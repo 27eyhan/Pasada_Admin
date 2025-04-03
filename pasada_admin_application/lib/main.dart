@@ -11,8 +11,10 @@ import 'package:pasada_admin_application/screen/main_pages/reports_pages/select_
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() async {
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
   // initializing supabase using the .env file
   await Supabase.initialize(
