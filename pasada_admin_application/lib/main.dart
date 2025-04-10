@@ -40,7 +40,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Login Pasada Admin',
+        title: 'Pasada',
         home: LoginSignup(),
         routes: {
           '/dashboard': (context) => Dashboard(),
