@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
@@ -15,11 +16,23 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> passengerData = [];
   bool isLoading = true;
+  Timer? _refreshTimer; // Timer variable for refreshing the state
 
   @override
   void initState() {
     super.initState();
     fetchPassengerData();
+    // Set up a periodic timer that refreshes every 30 seconds.
+    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+      fetchPassengerData();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Cancel the timer to prevent memory leaks.
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchPassengerData() async {

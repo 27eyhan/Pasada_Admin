@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
@@ -15,11 +16,23 @@ class _RideHistoryTableScreenState extends State<RideHistoryTableScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> rideHistoryData = [];
   bool isLoading = true;
+  Timer? _refreshTimer; // Timer variable for refreshing the state
 
   @override
   void initState() {
     super.initState();
     fetchRideHistoryData();
+    // Set up a periodic timer that refreshes every 30 seconds.
+    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+      fetchRideHistoryData();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Cancel the timer to prevent memory leaks.
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchRideHistoryData() async {
