@@ -7,8 +7,48 @@ class LoginSignup extends StatefulWidget {
 }
 
 class _LoginSignupState extends State<LoginSignup> {
+  // Controllers for text fields
+  final TextEditingController _adminIdController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
   bool isRememberMe = false;
   bool isObscure = true;
+
+  @override
+  void dispose() {
+    // Dispose controllers when the widget is disposed
+    _adminIdController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _login() {
+    final String adminId = _adminIdController.text.trim();
+    final String password = _passwordController.text.trim();
+
+    // Check credentials
+    if (adminId == 'admin' && password == 'admin1') {
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully logged in.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2), // Optional: shorter duration for success message
+        ),
+      );
+      // Navigate to dashboard on success
+      Navigator.pushReplacementNamed(context, '/dashboard'); // Use pushReplacementNamed to prevent going back to login
+    } else {
+      // Show error message on failure
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invalid Admin ID or Password.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3), // Set duration to 3 seconds
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,18 +124,19 @@ class _LoginSignupState extends State<LoginSignup> {
                               children: [
                                 _buildRichText('Enter your ', 'Admin ID'),
                                 SizedBox(height: 8),
-                                _buildTextField("Enter your Admin ID"),
+                                _buildTextField(
+                                  "Enter your Admin ID",
+                                  _adminIdController, // Pass controller
+                                ),
                                 SizedBox(height: 24),
                                 _buildRichText('Enter your ', 'password.'),
                                 SizedBox(height: 8),
-                                _buildPasswordField(),
+                                _buildPasswordField(_passwordController), // Pass controller
                                 SizedBox(height: 28),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pushNamed(context, '/dashboard');
-                                    },
+                                    onPressed: _login, // Call the login function
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.black,
                                       foregroundColor: Colors.white,
@@ -145,8 +186,9 @@ class _LoginSignupState extends State<LoginSignup> {
     );
   }
 
-  TextField _buildTextField(String hintText) {
+  TextField _buildTextField(String hintText, TextEditingController controller) {
     return TextField(
+      controller: controller, // Assign controller
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(
@@ -156,8 +198,9 @@ class _LoginSignupState extends State<LoginSignup> {
     );
   }
 
-  TextField _buildPasswordField() {
+  TextField _buildPasswordField(TextEditingController controller) {
     return TextField(
+      controller: controller, // Assign controller
       obscureText: isObscure,
       decoration: InputDecoration(
         hintText: "Enter your password",
