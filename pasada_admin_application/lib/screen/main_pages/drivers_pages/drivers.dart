@@ -49,6 +49,12 @@ class _DriversState extends State<Drivers> {
       final List listData = data as List;
       setState(() {
         driverData = listData.cast<Map<String, dynamic>>();
+        // Sort the list by driver_number numerically
+        driverData.sort((a, b) {
+          final numA = int.tryParse(a['driver_number']?.toString() ?? '0') ?? 0;
+          final numB = int.tryParse(b['driver_number']?.toString() ?? '0') ?? 0;
+          return numA.compareTo(numB);
+        });
         totalDrivers = driverData.length;
         // Adjust these conditions based on your actual driving_status values.
         activeDrivers = driverData
@@ -152,11 +158,9 @@ class _DriversState extends State<Drivers> {
                                     ),
                                   ],
                                 ),
-                                // Adjust padding as needed.
                                 padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
                                 child: Row(
                                   children: [
-                                    // Profile icon as a CircleAvatar.
                                     CircleAvatar(
                                       radius: 28,
                                       backgroundColor: Palette.blackColor,
@@ -167,7 +171,6 @@ class _DriversState extends State<Drivers> {
                                       ),
                                     ),
                                     const SizedBox(width: 16.0),
-                                    // Text information on the right of the icon.
                                     Expanded(
                                       child: Column(
                                         mainAxisAlignment: MainAxisAlignment.center,

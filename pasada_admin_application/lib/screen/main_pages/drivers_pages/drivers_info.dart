@@ -63,38 +63,56 @@ class _DriverInfoState extends State<DriverInfo> {
                   children: [
                     Text(
                       "Driver ID: ${driver['driver_id']?.toString() ?? 'N/A'}",
-                      style:
-                          TextStyle(fontSize: 16, color: Palette.blackColor),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Palette.blackColor,
+                      ),
                     ),
                     const SizedBox(height: 8.0),
                     Text(
                       "Name: ${driver['last_name'] ?? ''}, ${driver['first_name'] ?? ''}",
-                      style:
-                          TextStyle(fontSize: 16, color: Palette.blackColor),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Palette.blackColor,
+                      ),
                     ),
                     const SizedBox(height: 8.0),
                     Text(
                       "Driver Number: ${driver['driver_number'] ?? 'N/A'}",
-                      style:
-                          TextStyle(fontSize: 16, color: Palette.blackColor),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Palette.blackColor,
+                      ),
                     ),
                     const SizedBox(height: 8.0),
                     Text(
                       "Vehicle ID: ${driver['vehicle_id']?.toString() ?? 'N/A'}",
-                      style:
-                          TextStyle(fontSize: 16, color: Palette.blackColor),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Palette.blackColor,
+                      ),
                     ),
                     const SizedBox(height: 8.0),
                     Text(
                       "Status: ${driver['driving_status'] ?? 'N/A'}",
-                      style:
-                          TextStyle(fontSize: 16, color: Palette.blackColor),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Palette.blackColor,
+                      ),
                     ),
                     const SizedBox(height: 8.0),
                     Text(
                       "Last Online: ${driver['last_online'] ?? 'N/A'}",
-                      style:
-                          TextStyle(fontSize: 16, color: Palette.blackColor),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Palette.blackColor,
+                      ),
                     ),
                   ],
                 ),
@@ -114,7 +132,7 @@ class _DriverInfoState extends State<DriverInfo> {
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                   padding:
-                      EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 ),
                 onPressed: () {
                   // Add action to manage the driver here.
@@ -122,6 +140,7 @@ class _DriverInfoState extends State<DriverInfo> {
                 child: Text(
                   "Manage Driver",
                   style: TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 16,
                     color: Palette.blackColor,
                   ),
