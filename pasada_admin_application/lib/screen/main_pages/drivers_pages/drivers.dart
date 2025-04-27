@@ -21,13 +21,12 @@ class _DriversState extends State<Drivers> {
   int offlineDrivers = 0;
   int totalDrivers = 0;
 
-  Timer? _refreshTimer;  // Timer variable for refreshing the state
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     fetchDriverData();
-    // Set up a periodic timer that refreshes every 30 seconds.
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
       fetchDriverData();
     });
@@ -186,6 +185,14 @@ class _DriversState extends State<Drivers> {
                                             ),
                                           ),
                                           const SizedBox(height: 8.0),
+                                          Text(
+                                            "Driver ID: ${driver['driver_id']}",
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: Palette.blackColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4.0),
                                           Text(
                                             "Driver Number: ${driver['driver_number']}",
                                             style: TextStyle(

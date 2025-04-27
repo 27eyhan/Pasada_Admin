@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase
 
 class LoginSignup extends StatefulWidget {
   @override
@@ -8,46 +9,100 @@ class LoginSignup extends StatefulWidget {
 
 class _LoginSignupState extends State<LoginSignup> {
   // Controllers for text fields
-  final TextEditingController _adminIdController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final supabase = Supabase.instance.client; // Initialize Supabase client
 
   bool isRememberMe = false;
   bool isObscure = true;
+  bool _isLoading = false; // Add loading state
 
   @override
   void dispose() {
     // Dispose controllers when the widget is disposed
-    _adminIdController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _login() {
-    final String adminId = _adminIdController.text.trim();
-    final String password = _passwordController.text.trim();
+  Future<void> _login() async {
+    if (_isLoading) return;
 
-    // Check credentials
-    if (adminId == 'admin' && password == 'admin1') {
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully logged in.'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2), // Optional: shorter duration for success message
-        ),
-      );
-      // Navigate to dashboard on success
-      Navigator.pushReplacementNamed(context, '/dashboard'); // Use pushReplacementNamed to prevent going back to login
-    } else {
-      // Show error message on failure
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invalid Admin ID or Password.'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3), // Set duration to 3 seconds
-        ),
-      );
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Get user input and trim spaces
+    final String enteredUsername = _usernameController.text.trim();
+    final String enteredPassword = _passwordController.text.trim();
+
+    // Basic Input Validation
+    if (enteredUsername.isEmpty) {
+      _showErrorSnackBar('Username cannot be empty.'); // Updated message
+      setState(() => _isLoading = false);
+      return;
     }
+    if (enteredPassword.isEmpty) {
+      _showErrorSnackBar('Password cannot be empty.');
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      // 1. Find potential user by username (case-insensitive initial lookup)
+      //    We select the exact username and password stored in the DB for later comparison.
+      final response = await supabase
+          .from('adminTable')
+          .select('admin_username, admin_password')
+          .ilike('admin_username', enteredUsername) // Find potential match ignoring case
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) {
+        // Username not found even case-insensitively
+        _showErrorSnackBar('Username not found.');
+      } else {
+        // Potential user found, now perform strict case-sensitive checks in Dart
+
+        final String dbUsername = response['admin_username']; // Exact username from DB
+        final String dbPassword = response['admin_password']; // Exact password from DB
+
+        // 2. Perform strict, case-sensitive comparison for BOTH username and password
+        if (enteredUsername == dbUsername && enteredPassword == dbPassword) {
+          // SUCCESS: Both username and password match exactly (case-sensitive)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully logged in.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        } else {
+          // FAILURE: EITHER username case didn't match OR password didn't match
+          _showErrorSnackBar('Invalid username or password.');
+        }
+      }
+    } catch (e) {
+      print('Login Error: $e');
+      _showErrorSnackBar('An error occurred during login. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(
+         content: Text(message),
+         backgroundColor: Colors.red,
+         duration: Duration(seconds: 3),
+       ),
+     );
   }
 
   @override
@@ -122,21 +177,21 @@ class _LoginSignupState extends State<LoginSignup> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildRichText('Enter your ', 'Admin ID'),
+                                _buildRichText('Enter your ', 'Username'),
                                 SizedBox(height: 8),
                                 _buildTextField(
-                                  "Enter your Admin ID",
-                                  _adminIdController, // Pass controller
+                                  "Enter your username",
+                                  _usernameController,
                                 ),
                                 SizedBox(height: 24),
                                 _buildRichText('Enter your ', 'password.'),
                                 SizedBox(height: 8),
-                                _buildPasswordField(_passwordController), // Pass controller
+                                _buildPasswordField(_passwordController),
                                 SizedBox(height: 28),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: ElevatedButton(
-                                    onPressed: _login, // Call the login function
+                                    onPressed: _login,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.black,
                                       foregroundColor: Colors.white,
@@ -145,7 +200,9 @@ class _LoginSignupState extends State<LoginSignup> {
                                       ),
                                       minimumSize: Size(170, 50),
                                     ),
-                                    child: Text("Log-in"),
+                                    child: _isLoading 
+                                           ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                                           : Text("Log-in"),
                                   ),
                                 ),
                               ],
@@ -188,7 +245,7 @@ class _LoginSignupState extends State<LoginSignup> {
 
   TextField _buildTextField(String hintText, TextEditingController controller) {
     return TextField(
-      controller: controller, // Assign controller
+      controller: controller,
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(
@@ -200,7 +257,7 @@ class _LoginSignupState extends State<LoginSignup> {
 
   TextField _buildPasswordField(TextEditingController controller) {
     return TextField(
-      controller: controller, // Assign controller
+      controller: controller,
       obscureText: isObscure,
       decoration: InputDecoration(
         hintText: "Enter your password",

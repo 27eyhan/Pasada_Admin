@@ -17,6 +17,8 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
   List<Map<String, dynamic>> vehicleData = [];
   bool isLoading = true;
   Timer? _refreshTimer; // Timer variable for refreshing the state
+  int? _selectedRowIndex; // State variable to track selected row index
+  String? _pendingAction; // State variable for pending edit/delete action
 
   @override
   void initState() {
@@ -36,25 +38,61 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
   }
 
   Future<void> fetchVehicleData() async {
+     // Reset selection state on fetch
+    setState(() {
+      _selectedRowIndex = null;
+      _pendingAction = null; // Also reset pending action on refresh
+      isLoading = true;
+    });
     try {
       // Retrieve all columns from 'vehicleTable'
       final data = await supabase.from('vehicleTable').select('*');
       print("Fetched vehicle data: $data"); // Debug: verify data retrieval
       final List listData = data as List;
-      setState(() {
-        vehicleData = listData.cast<Map<String, dynamic>>();
-        isLoading = false;
-      });
+      if (mounted) { // Check if the widget is still mounted
+        setState(() {
+          vehicleData = listData.cast<Map<String, dynamic>>();
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      print('Error fetching vehicle data: $e');
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) { // Check if the widget is still mounted
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
+  // --- Action Handlers (Placeholders) ---
+  void _handleAddVehicle() {
+    _showInfoSnackBar('Add Vehicle functionality not yet implemented.');
+  }
+
+  void _handleEditVehicle(Map<String, dynamic> selectedVehicleData) {
+    _showInfoSnackBar('Edit Vehicle functionality not yet implemented.');
+  }
+
+  void _handleDeleteVehicle(Map<String, dynamic> selectedVehicleData) {
+    _showInfoSnackBar('Delete Vehicle functionality not yet implemented.');
+    // Possibly call fetchVehicleData() again after deletion
+  }
+
+  void _showInfoSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+  // --------------------------------------
+
   @override
   Widget build(BuildContext context) {
+     // Determine if Continue button should be enabled
+    final bool isRowSelected = _selectedRowIndex != null;
+
     return Scaffold(
       backgroundColor: Palette.whiteColor,
       appBar: AppBarSearch(),
@@ -62,12 +100,12 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
       body: Stack(
         children: [
           // Main content: loading indicator, "No data found." message, or the DataTable.
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : vehicleData.isEmpty
-                  ? const Center(child: Text("No data found."))
-                  : Center(
-                      child: SingleChildScrollView(
+          Center( // Center the table content
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : vehicleData.isEmpty
+                    ? const Center(child: Text("No data found."))
+                    : SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Container(
                           margin: const EdgeInsets.all(16.0),
@@ -88,15 +126,35 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                               DataColumn(label: Text('Vehicle Location')),
                               DataColumn(label: Text('Created At')),
                             ],
-                            rows: vehicleData.map((vehicle) {
-                              return DataRow(cells: [
-                                DataCell(Text(vehicle['vehicle_id'].toString())),
-                                DataCell(Text(vehicle['plate_number'].toString())),
-                                DataCell(Text(vehicle['route_id'].toString())),
-                                DataCell(Text(vehicle['passenger_capacity'].toString())),
-                                DataCell(Text(vehicle['vehicle_location'].toString())),
-                                DataCell(Text(vehicle['created_at'].toString())),
-                              ]);
+                            rows: vehicleData.asMap().entries.map((entry) { // Use asMap().entries
+                                final int index = entry.key;
+                                final Map<String, dynamic> vehicle = entry.value;
+                                final bool allowSelection = _pendingAction != null;
+
+                              return DataRow(
+                                selected: allowSelection && (_selectedRowIndex == index),
+                                onSelectChanged: allowSelection
+                                  ? (bool? selected) {
+                                    setState(() {
+                                      if (selected ?? false) {
+                                        _selectedRowIndex = index;
+                                      } else {
+                                        if (_selectedRowIndex == index) {
+                                          _selectedRowIndex = null;
+                                        }
+                                      }
+                                    });
+                                  }
+                                  : null,
+                                cells: [
+                                  DataCell(Text(vehicle['vehicle_id'].toString())),
+                                  DataCell(Text(vehicle['plate_number']?.toString() ?? 'N/A')),
+                                  DataCell(Text(vehicle['route_id']?.toString() ?? 'N/A')),
+                                  DataCell(Text(vehicle['passenger_capacity']?.toString() ?? 'N/A')),
+                                  DataCell(Text(vehicle['vehicle_location']?.toString() ?? 'N/A')),
+                                  DataCell(Text(vehicle['created_at'].toString())),
+                                ],
+                              );
                             }).toList(),
                           ),
                         ),
@@ -118,6 +176,118 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                   onPressed: () {
                     Navigator.pop(context);
                   },
+                ),
+              ),
+            ),
+          ),
+           // Positioned Action Button (Top Right)
+          Positioned(
+            top: 26.0,
+            right: 26.0,
+            child: SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Palette.blackColor, width: 1.0),
+                  borderRadius: BorderRadius.circular(30.0),
+                  color: Palette.whiteColor,
+                ),
+                child: PopupMenuButton<String>(
+                  icon: const Icon(Icons.edit, color: Palette.blackColor),
+                  tooltip: 'Actions',
+                  color: Palette.whiteColor,
+                  elevation: 8.0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    side: BorderSide(color: Palette.greyColor, width: 1.0),
+                  ),
+                  offset: const Offset(0, kToolbarHeight * 0.8),
+                  onSelected: (String value) {
+                    switch (value) {
+                      case 'add':
+                        _handleAddVehicle();
+                        break;
+                      case 'edit':
+                      case 'delete':
+                        setState(() {
+                          _pendingAction = value;
+                        });
+                        break;
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                    const PopupMenuItem<String>(
+                      value: 'add',
+                      child: Text('Add Vehicle'),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Text('Edit Selected'),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Text('Delete Selected'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+           // Confirmation Buttons (Bottom Center)
+          Positioned(
+            bottom: 16.0,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Visibility(
+                visible: _pendingAction != null,
+                child: Container(
+                   padding: const EdgeInsets.all(8.0),
+                   decoration: BoxDecoration(
+                      color: Palette.whiteColor,
+                      borderRadius: BorderRadius.circular(10.0),
+                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                   ),
+                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                        onPressed: () {
+                          setState(() {
+                            _pendingAction = null;
+                            _selectedRowIndex = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8.0),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isRowSelected ? Colors.green : Colors.grey,
+                          foregroundColor: Palette.whiteColor,
+                          disabledBackgroundColor: Colors.grey[400],
+                          disabledForegroundColor: Colors.white70,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        onPressed: isRowSelected
+                            ? () {
+                                final selectedData = vehicleData[_selectedRowIndex!];
+                                if (_pendingAction == 'edit') {
+                                  _handleEditVehicle(selectedData);
+                                } else if (_pendingAction == 'delete') {
+                                  _handleDeleteVehicle(selectedData);
+                                }
+                                setState(() {
+                                  _pendingAction = null;
+                                  _selectedRowIndex = null;
+                                });
+                              }
+                            : null,
+                        child: Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

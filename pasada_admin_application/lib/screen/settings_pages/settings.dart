@@ -15,30 +15,32 @@ class Settings extends StatefulWidget {
 class _SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width * 3.0;
+    final double horizontalPadding = screenWidth * 0.05;
+
     return Scaffold(
       backgroundColor: Palette.whiteColor,
       appBar: AppBarSearch(),
       drawer: MyDrawer(),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        child: Center(
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.47,
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 16.0,
-              mainAxisSpacing: 16.0,
-              children: [
-                _buildContainer("Profile"),
-                _buildContainer("Notifications"),
-                _buildContainer("Real-Time Updates"),
-                _buildContainer("Security"),
-              ],
-            ),
-          ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          vertical: 16.0, 
+          horizontal: horizontalPadding
+        ), 
+        child: GridView.count(
+          shrinkWrap: true,
+          physics: ClampingScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 16.0,
+          mainAxisSpacing: 16.0,
+          childAspectRatio: 1.2,
+          children: [
+            _buildContainer("Profile"),
+            _buildContainer("Notifications"),
+            _buildContainer("Real-Time Updates"),
+            _buildContainer("Security"),
+            // Add more settings items here if needed
+          ],
         ),
       ),
     );
@@ -84,7 +86,7 @@ class _SettingsState extends State<Settings> {
         }
       },
       child: Container(
-        padding: EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(8.0),
         decoration: BoxDecoration(
           color: Palette.whiteColor,
           borderRadius: BorderRadius.circular(8.0),

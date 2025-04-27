@@ -51,7 +51,7 @@ class _FleetDataState extends State<FleetData> {
               ],
             ),
             const SizedBox(height: 8.0),
-            Divider(color: Palette.blackColor.withOpacity(0.5)),
+            Divider(color: Palette.blackColor.withValues(alpha: 128)),
             const SizedBox(height: 16.0),
             Expanded(
               child: SingleChildScrollView(
@@ -123,7 +123,7 @@ class _FleetDataState extends State<FleetData> {
                 onPressed: () {
                 },
                 child: Text(
-                  "Manage Fleet",
+                  "Manage Vehicle",
                   style: TextStyle(
                     fontSize: 16,
                     color: Palette.blackColor,
