@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
-import 'dart:math';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DriverInfo extends StatefulWidget {
   final Map<String, dynamic> driver;
-  const DriverInfo({Key? key, required this.driver}) : super(key: key);
+  final bool initialEditMode;
+  
+  const DriverInfo({
+    Key? key, 
+    required this.driver,
+    this.initialEditMode = false, // Default to false if not provided
+  }) : super(key: key);
 
   @override
   _DriverInfoState createState() => _DriverInfoState();
@@ -14,11 +20,179 @@ class DriverInfo extends StatefulWidget {
 class _DriverInfoState extends State<DriverInfo> {
   late Map<DateTime, int> _heatMapData = {};
   late DateTime _currentMonth = DateTime.now();
+  late bool _isEditMode;
+  
+  // Text editing controllers
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
+  late TextEditingController _driverNumberController;
+  late TextEditingController _vehicleIdController;
   
   @override
   void initState() {
     super.initState();
+    _isEditMode = widget.initialEditMode;
     _generateHeatMapData();
+    _initControllers();
+  }
+  
+  void _initControllers() {
+    _firstNameController = TextEditingController(text: widget.driver['first_name'] ?? '');
+    _lastNameController = TextEditingController(text: widget.driver['last_name'] ?? '');
+    _driverNumberController = TextEditingController(text: widget.driver['driver_number'] ?? '');
+    _vehicleIdController = TextEditingController(text: widget.driver['vehicle_id']?.toString() ?? '');
+  }
+  
+  @override
+  void dispose() {
+    // Dispose controllers
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _driverNumberController.dispose();
+    _vehicleIdController.dispose();
+    super.dispose();
+  }
+  
+  // Toggle edit mode
+  void _toggleEditMode() {
+    setState(() {
+      _isEditMode = !_isEditMode;
+      
+      // If exiting edit mode, attempt to save changes
+      if (!_isEditMode) {
+        _saveChanges();
+      }
+    });
+  }
+  
+  // Save changes to database
+  void _saveChanges() async {
+    // First check if any data has changed
+    if (_firstNameController.text == widget.driver['first_name'] &&
+        _lastNameController.text == widget.driver['last_name'] &&
+        _driverNumberController.text == widget.driver['driver_number'] &&
+        _vehicleIdController.text == widget.driver['vehicle_id']?.toString()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No changes were made'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Check for duplicate driver number
+      final duplicateDriverNumber = await _checkForDuplicateData(
+        'driver_number', 
+        _driverNumberController.text,
+        widget.driver['driver_id'].toString(),
+      );
+      
+      if (duplicateDriverNumber) {
+        // Close loading dialog
+        Navigator.pop(context);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Driver number already exists for another driver'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Check for duplicate vehicle ID if it's not empty
+      if (_vehicleIdController.text.isNotEmpty) {
+        final duplicateVehicleId = await _checkForDuplicateData(
+          'vehicle_id', 
+          _vehicleIdController.text,
+          widget.driver['driver_id'].toString(),
+        );
+        
+        if (duplicateVehicleId) {
+          // Close loading dialog
+          Navigator.pop(context);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Vehicle ID is already assigned to another driver'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
+
+      // Create updated driver data
+      final updatedDriver = {
+        'first_name': _firstNameController.text,
+        'last_name': _lastNameController.text,
+        'driver_number': _driverNumberController.text,
+        'vehicle_id': _vehicleIdController.text,
+      };
+      
+      // TODO: Implement the actual database update
+      // final supabase = Supabase.instance.client;
+      // await supabase.from('drivers').update(updatedDriver).eq('driver_id', widget.driver['driver_id']);
+      
+      print('Saving updated driver data: $updatedDriver');
+      
+      // Close loading dialog
+      Navigator.pop(context);
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Driver information updated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.pop(context);
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating driver: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      print('Error updating driver: $e');
+    }
+  }
+
+  // Check if data already exists for another driver
+  Future<bool> _checkForDuplicateData(String field, String value, String currentDriverId) async {
+    if (value.isEmpty) return false;
+    
+    try {
+      // Example using Supabase
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('drivers')
+          .select('driver_id')
+          .eq(field, value)
+          .neq('driver_id', currentDriverId)
+          .maybeSingle();
+      
+      // If we get a response, a duplicate exists
+      return response != null;
+    } catch (e) {
+      print('Error checking for duplicate $field: $e');
+      // In case of error, we'll assume there's no duplicate to allow the operation to continue
+      return false;
+    }
   }
   
   void _generateHeatMapData() {
@@ -171,31 +345,28 @@ class _DriverInfoState extends State<DriverInfo> {
                       ),
                     ),
                     const SizedBox(height: 8.0),
-                    Text(
-                      "Name: ${driver['first_name'] ?? ''} ${driver['last_name'] ?? ''}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
+                    _buildEditableField(
+                      label: "First Name:",
+                      value: driver['first_name'] ?? '',
+                      controller: _firstNameController,
                     ),
                     const SizedBox(height: 8.0),
-                    Text(
-                      "Driver Number: ${driver['driver_number'] ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
+                    _buildEditableField(
+                      label: "Last Name:",
+                      value: driver['last_name'] ?? '',
+                      controller: _lastNameController,
                     ),
                     const SizedBox(height: 8.0),
-                    Text(
-                      "Vehicle ID: ${driver['vehicle_id']?.toString() ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
+                    _buildEditableField(
+                      label: "Driver Number:",
+                      value: driver['driver_number'] ?? 'N/A',
+                      controller: _driverNumberController,
+                    ),
+                    const SizedBox(height: 8.0),
+                    _buildEditableField(
+                      label: "Vehicle ID:",
+                      value: driver['vehicle_id']?.toString() ?? 'N/A',
+                      controller: _vehicleIdController,
                     ),
                     const SizedBox(height: 8.0),
                     Text(
@@ -398,10 +569,10 @@ class _DriverInfoState extends State<DriverInfo> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Contact Driver button
+                // Contact Driver button (or Cancel in edit mode)
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Palette.whiteColor,
+                    backgroundColor: _isEditMode ? Palette.orangeColor : Palette.whiteColor,
                     foregroundColor: Palette.blackColor,
                     elevation: 6.0,
                     shadowColor: Colors.grey,
@@ -413,21 +584,39 @@ class _DriverInfoState extends State<DriverInfo> {
                         const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   ),
                   onPressed: () {
-                    // Add action to contact the driver here.
+                    if (_isEditMode) {
+                      // Reset the text controllers to original values
+                      _firstNameController.text = widget.driver['first_name'] ?? '';
+                      _lastNameController.text = widget.driver['last_name'] ?? '';
+                      _driverNumberController.text = widget.driver['driver_number'] ?? '';
+                      _vehicleIdController.text = widget.driver['vehicle_id']?.toString() ?? '';
+                      
+                      // Exit edit mode
+                      setState(() {
+                        _isEditMode = false;
+                      });
+                      
+                      // If dialog was opened directly in edit mode, close it
+                      if (widget.initialEditMode) {
+                        Navigator.of(context).pop();
+                      }
+                    } else {
+                      // Contact driver logic here
+                    }
                   },
                   child: Text(
-                    "Contact Driver",
+                    _isEditMode ? "Cancel" : "Contact Driver",
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 16,
-                      color: Palette.blackColor,
+                      color: _isEditMode ? Colors.white : Palette.blackColor,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12.0),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Palette.whiteColor,
+                    backgroundColor: _isEditMode ? Palette.greenColor : Palette.whiteColor,
                     foregroundColor: Palette.blackColor,
                     elevation: 6.0,
                     shadowColor: Colors.grey,
@@ -438,15 +627,13 @@ class _DriverInfoState extends State<DriverInfo> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   ),
-                  onPressed: () {
-                    // Add action to manage the driver here.
-                  },
+                  onPressed: _toggleEditMode,
                   child: Text(
-                    "Manage Driver",
+                    _isEditMode ? "Save Changes" : "Manage Driver",
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 16,
-                      color: Palette.blackColor,
+                      color: _isEditMode ? Colors.white : Palette.blackColor,
                     ),
                   ),
                 ),
@@ -456,6 +643,58 @@ class _DriverInfoState extends State<DriverInfo> {
         ),
       ),
     );
+  }
+
+  // Helper method to build editable fields
+  Widget _buildEditableField({
+    required String label,
+    required String value,
+    required TextEditingController controller,
+  }) {
+    return _isEditMode
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 100,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Palette.blackColor,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: TextFormField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    color: Palette.blackColor,
+                  ),
+                ),
+              ),
+            ],
+          )
+        : Text(
+            "$label $value",
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: Palette.blackColor,
+            ),
+          );
   }
 
   // Method that adjusts the last online timestamp to a more readable format. 

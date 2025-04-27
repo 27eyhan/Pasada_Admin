@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 
 class DriverTableScreen extends StatefulWidget {
   const DriverTableScreen({Key? key}) : super(key: key);
@@ -73,7 +74,17 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
 
   void _handleEditDriver(Map<String, dynamic> selectedDriverData) {
     print("Edit Driver action triggered for: ${selectedDriverData['driver_id']}");
-    _showInfoSnackBar('Edit Driver functionality not yet implemented.');
+    
+    // Show the driver info dialog with edit mode enabled
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return DriverInfo(
+          driver: selectedDriverData,
+          initialEditMode: true, // Pass true to start in edit mode
+        );
+      },
+    );
   }
 
   void _handleDeleteDriver(Map<String, dynamic> selectedDriverData) {
@@ -144,6 +155,10 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                   ? (bool? selected) {
                                     setState(() {
                                       if (selected ?? false) {
+                                        // If already a different row selected, show message
+                                        if (_selectedRowIndex != null && _selectedRowIndex != index) {
+                                          _showInfoSnackBar('Only one driver can be selected at a time');
+                                        }
                                         _selectedRowIndex = index;
                                       } else {
                                         if (_selectedRowIndex == index) {
