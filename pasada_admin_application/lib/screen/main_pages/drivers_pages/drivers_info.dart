@@ -141,11 +141,14 @@ class _DriverInfoState extends State<DriverInfo> {
         'vehicle_id': _vehicleIdController.text,
       };
       
-      // TODO: Implement the actual database update
-      // final supabase = Supabase.instance.client;
-      // await supabase.from('drivers').update(updatedDriver).eq('driver_id', widget.driver['driver_id']);
+      // Implement the actual database update
+      final supabase = Supabase.instance.client;
+      await supabase
+          .from('driverTable')
+          .update(updatedDriver)
+          .eq('driver_id', widget.driver['driver_id']);
       
-      print('Saving updated driver data: $updatedDriver');
+      print('Driver updated successfully: ${widget.driver['driver_id']}');
       
       // Close loading dialog
       Navigator.pop(context);
@@ -177,10 +180,10 @@ class _DriverInfoState extends State<DriverInfo> {
     if (value.isEmpty) return false;
     
     try {
-      // Example using Supabase
+      // Using Supabase
       final supabase = Supabase.instance.client;
       final response = await supabase
-          .from('drivers')
+          .from('driverTable')
           .select('driver_id')
           .eq(field, value)
           .neq('driver_id', currentDriverId)
