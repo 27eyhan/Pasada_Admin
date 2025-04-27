@@ -104,7 +104,7 @@ class _ProfilePopupState extends State<ProfilePopup> {
                 ? Center(child: CircularProgressIndicator())
                 : adminData == null
                   ? Center(
-                      child: Text(
+                child: Text(
                         "No admin data found.",
                         style: TextStyle(fontSize: 16, color: Palette.blackColor),
                       ),
@@ -121,7 +121,7 @@ class _ProfilePopupState extends State<ProfilePopup> {
                               child: Icon(
                                 Icons.person,
                                 size: 50,
-                                color: Palette.blackColor,
+                    color: Palette.blackColor,
                               ),
                             ),
                             SizedBox(height: 20),
@@ -146,9 +146,9 @@ class _ProfilePopupState extends State<ProfilePopup> {
                               value: formatDate(adminData!['created_at']?.toString()),
                             ),
                           ],
-                        ),
-                      ),
-                    ),
+                  ),
+                ),
+              ),
             ),
             Align(
               alignment: Alignment.bottomRight,
