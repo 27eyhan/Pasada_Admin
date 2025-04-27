@@ -16,7 +16,6 @@ class _DriversState extends State<Drivers> {
   List<Map<String, dynamic>> driverData = [];
   bool isLoading = true;
 
-  // These values now update dynamically once data is fetched.
   int activeDrivers = 0;
   int offlineDrivers = 0;
   int totalDrivers = 0;
@@ -55,10 +54,16 @@ class _DriversState extends State<Drivers> {
           return numA.compareTo(numB);
         });
         totalDrivers = driverData.length;
-        // Adjust these conditions based on your actual driving_status values.
-        activeDrivers = driverData
-            .where((d) => d["driving_status"]?.toLowerCase() == "active")
-            .length;
+        
+        // Count active drivers based on multiple status values
+        activeDrivers = driverData.where((driver) {
+          final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
+          return status == "driving" || 
+                 status == "online" || 
+                 status == "idling" || 
+                 status == "active";
+        }).length;
+        
         offlineDrivers = totalDrivers - activeDrivers;
         isLoading = false;
       });
