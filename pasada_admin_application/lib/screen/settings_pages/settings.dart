@@ -35,10 +35,10 @@ class _SettingsState extends State<Settings> {
           mainAxisSpacing: 16.0,
           childAspectRatio: 1.2,
           children: [
-            _buildContainer("Profile"),
-            _buildContainer("Notifications"),
-            _buildContainer("Real-Time Updates"),
-            _buildContainer("Security"),
+            _buildContainer("Profile", Icons.account_circle),
+            _buildContainer("Notifications", Icons.notifications),
+            _buildContainer("Real-Time Updates", Icons.update),
+            _buildContainer("Security", Icons.security),
             // Add more settings items here if needed
           ],
         ),
@@ -46,7 +46,7 @@ class _SettingsState extends State<Settings> {
     );
   }
 
-  Widget _buildContainer(String title) {
+  Widget _buildContainer(String title, IconData icon) {
     return GestureDetector(
       onTap: () {
         if (title == "Profile") {
@@ -86,7 +86,7 @@ class _SettingsState extends State<Settings> {
         }
       },
       child: Container(
-        padding: EdgeInsets.all(8.0),
+        padding: EdgeInsets.all(16.0),
         decoration: BoxDecoration(
           color: Palette.whiteColor,
           borderRadius: BorderRadius.circular(8.0),
@@ -103,21 +103,18 @@ class _SettingsState extends State<Settings> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Icon(
+              icon,
+              size: 40,
+              color: Palette.blackColor,
+            ),
+            SizedBox(height: 16.0),
             Text(
               title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18.0,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8.0),
-            Text(
-              "Placeholder text for $title",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14.0,
-                color: Palette.blackColor.withValues(alpha: 128),
               ),
             ),
           ],

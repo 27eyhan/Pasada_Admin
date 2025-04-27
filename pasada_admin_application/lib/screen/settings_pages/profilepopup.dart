@@ -1,7 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ProfilePopup extends StatelessWidget {
+class ProfilePopup extends StatefulWidget {
+  @override
+  _ProfilePopupState createState() => _ProfilePopupState();
+}
+
+class _ProfilePopupState extends State<ProfilePopup> {
+  final SupabaseClient supabase = Supabase.instance.client;
+  Map<String, dynamic>? adminData;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAdminData();
+  }
+
+  Future<void> fetchAdminData() async {
+    setState(() {
+      isLoading = true;
+    });
+    
+    try {
+      // Get logged-in admin username
+      final response = await supabase
+          .from('adminTable')
+          .select('*')
+          .maybeSingle();
+          
+      if (mounted) {
+        setState(() {
+          adminData = response;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching admin data: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  String formatDate(String? dateString) {
+    if (dateString == null) return 'N/A';
+    try {
+      final DateTime date = DateTime.parse(dateString);
+      return DateFormat('MM/dd/yyyy').format(date);
+    } catch (e) {
+      return 'Invalid date';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width * 0.7;
@@ -45,15 +100,55 @@ class ProfilePopup extends StatelessWidget {
             Divider(color: Palette.blackColor.withValues(alpha: 128)),
             const SizedBox(height: 16.0),
             Expanded(
-              child: SingleChildScrollView(
-                child: Text(
-                  "This is the Profile popup. Add profile settings and additional information here as needed.",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Palette.blackColor,
-                  ),
-                ),
-              ),
+              child: isLoading 
+                ? Center(child: CircularProgressIndicator())
+                : adminData == null
+                  ? Center(
+                      child: Text(
+                        "No admin data found.",
+                        style: TextStyle(fontSize: 16, color: Palette.blackColor),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Palette.blackColor.withValues(alpha: 40),
+                              child: Icon(
+                                Icons.person,
+                                size: 50,
+                                color: Palette.blackColor,
+                              ),
+                            ),
+                            SizedBox(height: 20),
+                            ProfileInfoTile(
+                              label: "Admin ID",
+                              value: adminData!['admin_id']?.toString() ?? 'N/A',
+                            ),
+                            ProfileInfoTile(
+                              label: "Name",
+                              value: "${adminData!['first_name'] ?? 'N/A'} ${adminData!['last_name'] ?? ''}",
+                            ),
+                            ProfileInfoTile(
+                              label: "Username",
+                              value: adminData!['admin_username']?.toString() ?? 'N/A',
+                            ),
+                            ProfileInfoTile(
+                              label: "Mobile Number",
+                              value: adminData!['admin_mobile_number']?.toString() ?? 'N/A',
+                            ),
+                            ProfileInfoTile(
+                              label: "Account Created",
+                              value: formatDate(adminData!['created_at']?.toString()),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
             ),
             Align(
               alignment: Alignment.bottomRight,
@@ -82,6 +177,45 @@ class ProfilePopup extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ProfileInfoTile extends StatelessWidget {
+  final String label;
+  final String value;
+  
+  const ProfileInfoTile({
+    Key? key,
+    required this.label,
+    required this.value,
+  }) : super(key: key);
+  
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Palette.blackColor,
+            ),
+          ),
+        ],
       ),
     );
   }
