@@ -108,11 +108,11 @@ class _DriversState extends State<Drivers> {
                       ),
                       child: Row(
                         children: [
-                          _buildDriverStatus("Drivers Active", activeDrivers),
+                          _buildDriverStatus("Drivers Active", activeDrivers, Palette.greenColor),
                           _buildVerticalDivider(),
-                          _buildDriverStatus("Drivers Offline", offlineDrivers),
+                          _buildDriverStatus("Drivers Offline", offlineDrivers, Palette.redColor),
                           _buildVerticalDivider(),
-                          _buildDriverStatus("Total Drivers", totalDrivers),
+                          _buildDriverStatus("Total Drivers", totalDrivers, Palette.blackColor),
                         ],
                       ),
                     ),
@@ -240,7 +240,7 @@ class _DriversState extends State<Drivers> {
   }
 
   // Helper widget to build the status display.
-  Widget _buildDriverStatus(String title, int count) {
+  Widget _buildDriverStatus(String title, int count, Color countColor) {
     return Expanded(
       child: SizedBox(
         height: 100.0,
@@ -252,7 +252,7 @@ class _DriversState extends State<Drivers> {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 24.0,
-                color: Palette.blackColor,
+                color: countColor,
               ),
             ),
             const SizedBox(height: 8.0),

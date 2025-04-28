@@ -189,11 +189,9 @@ class _DriverInfoState extends State<DriverInfo> {
           .neq('driver_id', currentDriverId)
           .maybeSingle();
       
-      // If we get a response, a duplicate exists
       return response != null;
     } catch (e) {
       print('Error checking for duplicate $field: $e');
-      // In case of error, we'll assume there's no duplicate to allow the operation to continue
       return false;
     }
   }
@@ -273,21 +271,70 @@ class _DriverInfoState extends State<DriverInfo> {
     });
   }
   
-  // Fetch driver activity logs from the database
   Future<List<Map<String, dynamic>>> fetchDriverActivityLogs(DateTime startDate, DateTime endDate) async {
-    // TODO: Replace with actual database query
-    // Example using a database client (adjust based on your actual database implementation):
-    // final db = await DatabaseHelper.instance.database;
-    // final List<Map<String, dynamic>> logs = await db.rawQuery('''
-    //   SELECT log_id, driver_id, login_timestamp, logout_timestamp, session_duration, status
-    //   FROM driverActivityLog 
-    //   WHERE driver_id = ? AND login_timestamp BETWEEN ? AND ?
-    //   ORDER BY login_timestamp
-    // ''', [widget.driver['driver_id'], startDate.toIso8601String(), endDate.toIso8601String()]);
-    // return logs;
-    
-    // For now, return an empty list as placeholder
-    return [];
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('driverActivityLog')
+          .select('log_id, driver_id, login_timestamp, logout_timestamp, session_duration, status')
+          .eq('driver_id', widget.driver['driver_id'])
+          .gte('login_timestamp', startDate.toIso8601String())
+          .lte('login_timestamp', endDate.toIso8601String())
+          .order('login_timestamp');
+      
+      return response;
+    } catch (e) {
+      print('Error fetching driver activity logs: $e');
+      return [];
+    }
+  }
+
+  // Log driver activity when status changes
+  Future<void> logDriverActivity(String status, DateTime timestamp) async {
+    try {
+      final supabase = Supabase.instance.client;
+      
+      // Check if there's an ongoing session without a logout
+      final ongoingSession = await supabase
+          .from('driverActivityLog')
+          .select()
+          .eq('driver_id', widget.driver['driver_id'])
+          .filter('logout_timestamp', 'is', null)
+          .maybeSingle();
+      
+      if (ongoingSession != null) {
+        // Calculate session duration in seconds
+        final loginTime = DateTime.parse(ongoingSession['login_timestamp']);
+        final duration = timestamp.difference(loginTime).inSeconds;
+        
+        // Update the existing session with logout time and duration
+        await supabase
+            .from('driverActivityLog')
+            .update({
+              'logout_timestamp': timestamp.toIso8601String(),
+              'session_duration': duration,
+            })
+            .eq('log_id', ongoingSession['log_id']);
+      }
+      
+      // If status is one of the active statuses, create a new session
+      if (status == 'Online' || status == 'Driving' || status == 'Idling') {
+        // Insert new activity log with auto-generated UUID (handled by Supabase)
+        await supabase
+            .from('driverActivityLog')
+            .insert({
+              'driver_id': widget.driver['driver_id'],
+              'login_timestamp': timestamp.toIso8601String(),
+              'status': status,
+            });
+      }
+      
+      // Refresh heatmap data
+      _generateHeatMapData();
+      
+    } catch (e) {
+      print('Error logging driver activity: $e');
+    }
   }
 
   @override
