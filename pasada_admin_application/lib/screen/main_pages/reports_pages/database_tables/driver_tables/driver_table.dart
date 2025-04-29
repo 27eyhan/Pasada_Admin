@@ -5,7 +5,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/add_driver_dialog.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
 
 class DriverTableScreen extends StatefulWidget {
   const DriverTableScreen({Key? key}) : super(key: key);
@@ -21,6 +21,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
   Timer? _refreshTimer; // Timer variable for refreshing the state
   int? _selectedRowIndex; // State variable to track selected row index
   String? _pendingAction; // State variable for pending edit/delete action
+  int _selectionWarningCounter = 0; // Counter for the selection warning snackbar
 
   // Function to start the periodic refresh timer
   void _startRefreshTimer() {
@@ -227,9 +228,12 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                   ? (bool? selected) {
                                     setState(() {
                                       if (selected ?? false) {
-                                        // If already a different row selected, show message
+                                        // If already a different row selected, show message (limited times)
                                         if (_selectedRowIndex != null && _selectedRowIndex != index) {
-                                          _showInfoSnackBar('Only one driver can be selected at a time');
+                                          if (_selectionWarningCounter < 3) { // Limit to 3 warnings
+                                             _showInfoSnackBar('Only one driver can be selected at a time');
+                                             _selectionWarningCounter++; // Increment counter
+                                          }
                                         }
                                         _selectedRowIndex = index;
                                       } else {
@@ -309,6 +313,8 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                       case 'delete':
                         setState(() {
                           _pendingAction = value;
+                           _selectionWarningCounter = 0; // Reset counter for new action
+                          _selectedRowIndex = null; // Ensure no row is selected initially for the new action
                         });
                         break;
                     }
@@ -358,6 +364,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                           setState(() {
                             _pendingAction = null;
                             _selectedRowIndex = null;
+                             _selectionWarningCounter = 0; // Reset counter
                           });
                         },
                       ),
@@ -386,6 +393,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                 setState(() {
                                   _pendingAction = null;
                                   _selectedRowIndex = null;
+                                   _selectionWarningCounter = 0; // Reset counter
                                 });
                               }
                             : null,
