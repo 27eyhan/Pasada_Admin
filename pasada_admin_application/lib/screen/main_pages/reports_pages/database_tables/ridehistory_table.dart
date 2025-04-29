@@ -47,7 +47,7 @@ class _RideHistoryTableScreenState extends State<RideHistoryTableScreen> {
     try {
       // Select all columns from 'rideHistory'
       final data = await supabase.from('rideHistory').select('*');
-      print("Fetched ride history data: $data"); // Debug: verify data retrieval
+      // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) { // Check if the widget is still mounted
         setState(() {
@@ -56,7 +56,6 @@ class _RideHistoryTableScreenState extends State<RideHistoryTableScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching ride history data: $e');
       if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
@@ -67,7 +66,6 @@ class _RideHistoryTableScreenState extends State<RideHistoryTableScreen> {
 
   // --- Action Handlers (Placeholders) ---
   void _handleDeleteRideHistory(Map<String, dynamic> selectedRideData) {
-    print("Delete Ride History action triggered for: ${selectedRideData['ride_id']}");
     _showInfoSnackBar('Delete Ride History functionality not yet implemented.');
     // Possibly call fetchRideHistoryData() again after deletion
   }
@@ -250,7 +248,7 @@ class _RideHistoryTableScreenState extends State<RideHistoryTableScreen> {
                    decoration: BoxDecoration(
                       color: Palette.whiteColor,
                       borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
