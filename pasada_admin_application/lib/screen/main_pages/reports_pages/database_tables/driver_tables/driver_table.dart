@@ -28,11 +28,10 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
     _refreshTimer?.cancel(); // Cancel any existing timer
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
        if (mounted) { // Check if mounted before fetching
-          print("Timer refresh triggered");
           fetchDriverData();
        }
     });
-     print("Refresh timer started"); // Debug
+     // Debug
   }
 
   @override
@@ -58,7 +57,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
     try {
       // Select all columns from 'driverTable'
       final data = await supabase.from('driverTable').select('*');
-      print("Fetched driver data: $data"); // Debug: verify data retrieval
+      // Debug: verify data retrieval
       final List listData = data as List;
        if (mounted) { // Check if the widget is still mounted
         setState(() {
@@ -67,7 +66,6 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching driver data: $e');
       if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
@@ -78,7 +76,6 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
 
   // --- Action Handlers ---
   void _handleAddDriver() async {
-    print("Add Driver action triggered");
     try {
        await showDialog(
         context: context,
@@ -90,16 +87,16 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         },
       );
     } finally {
-       print("Add action finished, restarting timer"); // Debug
-      _startRefreshTimer(); // Restart timer when dialog closes
+       // Debug
+      _startRefreshTimer();
     }
   }
 
   void _handleEditDriver(Map<String, dynamic> selectedDriverData) async {
-    print("Edit Driver action triggered for: ${selectedDriverData['driver_id']}");
     
     try {
-        await showDialog(
+        // Await the boolean result from the DriverInfo dialog
+        final bool? saveSuccess = await showDialog<bool>(
           context: context,
           builder: (BuildContext context) {
             return DriverInfo(
@@ -108,16 +105,16 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
             );
           },
         );
-     } finally {
-         print("Edit action finished, restarting timer"); // Debug
-         _startRefreshTimer(); // Restart timer when dialog closes
-     }
+        fetchDriverData();
+        
+    } finally {
+        _startRefreshTimer(); // Restart timer when dialog closes
+    }
   }
 
   void _handleDeleteDriver(Map<String, dynamic> selectedDriverData) async {
     final driverId = selectedDriverData['driver_id'];
     final driverName = "${selectedDriverData['first_name'] ?? ''} ${selectedDriverData['last_name'] ?? ''}".trim();
-    print("Delete Driver action triggered for: $driverId");
 
     try {
       await showDialog(
@@ -151,7 +148,6 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                     fetchDriverData(); // Refresh data after deletion
 
                   } catch (e) {
-                    print('Error deleting driver: $e');
                     _showInfoSnackBar('Error deleting driver: ${e.toString()}');
                   }
                 },
@@ -161,7 +157,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         },
       );
     } finally {
-       print("Delete action finished, restarting timer"); // Debug
+       // Debug
       _startRefreshTimer(); // Restart timer when dialog closes
     }
   }
@@ -304,7 +300,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                   offset: const Offset(0, kToolbarHeight * 0.8),
                   onSelected: (String value) {
                     _refreshTimer?.cancel(); // Cancel timer immediately
-                    print("Timer cancelled for action: $value"); // Debug
+                    // Debug
                     switch (value) {
                       case 'add':
                         _handleAddDriver();
@@ -358,7 +354,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                       TextButton(
                         child: const Text('Cancel', style: TextStyle(color: Colors.red)),
                         onPressed: () {
-                          print("Bottom cancel pressed, restarting timer"); // Debug
+                          // Debug
                           _refreshTimer?.cancel(); // Cancel just in case
                            _startRefreshTimer(); // Restart timer
                           setState(() {
@@ -383,7 +379,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                             ? () {
                                 final selectedData = driverData[_selectedRowIndex!];
                                 _refreshTimer?.cancel(); // Cancel timer before action
-                                print("Timer cancelled for continue button action: $_pendingAction"); // Debug
+                                // Debug
 
                                 if (_pendingAction == 'edit') {
                                   _handleEditDriver(selectedData);

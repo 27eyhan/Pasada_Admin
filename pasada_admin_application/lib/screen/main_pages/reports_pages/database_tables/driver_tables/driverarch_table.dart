@@ -47,7 +47,7 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
     try {
       // Select all columns from the 'driverArchives' table.
       final data = await supabase.from('driverArchives').select('*');
-      print("Fetched archive data: $data"); // Debug: verify data retrieval
+      // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) { // Check if the widget is still mounted
         setState(() {
@@ -56,7 +56,6 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching archive data: $e');
        if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
@@ -67,13 +66,11 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
 
   // --- Action Handlers (Placeholders) ---
    void _handleRestoreDriver(Map<String, dynamic> selectedArchiveData) {
-    print("Restore Driver action triggered for: ${selectedArchiveData['driver_id']}");
     _showInfoSnackBar('Restore Driver functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after restoration
   }
 
   void _handleDeleteDriverPermanent(Map<String, dynamic> selectedArchiveData) {
-    print("Permanent Delete Driver action triggered for: ${selectedArchiveData['driver_id']}");
     _showInfoSnackBar('Permanent Delete Driver functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after deletion
   }
@@ -238,7 +235,7 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
                    decoration: BoxDecoration(
                       color: Palette.whiteColor,
                       borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
                    child: Row(
                     mainAxisSize: MainAxisSize.min,

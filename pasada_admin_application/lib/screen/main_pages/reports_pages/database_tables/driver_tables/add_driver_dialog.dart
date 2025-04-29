@@ -22,7 +22,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
   final _lastNameController = TextEditingController();
   final _driverNumberController = TextEditingController();
   final _vehicleIdController = TextEditingController();
-  final _passwordController = TextEditingController(); // Added password field
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -111,7 +111,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
 
       } catch (e) {
         setState(() { _isLoading = false; });
-        print('Error adding driver: $e'); // Log the detailed error
+        // Log the detailed error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error adding driver: ${e.toString()}')),
         );
