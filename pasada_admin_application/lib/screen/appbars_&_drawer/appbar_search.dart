@@ -57,7 +57,7 @@ class AppBarSearch extends StatelessWidget implements PreferredSizeWidget {
             onPressed: () {
               // Add your messages action here.
             },
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
             splashRadius: 20.0,
           ),
         ],
@@ -134,6 +134,7 @@ class AppBarSearch extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 10.0),
               _buildCircularIconButton(
                 icon: Icons.filter_list,
                 onPressed: () {
@@ -141,7 +142,9 @@ class AppBarSearch extends StatelessWidget implements PreferredSizeWidget {
                 },
                 iconSize: 30.0,
               ),
+              const SizedBox(width: 220.0),
               _buildMergedNotificationsAndMessages(),
+              const SizedBox(width: 220.0),
               _buildCircularIconButton(
                 icon: Icons.account_circle,
                 onPressed: () {
