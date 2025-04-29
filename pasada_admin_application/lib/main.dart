@@ -10,7 +10,8 @@ import 'package:pasada_admin_application/screen/main_pages/reports_pages/data_ta
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/select_table.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:pasada_admin_application/maps/google_maps_api.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,11 @@ Future<void> main() async {
       storageOptions: const StorageClientOptions(
         retryAttempts: 10,
       ));
+
+  // Initialize Google Maps API for web platform
+  if (kIsWeb) {
+    GoogleMapsApiInitializer.initialize();
+  }
 
   runApp(const MainApp());
 }
