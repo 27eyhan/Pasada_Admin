@@ -4,6 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+// Import dialogs
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/route_tables/add_route_dialog.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/route_tables/edit_route_dialog.dart';
 
 class DriverRouteTableScreen extends StatefulWidget {
   const DriverRouteTableScreen({Key? key}) : super(key: key);
@@ -28,6 +31,7 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
       fetchRouteData();
     });
+    // Debug
   }
 
   @override
@@ -47,7 +51,7 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
     try {
       // Fetch all columns from 'driverRouteTable'
       final data = await supabase.from('driverRouteTable').select('*');
-      print("Fetched route data: $data"); // Debug: verify data retrieval
+      // Debug: verify data retrieval
       final List listData = data as List;
        if (mounted) { // Check if the widget is still mounted
         setState(() {
@@ -56,30 +60,108 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching route data: $e');
        if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
         });
       }
     }
+    // Restart timer after fetch completes or fails
+    // _startRefreshTimer();
+    // print("Route Timer potentially restarted after fetch"); // Debug
   }
 
   // --- Action Handlers (Placeholders) ---
-  void _handleAddRoute() {
-    print("Add Route action triggered");
-    _showInfoSnackBar('Add Route functionality not yet implemented.');
+  void _handleAddRoute() async {
+    _refreshTimer?.cancel();
+
+    try {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AddRouteDialog(
+            supabase: supabase,
+            onRouteActionComplete: fetchRouteData,
+          );
+        },
+      );
+    } finally {
+      _startRefreshTimer(); // Restart timer when dialog closes
+    }
   }
 
-  void _handleEditRoute(Map<String, dynamic> selectedRouteData) {
-    print("Edit Route action triggered for: ${selectedRouteData['route_id']}");
-    _showInfoSnackBar('Edit Route functionality not yet implemented.');
+  void _handleEditRoute(Map<String, dynamic> selectedRouteData) async {
+    _refreshTimer?.cancel();
+
+    try {
+     await showDialog(
+       context: context,
+       barrierDismissible: false,
+       builder: (BuildContext context) {
+         return EditRouteDialog(
+           supabase: supabase,
+           onRouteActionComplete: fetchRouteData,
+           routeData: selectedRouteData,
+         );
+       },
+     );
+   } finally {
+     _startRefreshTimer(); // Restart timer when dialog closes
+   }
   }
 
-  void _handleDeleteRoute(Map<String, dynamic> selectedRouteData) {
-    print("Delete Route action triggered for: ${selectedRouteData['route_id']}");
-    _showInfoSnackBar('Delete Route functionality not yet implemented.');
-    // Possibly call fetchRouteData() again after deletion
+  void _handleDeleteRoute(Map<String, dynamic> selectedRouteData) async {
+    final routeId = selectedRouteData['route_id'];
+    final routeName = selectedRouteData['route']?.toString() ?? 'ID: $routeId'; // Use route name or ID
+    _refreshTimer?.cancel();
+
+     bool? confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Palette.whiteColor,
+          title: const Text('Confirm Deletion'),
+          contentPadding: const EdgeInsets.all(24.0),
+          content: Text('Are you sure you want to delete route $routeName?'),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    _startRefreshTimer(); // Restart timer regardless of outcome
+
+    if (confirmed == true) {
+      try {
+        await supabase
+            .from('driverRouteTable')
+            .delete()
+            .match({'route_id': routeId});
+
+        _showInfoSnackBar('Route $routeName deleted successfully.');
+        fetchRouteData(); // Refresh data after deletion
+
+      } catch (e) {
+        // Check for foreign key constraint violation (common issue)
+        if (e.toString().contains('violates foreign key constraint')) {
+           _showInfoSnackBar('Error: Cannot delete route. It might be assigned to a vehicle.');
+        } else {
+          _showInfoSnackBar('Error deleting route: ${e.toString()}');
+        }
+      }
+    } else {
+    }
   }
 
   void _showInfoSnackBar(String message) {
@@ -91,6 +173,17 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
     );
   }
   // --------------------------------------
+
+  // Function to start the periodic refresh timer (Helper)
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel(); // Cancel any existing timer
+    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+       if (mounted) { // Check if mounted before fetching
+          fetchRouteData();
+       }
+    });
+     // Debug
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +210,7 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                             color: Palette.whiteColor,
                             borderRadius: BorderRadius.circular(16.0),
                             border: Border.all(
-                              color: Palette.blackColor.withOpacity(0.5),
+                              color: Palette.blackColor.withValues(alpha: 128),
                               width: 1,
                             ),
                           ),
@@ -216,6 +309,9 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                   ),
                   offset: const Offset(0, kToolbarHeight * 0.8),
                   onSelected: (String value) {
+                    // Stop timer only for actions that show a dialog or require selection
+                    _refreshTimer?.cancel();
+                    // Debug
                     switch (value) {
                       case 'add':
                         _handleAddRoute();
@@ -259,7 +355,7 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                    decoration: BoxDecoration(
                       color: Palette.whiteColor,
                       borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -267,6 +363,9 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                       TextButton(
                         child: const Text('Cancel', style: TextStyle(color: Colors.red)),
                         onPressed: () {
+                          // Debug
+                          _refreshTimer?.cancel();
+                          _startRefreshTimer(); // Restart timer
                           setState(() {
                             _pendingAction = null;
                             _selectedRowIndex = null;
@@ -287,15 +386,23 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                         onPressed: isRowSelected
                             ? () {
                                 final selectedData = routeData[_selectedRowIndex!];
-                                if (_pendingAction == 'edit') {
-                                  _handleEditRoute(selectedData);
-                                } else if (_pendingAction == 'delete') {
-                                  _handleDeleteRoute(selectedData);
-                                }
+                                // Timer already cancelled by PopupMenuButton onSelected
+
+                                // Store pending action locally
+                                String? actionToPerform = _pendingAction;
+
+                                // Reset state immediately
                                 setState(() {
                                   _pendingAction = null;
                                   _selectedRowIndex = null;
                                 });
+
+                                // Execute action (handlers will restart timer)
+                                if (actionToPerform == 'edit') {
+                                  _handleEditRoute(selectedData);
+                                } else if (actionToPerform == 'delete') {
+                                  _handleDeleteRoute(selectedData);
+                                }
                               }
                             : null,
                         child: Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}'),
