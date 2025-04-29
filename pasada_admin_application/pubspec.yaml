@@ -44,7 +44,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  supabase_flutter: ^2.8.4
 
 flutter:
   uses-material-design: true
