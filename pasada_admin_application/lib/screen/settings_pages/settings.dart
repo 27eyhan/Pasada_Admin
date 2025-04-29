@@ -82,7 +82,6 @@ class _SettingsState extends State<Settings> {
           );
         }
          else {
-          print("$title container clicked");
         }
       },
       child: Container(

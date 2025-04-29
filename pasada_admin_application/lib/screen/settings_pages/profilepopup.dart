@@ -38,7 +38,6 @@ class _ProfilePopupState extends State<ProfilePopup> {
         });
       }
     } catch (e) {
-      print('Error fetching admin data: $e');
       if (mounted) {
         setState(() {
           isLoading = false;
