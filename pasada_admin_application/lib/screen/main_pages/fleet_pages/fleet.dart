@@ -254,7 +254,7 @@ class _FleetState extends State<Fleet> {
     return Container(
       height: 80.0,
       width: 1.0,
-      color: Palette.blackColor.withOpacity(0.5),
+      color: Palette.blackColor.withValues(alpha: 128),
       margin: const EdgeInsets.symmetric(horizontal: 8.0),
     );
   }

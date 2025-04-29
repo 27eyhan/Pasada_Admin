@@ -2,10 +2,10 @@ import 'package:flutter/painting.dart';
 
 class Palette {
   static const Color whiteColor = Color(0xFFF5F5F5);
-  static const Color greenColor = Color.fromARGB(255, 0, 204, 88);
-  static const Color yellowColor = Color.fromARGB(255, 255, 243, 33);
-  static const Color orangeColor = Color.fromARGB(255, 255, 206, 33);
-  static const Color redColor = Color.fromARGB(255, 215, 72, 29);
-  static const Color blackColor = Color.fromARGB(255, 18, 18, 18);
-  static const Color greyColor = Color.fromARGB(255, 223, 221, 221);
+  static const Color greenColor = Color(0xFF00CC58);
+  static const Color yellowColor = Color(0xFFFFF321);
+  static const Color orangeColor = Color(0xFFFFCE21);
+  static const Color redColor = Color(0xFFD7481D);
+  static const Color blackColor = Color(0xFF121212);
+  static const Color greyColor = Color(0xFFDFDDDD);
 }
