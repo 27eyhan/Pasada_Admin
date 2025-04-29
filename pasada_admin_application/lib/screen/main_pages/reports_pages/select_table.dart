@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_table.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_tables/admin_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/driver_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/passenger_tables/passenger_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/driverarch_table.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_table.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/route_table.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/vehicle_table.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/route_tables/route_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/ridehistory_table.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/adminarch_table.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_tables/adminarch_table.dart';
 
 class SelectTable extends StatefulWidget {
   @override
