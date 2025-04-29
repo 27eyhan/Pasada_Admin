@@ -4,6 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+// Import dialogs
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/edit_vehicle_dialog.dart';
 
 class VehicleTableScreen extends StatefulWidget {
   const VehicleTableScreen({Key? key}) : super(key: key);
@@ -28,6 +31,7 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
       fetchVehicleData();
     });
+    // Debug
   }
 
   @override
@@ -47,7 +51,7 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
     try {
       // Retrieve all columns from 'vehicleTable'
       final data = await supabase.from('vehicleTable').select('*');
-      print("Fetched vehicle data: $data"); // Debug: verify data retrieval
+      // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) { // Check if the widget is still mounted
         setState(() {
@@ -62,20 +66,97 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
         });
       }
     }
+    // Restart timer after fetch completes or fails
+    // _startRefreshTimer(); 
+    // print("Vehicle Timer potentially restarted after fetch"); // Debug
   }
 
   // --- Action Handlers (Placeholders) ---
-  void _handleAddVehicle() {
-    _showInfoSnackBar('Add Vehicle functionality not yet implemented.');
+  void _handleAddVehicle() async {
+    _refreshTimer?.cancel();
+
+    try {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AddVehicleDialog(
+            supabase: supabase,
+            onVehicleActionComplete: fetchVehicleData,
+          );
+        },
+      );
+    } finally {
+      _startRefreshTimer(); // Restart timer when dialog closes
+    }
   }
 
-  void _handleEditVehicle(Map<String, dynamic> selectedVehicleData) {
-    _showInfoSnackBar('Edit Vehicle functionality not yet implemented.');
+  void _handleEditVehicle(Map<String, dynamic> selectedVehicleData) async {
+    _refreshTimer?.cancel();
+
+    try {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return EditVehicleDialog(
+            supabase: supabase,
+            onVehicleActionComplete: fetchVehicleData,
+            vehicleData: selectedVehicleData,
+          );
+        },
+      );
+    } finally {
+      _startRefreshTimer(); // Restart timer when dialog closes
+    }
   }
 
-  void _handleDeleteVehicle(Map<String, dynamic> selectedVehicleData) {
-    _showInfoSnackBar('Delete Vehicle functionality not yet implemented.');
-    // Possibly call fetchVehicleData() again after deletion
+  void _handleDeleteVehicle(Map<String, dynamic> selectedVehicleData) async {
+    final vehicleId = selectedVehicleData['vehicle_id'];
+    final plateNumber = selectedVehicleData['plate_number']?.toString() ?? 'ID: $vehicleId';
+    _refreshTimer?.cancel();
+
+    bool? confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Palette.whiteColor,
+          title: const Text('Confirm Deletion'),
+          contentPadding: const EdgeInsets.all(24.0),
+          content: Text('Are you sure you want to delete vehicle $plateNumber?'),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    _startRefreshTimer(); // Restart timer regardless of outcome
+
+    if (confirmed == true) {
+      try {
+        await supabase
+            .from('vehicleTable')
+            .delete()
+            .match({'vehicle_id': vehicleId});
+
+        _showInfoSnackBar('Vehicle $plateNumber deleted successfully.');
+        fetchVehicleData(); // Refresh data after deletion
+
+      } catch (e) {
+        _showInfoSnackBar('Error deleting vehicle: ${e.toString()}');
+      }
+    } else {
+    }
   }
 
   void _showInfoSnackBar(String message) {
@@ -87,6 +168,17 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
     );
   }
   // --------------------------------------
+
+  // Function to start the periodic refresh timer (Helper)
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel(); // Cancel any existing timer
+    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+       if (mounted) { // Check if mounted before fetching
+          fetchVehicleData();
+       }
+    });
+     // Debug
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +294,10 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                   ),
                   offset: const Offset(0, kToolbarHeight * 0.8),
                   onSelected: (String value) {
+                    // Stop timer only for actions that show a dialog or require selection
+                    _refreshTimer?.cancel();
+                    // Debug
+
                     switch (value) {
                       case 'add':
                         _handleAddVehicle();
@@ -245,7 +341,7 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                    decoration: BoxDecoration(
                       color: Palette.whiteColor,
                       borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -253,6 +349,9 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                       TextButton(
                         child: const Text('Cancel', style: TextStyle(color: Colors.red)),
                         onPressed: () {
+                          // Debug
+                          _refreshTimer?.cancel(); 
+                          _startRefreshTimer(); // Restart timer
                           setState(() {
                             _pendingAction = null;
                             _selectedRowIndex = null;
@@ -273,15 +372,23 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                         onPressed: isRowSelected
                             ? () {
                                 final selectedData = vehicleData[_selectedRowIndex!];
-                                if (_pendingAction == 'edit') {
-                                  _handleEditVehicle(selectedData);
-                                } else if (_pendingAction == 'delete') {
-                                  _handleDeleteVehicle(selectedData);
-                                }
+                                // Timer already cancelled by PopupMenuButton onSelected
+
+                                // Store pending action locally
+                                String? actionToPerform = _pendingAction;
+
+                                // Reset state immediately
                                 setState(() {
                                   _pendingAction = null;
                                   _selectedRowIndex = null;
                                 });
+
+                                // Execute action (handlers will restart timer)
+                                if (actionToPerform == 'edit') {
+                                  _handleEditVehicle(selectedData);
+                                } else if (actionToPerform == 'delete') {
+                                  _handleDeleteVehicle(selectedData);
+                                }
                               }
                             : null,
                         child: Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}'),
