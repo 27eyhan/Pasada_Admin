@@ -42,7 +42,6 @@ class _DriversState extends State<Drivers> {
     try {
       // Get all columns from 'driverTable'
       final data = await supabase.from('driverTable').select('*');
-      print("Fetched driver data: $data");
 
       final List listData = data as List;
       setState(() {
@@ -68,7 +67,6 @@ class _DriversState extends State<Drivers> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error fetching driver data: $e');
       setState(() {
         isLoading = false;
       });

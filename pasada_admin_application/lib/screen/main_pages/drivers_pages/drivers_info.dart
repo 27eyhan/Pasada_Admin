@@ -10,7 +10,7 @@ class DriverInfo extends StatefulWidget {
   const DriverInfo({
     Key? key, 
     required this.driver,
-    this.initialEditMode = false, // Default to false if not provided
+    this.initialEditMode = false,
   }) : super(key: key);
 
   @override
@@ -91,27 +91,6 @@ class _DriverInfoState extends State<DriverInfo> {
     );
 
     try {
-      // Check for duplicate driver number
-      final duplicateDriverNumber = await _checkForDuplicateData(
-        'driver_number', 
-        _driverNumberController.text,
-        widget.driver['driver_id'].toString(),
-      );
-      
-      if (duplicateDriverNumber) {
-        // Close loading dialog
-        Navigator.pop(context);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Driver number already exists for another driver'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Check for duplicate vehicle ID if it's not empty
       if (_vehicleIdController.text.isNotEmpty) {
         final duplicateVehicleId = await _checkForDuplicateData(
           'vehicle_id', 
@@ -148,7 +127,6 @@ class _DriverInfoState extends State<DriverInfo> {
           .update(updatedDriver)
           .eq('driver_id', widget.driver['driver_id']);
       
-      print('Driver updated successfully: ${widget.driver['driver_id']}');
       
       // Close loading dialog
       Navigator.pop(context);
@@ -171,7 +149,6 @@ class _DriverInfoState extends State<DriverInfo> {
           backgroundColor: Colors.red,
         ),
       );
-      print('Error updating driver: $e');
     }
   }
 
@@ -191,7 +168,6 @@ class _DriverInfoState extends State<DriverInfo> {
       
       return response != null;
     } catch (e) {
-      print('Error checking for duplicate $field: $e');
       return false;
     }
   }
@@ -255,7 +231,6 @@ class _DriverInfoState extends State<DriverInfo> {
         setState(() {});
       }
     }).catchError((error) {
-      print('Error fetching driver activity logs: $error');
       // Fallback to last_online in case of error
       if (widget.driver['last_online'] != null) {
         try {
@@ -284,7 +259,6 @@ class _DriverInfoState extends State<DriverInfo> {
       
       return response;
     } catch (e) {
-      print('Error fetching driver activity logs: $e');
       return [];
     }
   }
@@ -333,7 +307,6 @@ class _DriverInfoState extends State<DriverInfo> {
       _generateHeatMapData();
       
     } catch (e) {
-      print('Error logging driver activity: $e');
     }
   }
 
