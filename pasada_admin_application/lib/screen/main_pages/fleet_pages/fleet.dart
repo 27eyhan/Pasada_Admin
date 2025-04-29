@@ -36,7 +36,6 @@ class _FleetState extends State<Fleet> {
   Future<void> fetchVehicleData() async {
     try {
       final data = await supabase.from('vehicleTable').select('*');
-
       final List listData = data as List;
       if (mounted) {
         setState(() {
