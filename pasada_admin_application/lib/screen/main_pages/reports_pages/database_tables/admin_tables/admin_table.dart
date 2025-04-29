@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_tables/edit_admin_dialog.dart';
 
 class AdminTableScreen extends StatefulWidget {
   const AdminTableScreen({Key? key}) : super(key: key);
@@ -18,15 +19,15 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
   bool isLoading = true;
   Timer? _refreshTimer;
   int? _selectedRowIndex; // State variable to track selected row index
-  String? _pendingAction; // State variable for pending edit/delete action
+  String? _pendingAction; // Reintroduce state variable for pending edit action
+  int _selectionWarningCounter = 0; // Counter for selection warning
 
   @override
   void initState() {
     super.initState();
     fetchAdminData();
-    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
-      fetchAdminData();
-    });
+    // Use helper to start timer initially
+    _startRefreshTimer(); 
   }
 
   @override
@@ -38,14 +39,12 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
   Future<void> fetchAdminData() async {
     setState(() {
       _selectedRowIndex = null;
-      _pendingAction = null; // Also reset pending action on refresh
+      _pendingAction = null; // Reset pending action on refresh
       isLoading = true;
     });
     try {
       final data = await supabase.from('adminTable').select('*');
-      print("Fetched data: $data");
       final List listData = data as List;
-      // Check if the widget is still mounted before calling setState
       if (mounted) {
         setState(() {
           adminData = listData.cast<Map<String, dynamic>>();
@@ -53,31 +52,46 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching admin data: $e');
-      // Check if the widget is still mounted before calling setState
       if (mounted) {
         setState(() {
           isLoading = false;
         });
       }
+      _showInfoSnackBar('Error fetching admin data: ${e.toString()}');
     }
   }
 
-  // --- Action Handlers (Placeholders) ---
-  void _handleAddAdmin() {
-    print("Add Admin action triggered");
-    _showInfoSnackBar('Add Admin functionality not yet implemented.');
+  void _handleEditAdmin(Map<String, dynamic> selectedAdminData) async {
+    // Timer is already cancelled by the Continue button or PopupMenu
+
+    bool? updateSuccess = false; // Variable to store dialog result
+    try {
+      // Await the result from showDialog
+      updateSuccess = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false, 
+        builder: (BuildContext context) {
+          return EditAdminDialog(
+            supabase: supabase,
+            adminData: selectedAdminData,
+          );
+        },
+      );
+    } finally {
+      // Restart timer when the dialog is closed regardless of outcome
+      _startRefreshTimer(); 
+      // Fetch data only if update was successful (dialog returned true)
+      if (updateSuccess == true) {
+          fetchAdminData();
+      }
+    }
   }
 
-  void _handleEditAdmin(Map<String, dynamic> selectedAdminData) {
-    print("Edit Admin action triggered for: ${selectedAdminData['admin_id']}");
-    _showInfoSnackBar('Edit Admin functionality not yet implemented.');
-  }
-
-  void _handleDeleteAdmin(Map<String, dynamic> selectedAdminData) {
-    print("Delete Admin action triggered for: ${selectedAdminData['admin_id']}");
-    _showInfoSnackBar('Delete Admin functionality not yet implemented.');
-    // Possibly call fetchAdminData() again after deletion
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel(); 
+    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+       if (mounted) fetchAdminData();
+    });
   }
 
   void _showInfoSnackBar(String message) {
@@ -88,11 +102,9 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
       ),
     );
   }
-  // --------------------------------------
 
   @override
   Widget build(BuildContext context) {
-    // Determine if Continue button should be enabled
     final bool isRowSelected = _selectedRowIndex != null;
 
     return Scaffold(
@@ -128,20 +140,27 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                               DataColumn(label: Text('Password')),
                               DataColumn(label: Text('Created At')),
                             ],
-                            rows: adminData.asMap().entries.map((entry) { // Use asMap().entries to get index
+                            rows: adminData.asMap().entries.map((entry) {
                               final int index = entry.key;
                               final Map<String, dynamic> admin = entry.value;
                               // Determine if row selection should be active
-                              final bool allowSelection = _pendingAction != null;
+                              final bool allowSelection = _pendingAction == 'edit';
 
                               return DataRow(
-                                // Only show selection highlight if allowed AND this row is selected
+                                // Highlight selected row only when selection is allowed
                                 selected: allowSelection && (_selectedRowIndex == index),
-                                // Only allow selection change if allowed
-                                onSelectChanged: allowSelection 
+                                // Enable selection change only when allowed
+                                onSelectChanged: allowSelection
                                   ? (bool? selected) {
                                     setState(() {
                                       if (selected ?? false) {
+                                        // Show warning only if selecting a DIFFERENT row when one is already selected
+                                         if (_selectedRowIndex != null && _selectedRowIndex != index) {
+                                            if (_selectionWarningCounter < 3) { // Limit warnings
+                                               _showInfoSnackBar('Only one admin can be selected at a time');
+                                               _selectionWarningCounter++;
+                                            }
+                                         }
                                         _selectedRowIndex = index;
                                       } else {
                                         // Deselect if clicked again
@@ -150,15 +169,15 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                                         }
                                       }
                                     });
-                                  } 
-                                  : null, // Pass null to disable selection when no action is pending
+                                  }
+                                  : null, // Disable selection if not in edit mode
                                 cells: [
                                   DataCell(Text(admin['admin_id'].toString())),
                                   DataCell(Text(admin['first_name'].toString())),
                                   DataCell(Text(admin['last_name'].toString())),
                                   DataCell(Text(admin['admin_mobile_number'].toString())),
                                   DataCell(Text(admin['admin_username']?.toString() ?? 'N/A')),
-                                  DataCell(Text(admin['admin_password'].toString())), // Careful displaying passwords
+                                  DataCell(Text(admin['admin_password'].toString())),
                                   DataCell(Text(admin['created_at'].toString())),
                                 ],
                               );
@@ -180,6 +199,10 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                   iconSize: 28.0,
                   icon: const Icon(Icons.arrow_back, color: Palette.blackColor),
                   onPressed: () {
+                    // Always cancel timer and pending action when going back
+                    _refreshTimer?.cancel();
+                    _pendingAction = null;
+                    _selectedRowIndex = null;
                     Navigator.pop(context);
                   },
                 ),
@@ -188,72 +211,60 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
           ),
           Positioned(
             top: 26.0,
-            right: 26.0, // Position to the right
+            right: 26.0,
             child: SafeArea(
               child: Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: Palette.blackColor, width: 1.0),
                   borderRadius: BorderRadius.circular(30.0),
-                  color: Palette.whiteColor, // Match background or style as needed
+                  color: Palette.whiteColor,
                 ),
+                // Use PopupMenuButton again for consistency and clear action initiation
                 child: PopupMenuButton<String>(
                   icon: const Icon(Icons.edit, color: Palette.blackColor),
-                  tooltip: 'Actions',
-                  color: Palette.whiteColor, // Background color
-                  elevation: 8.0, // Add elevation for shadow effect
-                  shape: RoundedRectangleBorder( // Shape with rounded corners and border
+                  tooltip: 'Edit Admin', // Simplified tooltip
+                  color: Palette.whiteColor, 
+                  elevation: 8.0, 
+                  shape: RoundedRectangleBorder( 
                     borderRadius: BorderRadius.circular(10.0),
-                    side: BorderSide(color: Palette.greyColor, width: 1.0), // Add black border
+                    side: BorderSide(color: Palette.greyColor, width: 1.0),
                   ),
-                  offset: const Offset(0, kToolbarHeight * 0.8), // Position below the button
+                  offset: const Offset(0, kToolbarHeight * 0.8), 
                   onSelected: (String value) {
-                    switch (value) {
-                      case 'add':
-                        _handleAddAdmin(); // Add still happens directly
-                        break;
-                      case 'edit':
-                      case 'delete':
-                        // Set pending action instead of direct call
-                        setState(() {
-                          _pendingAction = value;
-                        });
-                        // Optional: Show snackbar immediately if no row is selected
-                        // if (_selectedRowIndex == null) {
-                        //   _showInfoSnackBar('Please select a row to $_pendingAction.');
-                        // }
-                        break;
+                     // Only action is 'edit'
+                    if (value == 'edit') {
+                       _refreshTimer?.cancel(); // Stop timer to allow selection
+                       setState(() {
+                          _pendingAction = 'edit';
+                          _selectedRowIndex = null; // Clear selection when starting edit mode
+                          _selectionWarningCounter = 0; // Reset warning counter
+                       });
+                       _showInfoSnackBar('Please select an admin row to edit.');
                     }
                   },
                   itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                     const PopupMenuItem<String>(
-                      value: 'add',
-                      child: Text('Add Admin'),
-                    ),
-                    const PopupMenuItem<String>(
                       value: 'edit',
                       child: Text('Edit Selected'),
                     ),
-                    const PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Text('Delete Selected'),
-                    ),
+                     // No Add or Delete options
                   ],
                 ),
               ),
             ),
           ),
-          // Confirmation Buttons (New)
+          // Reintroduce Confirmation Buttons
           Positioned(
             bottom: 16.0,
-            left: 0, // Align to left edge
-            right: 0, // Align to right edge
-            child: Center( // Center the row horizontally
+            left: 0, 
+            right: 0, 
+            child: Center( 
               child: Visibility(
-                visible: _pendingAction != null, // Show only when an action is pending
+                visible: _pendingAction == 'edit', // Show only when edit is pending
                 child: Container(
                    padding: const EdgeInsets.all(8.0),
                    decoration: BoxDecoration(
-                      color: Palette.whiteColor, // Semi-transparent background
+                      color: Palette.whiteColor, 
                       borderRadius: BorderRadius.circular(10.0),
                       boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
@@ -264,9 +275,10 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                       TextButton(
                         child: const Text('Cancel', style: TextStyle(color: Colors.red)),
                         onPressed: () {
+                           _startRefreshTimer(); // Restart timer on cancel
                           setState(() {
                             _pendingAction = null;
-                            _selectedRowIndex = null; // Deselect row on cancel
+                            _selectedRowIndex = null; 
                           });
                         },
                       ),
@@ -274,40 +286,39 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                       // Continue Button
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isRowSelected ? Colors.green : Colors.grey, // Dynamic color
+                          backgroundColor: isRowSelected ? Colors.green : Colors.grey, 
                           foregroundColor: Palette.whiteColor,
-                          disabledBackgroundColor: Colors.grey[400], // Grey when disabled
+                          disabledBackgroundColor: Colors.grey[400], 
                           disabledForegroundColor: Colors.white70,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                         ),
-                        // Disable onPressed if no row is selected
+                        // Enable only if a row is selected
                         onPressed: isRowSelected 
                             ? () {
-                                // Execute pending action
                                 final selectedData = adminData[_selectedRowIndex!];
-                                if (_pendingAction == 'edit') {
-                                  _handleEditAdmin(selectedData);
-                                } else if (_pendingAction == 'delete') {
-                                  _handleDeleteAdmin(selectedData);
-                                }
-                                // Reset state after action
+                                // Timer already cancelled by PopupMenuButton onSelected
+
+                                // Reset state *before* calling handler 
+                                // (Handler will restart timer in its finally block)
                                 setState(() {
                                   _pendingAction = null;
                                   _selectedRowIndex = null;
                                 });
+                                
+                                // Call the edit handler
+                                _handleEditAdmin(selectedData); 
                               }
                             : null,
-                        // Capitalize action word in button text
-                        child: Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}'),
+                        child: const Text('Continue Edit'), // Explicit text
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
-          ),
+              ), 
+            ), 
+          ), 
         ],
       ),
     );

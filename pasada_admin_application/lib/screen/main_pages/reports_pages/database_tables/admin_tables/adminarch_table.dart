@@ -47,7 +47,7 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
     try {
       // Fetch all columns from the 'adminArchives' table.
       final data = await supabase.from('adminArchives').select('*');
-      print("Fetched archive data: $data"); // Debug: verify data retrieval
+      // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) { // Check if the widget is still mounted
         setState(() {
@@ -56,7 +56,6 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching archive data: $e');
       if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
@@ -67,13 +66,11 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
 
   // --- Action Handlers (Placeholders) ---
    void _handleRestoreAdmin(Map<String, dynamic> selectedArchiveData) {
-    print("Restore Admin action triggered for: ${selectedArchiveData['admin_id']}");
     _showInfoSnackBar('Restore Admin functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after restoration
   }
 
   void _handleDeleteAdminPermanent(Map<String, dynamic> selectedArchiveData) {
-    print("Permanent Delete Admin action triggered for: ${selectedArchiveData['admin_id']}");
     _showInfoSnackBar('Permanent Delete Admin functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after deletion
   }
@@ -237,7 +234,7 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
                    decoration: BoxDecoration(
                       color: Palette.whiteColor,
                       borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
