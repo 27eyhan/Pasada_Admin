@@ -48,7 +48,7 @@ class _PassengerArchTableScreenState extends State<PassengerArchTableScreen> {
       // Select all columns from the 'passengerArchives' table.
       // ********** Make sure 'passengerArchives' table exists in Supabase **********
       final data = await supabase.from('passengerArchives').select('*');
-      print("Fetched passenger archive data: $data"); // Debug: verify data retrieval
+      // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) { // Check if the widget is still mounted
         setState(() {
@@ -57,7 +57,6 @@ class _PassengerArchTableScreenState extends State<PassengerArchTableScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching passenger archive data: $e');
        if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
@@ -68,13 +67,13 @@ class _PassengerArchTableScreenState extends State<PassengerArchTableScreen> {
 
   // --- Action Handlers (Placeholders) ---
    void _handleRestorePassenger(Map<String, dynamic> selectedArchiveData) {
-    print("Restore Passenger action triggered for: ${selectedArchiveData['passenger_id']}"); // Adjust key if needed
+    // Adjust key if needed
     _showInfoSnackBar('Restore Passenger functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after restoration
   }
 
   void _handleDeletePassengerPermanent(Map<String, dynamic> selectedArchiveData) {
-    print("Permanent Delete Passenger action triggered for: ${selectedArchiveData['passenger_id']}"); // Adjust key if needed
+    // Adjust key if needed
     _showInfoSnackBar('Permanent Delete Passenger functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after deletion
   }
@@ -114,7 +113,7 @@ class _PassengerArchTableScreenState extends State<PassengerArchTableScreen> {
                             color: Palette.whiteColor,
                             borderRadius: BorderRadius.circular(16.0),
                             border: Border.all(
-                              color: Palette.blackColor.withOpacity(0.5),
+                              color: Palette.blackColor.withValues(alpha: 128),
                               width: 1,
                             ),
                           ),
@@ -239,7 +238,7 @@ class _PassengerArchTableScreenState extends State<PassengerArchTableScreen> {
                    decoration: BoxDecoration(
                       color: Palette.whiteColor,
                       borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
                    child: Row(
                     mainAxisSize: MainAxisSize.min,

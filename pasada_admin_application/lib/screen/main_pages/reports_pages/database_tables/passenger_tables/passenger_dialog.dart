@@ -76,7 +76,6 @@ class _PassengerDialogState extends State<PassengerDialog> {
         };
 
         final passengerId = widget.passengerData!['id'];
-        print("Updating passenger ID: $passengerId");
         await widget.supabase
             .from('passenger')
             .update(passengerDetails)
@@ -94,7 +93,6 @@ class _PassengerDialogState extends State<PassengerDialog> {
 
       } catch (e) {
         setState(() { _isLoading = false; });
-        print('Error saving passenger (update): $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating passenger: ${e.toString()}')),
         );
