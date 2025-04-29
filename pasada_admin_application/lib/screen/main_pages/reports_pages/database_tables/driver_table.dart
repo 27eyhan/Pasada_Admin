@@ -5,6 +5,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/add_driver_dialog.dart';
 
 class DriverTableScreen extends StatefulWidget {
   const DriverTableScreen({Key? key}) : super(key: key);
@@ -21,19 +22,27 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
   int? _selectedRowIndex; // State variable to track selected row index
   String? _pendingAction; // State variable for pending edit/delete action
 
+  // Function to start the periodic refresh timer
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel(); // Cancel any existing timer
+    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+       if (mounted) { // Check if mounted before fetching
+          print("Timer refresh triggered");
+          fetchDriverData();
+       }
+    });
+     print("Refresh timer started"); // Debug
+  }
+
   @override
   void initState() {
     super.initState();
     fetchDriverData();
-    // Set up a periodic timer that refreshes every 30 seconds.
-    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
-      fetchDriverData();
-    });
+    _startRefreshTimer(); // Start the timer initially
   }
 
   @override
   void dispose() {
-    // Cancel the timer to prevent memory leaks.
     _refreshTimer?.cancel();
     super.dispose();
   }
@@ -66,31 +75,94 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
     }
   }
 
-  // --- Action Handlers (Placeholders) ---
-  void _handleAddDriver() {
+  // --- Action Handlers ---
+  void _handleAddDriver() async {
     print("Add Driver action triggered");
-    _showInfoSnackBar('Add Driver functionality not yet implemented.');
+    try {
+       await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AddDriverDialog(
+            supabase: supabase,
+            onDriverAdded: fetchDriverData,
+          );
+        },
+      );
+    } finally {
+       print("Add action finished, restarting timer"); // Debug
+      _startRefreshTimer(); // Restart timer when dialog closes
+    }
   }
 
-  void _handleEditDriver(Map<String, dynamic> selectedDriverData) {
+  void _handleEditDriver(Map<String, dynamic> selectedDriverData) async {
     print("Edit Driver action triggered for: ${selectedDriverData['driver_id']}");
     
-    // Show the driver info dialog with edit mode enabled
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return DriverInfo(
-          driver: selectedDriverData,
-          initialEditMode: true, // Pass true to start in edit mode
+    try {
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return DriverInfo(
+              driver: selectedDriverData,
+              initialEditMode: true,
+            );
+          },
         );
-      },
-    );
+     } finally {
+         print("Edit action finished, restarting timer"); // Debug
+         _startRefreshTimer(); // Restart timer when dialog closes
+     }
   }
 
-  void _handleDeleteDriver(Map<String, dynamic> selectedDriverData) {
-    print("Delete Driver action triggered for: ${selectedDriverData['driver_id']}");
-    _showInfoSnackBar('Delete Driver functionality not yet implemented.');
-    // Possibly call fetchDriverData() again after deletion
+  void _handleDeleteDriver(Map<String, dynamic> selectedDriverData) async {
+    final driverId = selectedDriverData['driver_id'];
+    final driverName = "${selectedDriverData['first_name'] ?? ''} ${selectedDriverData['last_name'] ?? ''}".trim();
+    print("Delete Driver action triggered for: $driverId");
+
+    try {
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Palette.whiteColor,
+            title: const Text('Confirm Deletion'),
+            contentPadding: const EdgeInsets.all(24.0),
+            content: Text('Are you sure you want to delete driver ${driverName.isNotEmpty ? driverName : 'ID: $driverId'}?'),
+            actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+              ),
+              TextButton(
+                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                onPressed: () async {
+                  Navigator.of(context).pop(); // Close the dialog first
+                  try {
+                    // Perform the delete operation
+                    await supabase
+                        .from('driverTable')
+                        .delete()
+                        .match({'driver_id': driverId});
+
+                    _showInfoSnackBar('Driver $driverId deleted successfully.');
+                    fetchDriverData(); // Refresh data after deletion
+
+                  } catch (e) {
+                    print('Error deleting driver: $e');
+                    _showInfoSnackBar('Error deleting driver: ${e.toString()}');
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+       print("Delete action finished, restarting timer"); // Debug
+      _startRefreshTimer(); // Restart timer when dialog closes
+    }
   }
 
   void _showInfoSnackBar(String message) {
@@ -227,6 +299,8 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                   ),
                   offset: const Offset(0, kToolbarHeight * 0.8),
                   onSelected: (String value) {
+                    _refreshTimer?.cancel(); // Cancel timer immediately
+                    print("Timer cancelled for action: $value"); // Debug
                     switch (value) {
                       case 'add':
                         _handleAddDriver();
@@ -270,7 +344,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                    decoration: BoxDecoration(
                       color: Palette.whiteColor,
                       borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.5), spreadRadius: 2, blurRadius: 5) ],
+                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
                    ),
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -278,6 +352,9 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                       TextButton(
                         child: const Text('Cancel', style: TextStyle(color: Colors.red)),
                         onPressed: () {
+                          print("Bottom cancel pressed, restarting timer"); // Debug
+                          _refreshTimer?.cancel(); // Cancel just in case
+                           _startRefreshTimer(); // Restart timer
                           setState(() {
                             _pendingAction = null;
                             _selectedRowIndex = null;
@@ -298,6 +375,9 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                         onPressed: isRowSelected
                             ? () {
                                 final selectedData = driverData[_selectedRowIndex!];
+                                _refreshTimer?.cancel(); // Cancel timer before action
+                                print("Timer cancelled for continue button action: $_pendingAction"); // Debug
+
                                 if (_pendingAction == 'edit') {
                                   _handleEditDriver(selectedData);
                                 } else if (_pendingAction == 'delete') {
