@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/edit_vehicle_dialog.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FleetData extends StatefulWidget {
   final Map<String, dynamic> vehicle;
-  const FleetData({Key? key, required this.vehicle}) : super(key: key);
+  final SupabaseClient supabase;
+  final VoidCallback onVehicleActionComplete;
+
+  const FleetData({
+    Key? key,
+    required this.vehicle,
+    required this.supabase,
+    required this.onVehicleActionComplete,
+  }) : super(key: key);
 
   @override
   _FleetDataState createState() => _FleetDataState();
@@ -12,8 +22,8 @@ class FleetData extends StatefulWidget {
 class _FleetDataState extends State<FleetData> {
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width * 0.7;
-    final double sideLength = screenWidth * 0.6;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double dialogWidth = screenWidth * 0.35;
     final vehicle = widget.vehicle;
 
     return Dialog(
@@ -22,20 +32,19 @@ class _FleetDataState extends State<FleetData> {
       ),
       backgroundColor: Palette.whiteColor,
       child: Container(
-        width: sideLength,
-        height: sideLength,
-        padding: const EdgeInsets.all(16.0),
+        width: dialogWidth,
+        padding: const EdgeInsets.all(20.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Fleet",
+                  "Fleet Details",
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Palette.blackColor,
                   ),
@@ -53,85 +62,70 @@ class _FleetDataState extends State<FleetData> {
             const SizedBox(height: 8.0),
             Divider(color: Palette.blackColor.withValues(alpha: 128)),
             const SizedBox(height: 16.0),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Vehicle ID: ${vehicle['vehicle_id']?.toString() ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8.0),
-                    Text(
-                      "Plate Number: ${vehicle['plate_number'] ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8.0),
-                    Text(
-                      "Passenger Capacity: ${vehicle['passenger_capacity']?.toString() ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8.0),
-                    Text(
-                      "Route ID: ${vehicle['route_id']?.toString() ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8.0),
-                    Text(
-                      "Vehicle Location: ${vehicle['vehicle_location'] ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        color: Palette.blackColor,
-                      ),
-                    ),
-                  ],
-                ),
+            SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailRow("Vehicle ID:", vehicle['vehicle_id']?.toString() ?? 'N/A'),
+                  _buildDetailRow("Plate Number:", vehicle['plate_number'] ?? 'N/A'),
+                  _buildDetailRow("Passenger Capacity:", vehicle['passenger_capacity']?.toString() ?? 'N/A'),
+                  _buildDetailRow("Route ID:", vehicle['route_id']?.toString() ?? 'N/A'),
+                  _buildDetailRow("Vehicle Location:", vehicle['vehicle_location'] ?? 'N/A'),
+                ],
               ),
             ),
+            const SizedBox(height: 24.0),
             Align(
               alignment: Alignment.bottomRight,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Palette.whiteColor,
                   foregroundColor: Palette.blackColor,
-                  elevation: 6.0,
+                  elevation: 4.0,
                   shadowColor: Colors.grey,
-                  side: BorderSide(color: Colors.grey, width: 1.0),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+                    side: BorderSide(color: Palette.blackColor, width: 0.5),
+                    borderRadius: BorderRadius.circular(8.0),
                   ),
                   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 ),
                 onPressed: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return EditVehicleDialog(
+                        supabase: widget.supabase,
+                        onVehicleActionComplete: widget.onVehicleActionComplete,
+                        vehicleData: widget.vehicle,
+                        openedFromFleetData: true,
+                      );
+                    },
+                  );
                 },
-                child: Text(
+                child: const Text(
                   "Manage Vehicle",
                   style: TextStyle(
                     fontSize: 16,
-                    color: Palette.blackColor,
                   ),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Text(
+        "$label $value",
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 16,
+          color: Palette.blackColor,
         ),
       ),
     );

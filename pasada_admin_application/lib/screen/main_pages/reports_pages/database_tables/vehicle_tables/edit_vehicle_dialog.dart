@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/screen/main_pages/fleet_pages/fleet_data.dart'; // Import FleetData
 
 class EditVehicleDialog extends StatefulWidget {
   final SupabaseClient supabase;
   final VoidCallback onVehicleActionComplete;
   final Map<String, dynamic> vehicleData; // Required data for editing
+  final bool openedFromFleetData; // Add flag
 
   const EditVehicleDialog({
     Key? key,
     required this.supabase,
     required this.onVehicleActionComplete,
     required this.vehicleData,
+    this.openedFromFleetData = false, // Default to false
   }) : super(key: key);
 
   @override
@@ -191,7 +194,24 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                      children: <Widget>[
                         TextButton(
                            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                           onPressed: _isLoading ? null : () {
+                             // Close current dialog first
+                             Navigator.of(context).pop(); 
+                             
+                             // If opened from FleetData, reopen it
+                             if (widget.openedFromFleetData) {
+                               showDialog(
+                                 context: context,
+                                 builder: (BuildContext context) {
+                                   return FleetData(
+                                     vehicle: widget.vehicleData,
+                                     supabase: widget.supabase,
+                                     onVehicleActionComplete: widget.onVehicleActionComplete,
+                                   );
+                                 },
+                               );
+                             }
+                           },
                         ),
                         const SizedBox(width: 8.0),
                         ElevatedButton(

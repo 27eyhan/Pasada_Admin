@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
@@ -16,6 +18,10 @@ class _FleetState extends State<Fleet> {
   List<Map<String, dynamic>> vehicleData = [];
   bool isLoading = true;
   int totalVehicles = 0;
+  int _onlineVehicles = 0;
+  int _idlingVehicles = 0;
+  int _drivingVehicles = 0;
+  int _offlineVehicles = 0;
   Timer? _refreshTimer;
 
   @override
@@ -35,19 +41,80 @@ class _FleetState extends State<Fleet> {
 
   Future<void> fetchVehicleData() async {
     try {
-      final data = await supabase.from('vehicleTable').select('*');
-      final List listData = data as List;
+      final response = await supabase
+          .from('vehicleTable')
+          .select('*, driverTable!inner(driver_id, driving_status)');
+
+      final List listData = response as List;
+
+      int onlineCount = 0;
+      int idlingCount = 0;
+      int drivingCount = 0;
+      int offlineCount = 0;
+      int totalCount = listData.length;
+      for (var item in listData) {
+        final vehicle = item as Map<String, dynamic>;
+        final driverData = vehicle['driverTable'];
+
+        String? status = 'Offline';
+        if (driverData != null && driverData is List && driverData.isNotEmpty) {
+          final driverMap = driverData.first as Map<String, dynamic>?;
+          if (driverMap != null) {
+            status = driverMap['driving_status'] as String?;
+          }
+        }
+
+        switch (status) {
+          case 'Online':
+            onlineCount++; 
+            break;
+          case 'Driving':
+            drivingCount++; 
+            break;
+          case 'Idling':
+            idlingCount++;
+            break;
+          default:
+            break;
+        }
+      }
+
+      offlineCount = totalCount - onlineCount - idlingCount - drivingCount;
+
       if (mounted) {
         setState(() {
-          vehicleData = listData.cast<Map<String, dynamic>>();
-          totalVehicles = vehicleData.length;
+          vehicleData = listData.cast<Map<String, dynamic>>(); 
+          _onlineVehicles = onlineCount;
+          _idlingVehicles = idlingCount;
+          _drivingVehicles = drivingCount;
+          _offlineVehicles = offlineCount;
+          totalVehicles = totalCount; 
           isLoading = false;
         });
       }
-    } catch (e) {
+    } on PostgrestException {
       if (mounted) {
         setState(() {
           isLoading = false;
+          _onlineVehicles = 0;
+          _idlingVehicles = 0;
+          _drivingVehicles = 0;
+          _offlineVehicles = 0;
+          totalVehicles = 0;
+          vehicleData = [];
+        });
+      }
+    } catch (e) {
+
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          _onlineVehicles = 0;
+          _idlingVehicles = 0;
+          _drivingVehicles = 0;
+          _offlineVehicles = 0;
+          totalVehicles = 0;
+          vehicleData = [];
         });
       }
     }
@@ -82,8 +149,17 @@ class _FleetState extends State<Fleet> {
                         ],
                       ),
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Distribute space evenly
                         children: [
-                          _buildVehicleStatus("Total Vehicles", totalVehicles),
+                          _buildVehicleStatus("Online", _onlineVehicles, Palette.greenColor),
+                          _buildVerticalDivider(),
+                          _buildVehicleStatus("Idling", _idlingVehicles, Palette.orangeColor),
+                          _buildVerticalDivider(),
+                          _buildVehicleStatus("Driving", _drivingVehicles, Palette.greenColor.withAlpha(200)),
+                          _buildVerticalDivider(),
+                          _buildVehicleStatus("Offline", _offlineVehicles, Palette.redColor),
+                          _buildVerticalDivider(),
+                          _buildVehicleStatus("Total", totalVehicles, Palette.blackColor),
                         ],
                       ),
                     ),
@@ -115,7 +191,11 @@ class _FleetState extends State<Fleet> {
                                 showDialog(
                                   context: context,
                                   builder: (BuildContext context) {
-                                    return FleetData(vehicle: vehicle);
+                                    return FleetData(
+                                      vehicle: vehicle,
+                                      supabase: supabase,
+                                      onVehicleActionComplete: fetchVehicleData,
+                                    );
                                   },
                                 );
                               },
@@ -215,7 +295,7 @@ class _FleetState extends State<Fleet> {
     );
   }
 
-  Widget _buildVehicleStatus(String title, int count) {
+  Widget _buildVehicleStatus(String title, int count, Color countColor) {
     return Expanded(
       child: SizedBox(
         height: 100.0,
@@ -227,7 +307,7 @@ class _FleetState extends State<Fleet> {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 24.0,
-                color: Palette.blackColor,
+                color: countColor,
               ),
             ),
             const SizedBox(height: 8.0),
