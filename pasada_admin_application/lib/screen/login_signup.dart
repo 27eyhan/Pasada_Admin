@@ -141,8 +141,8 @@ class _LoginSignupState extends State<LoginSignup> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.circle, size: 58, color: Palette.blackColor),
-                        SizedBox(width: 8),
+                        Image.asset('assets/novadeci.png', width: 58, height: 58),
+                        SizedBox(width: 10),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.only(right: 16),
