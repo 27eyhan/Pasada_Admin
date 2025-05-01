@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
-import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
   @override

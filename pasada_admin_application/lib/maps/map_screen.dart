@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:pasada_admin_application/maps/maps_call_driver.dart'; // Import the service
 
 class Mapscreen extends StatefulWidget {
   const Mapscreen({super.key});
@@ -18,9 +20,13 @@ class MapsScreenState extends State<Mapscreen> {
   final Set<Polyline> _polylines = {};
   bool _isMapReady = false;
 
+  final DriverLocationService _driverLocationService = DriverLocationService(); // Instantiate the service
+  Timer? _locationUpdateTimer; // Timer for periodic updates
+
   @override
   void initState() {
     super.initState();
+    debugPrint('[MapsScreenState] initState called.');
     // For web platform, we need to ensure the Google Maps API is loaded
     if (kIsWeb) {
       // Check if API key is set
@@ -29,10 +35,11 @@ class MapsScreenState extends State<Mapscreen> {
         debugPrint('Warning: GOOGLE_MAPS_API_KEY is not set in .env file');
       }
       // Set a delay to ensure the API is loaded
+      // We still need this delay for the map widget itself on web
       Future.delayed(Duration(milliseconds: 500), () {
         if (mounted) {
           setState(() {
-            _isMapReady = true;
+            _isMapReady = true; // Mark map as ready for rendering
           });
         }
       });
@@ -41,18 +48,80 @@ class MapsScreenState extends State<Mapscreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _locationUpdateTimer?.cancel(); // Cancel the timer when the widget is disposed
+    debugPrint('[MapsScreenState] dispose called, timer cancelled.'); // Added log
+    super.dispose();
+  }
+
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
-    // Add initial markers here if needed
-    setState(() {
-      // _markers.add(
-      //   Marker(
-      //     markerId: MarkerId('manila_center'),
-      //     position: _center,
-      //     infoWindow: InfoWindow(title: 'Manila'),
-      //   ),
-      // );
+    debugPrint('[MapsScreenState] _onMapCreated called.');
+
+    // Ensure updates are started only once the controller is ready
+    // and the timer hasn't been started already.
+    if (_locationUpdateTimer == null || !_locationUpdateTimer!.isActive) {
+        debugPrint('[MapsScreenState] Map controller ready, starting location updates.');
+        _startLocationUpdates();
+    }
+
+    // No need for setState here unless other map configurations change
+    // setState(() { ... });
+  }
+
+  void _startLocationUpdates() {
+     // Fetch immediately first time
+    _updateDriverMarkers();
+    debugPrint('[MapsScreenState] Initial marker update requested.');
+
+    // Start periodic updates (e.g., every 15 seconds)
+    _locationUpdateTimer?.cancel(); // Cancel existing timer just in case
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+       debugPrint('[MapsScreenState] Timer fired. Requesting marker update.');
+       if (mounted) { // Check if the widget is still mounted
+        _updateDriverMarkers();
+       }
     });
+  }
+
+  Future<void> _updateDriverMarkers() async {
+    debugPrint('[MapsScreenState] _updateDriverMarkers called.');
+    List<Map<String, dynamic>> driverLocations = await _driverLocationService.fetchDriverLocations();
+    debugPrint('[MapsScreenState] Received driver locations: ${driverLocations.length} drivers.');
+
+    Set<Marker> updatedMarkers = {};
+
+    for (var driverData in driverLocations) {
+      final String driverId = driverData['driver_id'].toString();
+      final LatLng position = driverData['position'];
+      final String firstName = driverData['first_name'] ?? 'N/A';
+      final String lastName = driverData['last_name'] ?? 'N/A';
+      final String vehicleId = driverData['vehicle_id']?.toString() ?? 'N/A';
+      final String driverName = "$firstName $lastName".trim();
+
+      updatedMarkers.add(
+        Marker(
+          markerId: MarkerId(driverId),
+          position: position,
+          infoWindow: InfoWindow(
+            title: 'Driver: $driverName (ID: $driverId)',
+            snippet: 'Vehicle ID: $vehicleId\nLocation: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
+          ),
+          icon: BitmapDescriptor.defaultMarker, // Use default icon for now
+          // Optional: Use a custom icon for drivers
+          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        ),
+      );
+    }
+
+    if (mounted) {
+      setState(() {
+        _markers.clear();
+        _markers.addAll(updatedMarkers);
+        debugPrint('[MapsScreenState] setState called with ${updatedMarkers.length} markers.');
+      });
+    }
   }
 
   @override
