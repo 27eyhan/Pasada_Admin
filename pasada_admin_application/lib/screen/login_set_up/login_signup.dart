@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase
+import './login_password_util.dart'; // Import the password utility
 
 class LoginSignup extends StatefulWidget {
   @override
@@ -12,7 +13,6 @@ class _LoginSignupState extends State<LoginSignup> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final supabase = Supabase.instance.client; // Initialize Supabase client
-
   bool isRememberMe = false;
   bool isObscure = true;
   bool _isLoading = false; // Add loading state
@@ -62,14 +62,12 @@ class _LoginSignupState extends State<LoginSignup> {
         // Username not found even case-insensitively
         _showErrorSnackBar('Username not found.');
       } else {
-        // Potential user found, now perform strict case-sensitive checks in Dart
 
-        final String dbUsername = response['admin_username']; // Exact username from DB
-        final String dbPassword = response['admin_password']; // Exact password from DB
+        final String dbUsername = response['admin_username'];
+        final String dbHashedPassword = response['admin_password'];
 
-        // 2. Perform strict, case-sensitive comparison for BOTH username and password
-        if (enteredUsername == dbUsername && enteredPassword == dbPassword) {
-          // SUCCESS: Both username and password match exactly (case-sensitive)
+        if (enteredUsername == dbUsername && 
+            LoginPasswordUtil().checkPassword(enteredPassword, dbHashedPassword)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Successfully logged in.'),
