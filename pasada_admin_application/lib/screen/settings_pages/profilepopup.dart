@@ -25,10 +25,10 @@ class _ProfilePopupState extends State<ProfilePopup> {
     });
     
     try {
-      // Get logged-in admin username
       final response = await supabase
           .from('adminTable')
-          .select('*')
+          .select('admin_id, first_name, last_name, admin_username, admin_mobile_number, created_at')
+          .limit(1)
           .maybeSingle();
           
       if (mounted) {
@@ -38,6 +38,7 @@ class _ProfilePopupState extends State<ProfilePopup> {
         });
       }
     } catch (e) {
+      print('Error fetching admin data: $e');
       if (mounted) {
         setState(() {
           isLoading = false;

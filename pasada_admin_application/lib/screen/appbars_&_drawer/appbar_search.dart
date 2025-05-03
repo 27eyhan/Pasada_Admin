@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/screen/settings_pages/profilepopup.dart';
+import 'package:pasada_admin_application/screen/settings_pages/notifpopup.dart';
+import 'package:pasada_admin_application/screen/settings_pages/securitypopup.dart';
+import 'package:pasada_admin_application/screen/settings_pages/updatespopup.dart';
 
 class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
   @override
@@ -37,24 +41,6 @@ class _AppBarSearchState extends State<AppBarSearch> {
     });
   }
 
-  Widget _buildCircularIconButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    double iconSize = 30.0,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Palette.blackColor, width: 1.0),
-      ),
-      child: IconButton(
-        icon: Icon(icon, size: iconSize, color: Palette.blackColor),
-        onPressed: onPressed,
-        padding: const EdgeInsets.all(8.0),
-        splashRadius: 20.0,
-      ),
-    );
-  }
 
   Widget _buildMergedNotificationsAndMessages() {
     return Container(
@@ -195,19 +181,93 @@ class _AppBarSearchState extends State<AppBarSearch> {
             const SizedBox(width: 220.0),
             _buildMergedNotificationsAndMessages(),
             const SizedBox(width: 220.0),
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Palette.blackColor, width: 1.0),
-              ),
-              child: IconButton(
-                icon: Icon(Icons.account_circle, size: 30.0, color: Palette.blackColor),
-                onPressed: () {
-                  // Add your profile action here.
-                },
+            PopupMenuButton<String>(
+              offset: const Offset(0, 50),
+              child: Container(
                 padding: const EdgeInsets.all(8.0),
-                splashRadius: 20.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Palette.blackColor, width: 1.0),
+                ),
+                child: Icon(Icons.account_circle, size: 30.0, color: Palette.blackColor),
               ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                side: BorderSide(color: Palette.blackColor, width: 1.0),
+              ),
+              color: Palette.whiteColor,
+              onSelected: (String result) {
+                switch (result) {
+                  case 'profile':
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return ProfilePopup();
+                      },
+                    );
+                    break;
+                  case 'notification':
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return NotifPopUp();
+                      },
+                    );
+                    break;
+                  case 'security':
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return SecurityPopUp();
+                      },
+                    );
+                    break;
+                  case 'updates':
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return UpdatesPopup();
+                      },
+                    );
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'profile',
+                  child: Text('Profile'),
+                ),
+                const PopupMenuItem<String>(
+                  height: 1,
+                  padding: EdgeInsets.zero,
+                  enabled: false,
+                  child: Divider(color: Palette.greyColor, height: 1),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'notification',
+                  child: Text('Notification'),
+                ),
+                const PopupMenuItem<String>(
+                  height: 1,
+                  padding: EdgeInsets.zero,
+                  enabled: false,
+                  child: Divider(color: Palette.greyColor, height: 1),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'security',
+                  child: Text('Security'),
+                ),
+                const PopupMenuItem<String>(
+                  height: 1,
+                  padding: EdgeInsets.zero,
+                  enabled: false,
+                  child: Divider(color: Palette.greyColor, height: 1),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'updates',
+                  child: Text('Updates'),
+                ),
+              ],
             ),
           ],
         ),
