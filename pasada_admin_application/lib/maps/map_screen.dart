@@ -12,7 +12,7 @@ class Mapscreen extends StatefulWidget {
   State<Mapscreen> createState() => MapsScreenState();
 }
 
-class MapsScreenState extends State<Mapscreen> {
+class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixin {
   late GoogleMapController mapController;
   final LatLng _center =
       const LatLng(14.714213612467042, 120.9997533908128); // Novadeci route
@@ -22,6 +22,9 @@ class MapsScreenState extends State<Mapscreen> {
 
   final DriverLocationService _driverLocationService = DriverLocationService(); // Instantiate the service
   Timer? _locationUpdateTimer; // Timer for periodic updates
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -126,8 +129,10 @@ class MapsScreenState extends State<Mapscreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    debugPrint('[MapsScreenState] build called.');
+
     if (!_isMapReady && kIsWeb) {
-      // Show loading indicator while waiting for the Google Maps API to load
       return Center(
         child: CircularProgressIndicator(),
       );
@@ -148,13 +153,11 @@ class MapsScreenState extends State<Mapscreen> {
           zoomControlsEnabled: false,
           mapType: MapType.normal,
         ),
-        // Add a button to center on user location
         Positioned(
           top: 16,
           right: 16,
           child: FloatingActionButton(
-            onPressed: () {
-              // Add functionality to center on user location
+            onPressed: () {            // Add functionality to center on user location
               mapController.animateCamera(
                 CameraUpdate.newLatLng(_center),
               );
