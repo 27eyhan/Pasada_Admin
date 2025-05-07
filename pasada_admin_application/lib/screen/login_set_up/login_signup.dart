@@ -126,14 +126,16 @@ class _LoginSignupState extends State<LoginSignup> {
 
     return Scaffold(
       backgroundColor: Palette.whiteColor,
-      body: RawKeyboardListener(
+      body: Focus(
         focusNode: FocusNode(), // Needs a focus node to receive events
-        onKey: (RawKeyEvent event) {
-          if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+        onKeyEvent: (FocusNode node, KeyEvent event) {
+          if (event is KeyDownEvent &&
+              HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.enter)) {
             if (!_isLoading) { // Check if not already loading
               _login();
             }
           }
+          return KeyEventResult.ignored; // Or KeyEventResult.handled if you want to stop event propagation
         },
         child: Stack(
           children: [

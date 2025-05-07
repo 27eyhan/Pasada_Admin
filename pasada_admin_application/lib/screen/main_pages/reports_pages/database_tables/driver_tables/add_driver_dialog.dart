@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:bcrypt/bcrypt.dart';
 
 class AddDriverDialog extends StatefulWidget {
   final SupabaseClient supabase;
@@ -31,7 +32,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
     _lastNameController.dispose();
     _driverNumberController.dispose();
     _vehicleIdController.dispose();
-    _passwordController.dispose(); // Dispose password controller
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -87,16 +88,17 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         final String createdAt = DateTime.now().toIso8601String();
 
         // 3. Prepare data for insertion
+        final String hashedPassword = BCrypt.hashpw(_passwordController.text.trim(), BCrypt.gensalt());
         final newDriverData = {
           'driver_id': nextDriverId,
           'first_name': _firstNameController.text.trim(),
           'last_name': _lastNameController.text.trim(),
           'driver_number': _driverNumberController.text.trim(),
-          'driver_password': _passwordController.text.trim(), // Add password
-          'vehicle_id': vehicleId, // Use the parsed and validated vehicleId
+          'driver_password': hashedPassword,
+          'vehicle_id': vehicleId,
           'created_at': createdAt,
-          'driving_status': 'Offline', // Default status
-          'last_online': null, // Default last online
+          'driving_status': 'Offline',
+          'last_online': null,
         };
 
         // 4. Insert into Supabase
