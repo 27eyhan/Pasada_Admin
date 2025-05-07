@@ -12,10 +12,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pasada_admin_application/maps/google_maps_api.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+
+  // Initialize AuthService and load admin ID
+  final authService = AuthService();
+  await authService.loadAdminID();
 
   await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
@@ -35,18 +40,19 @@ Future<void> main() async {
     GoogleMapsApiInitializer.initialize();
   }
 
-  runApp(const MainApp());
+  runApp(MainApp(initialRoute: authService.currentAdminID != null ? '/dashboard' : '/login'));
 }
 
 class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+  final String initialRoute;
+  const MainApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Pasada',
-        home: LoginSignup(),
+        initialRoute: initialRoute,
         routes: {
           '/dashboard': (context) => Dashboard(),
           '/login': (context) => LoginSignup(),

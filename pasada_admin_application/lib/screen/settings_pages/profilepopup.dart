@@ -39,7 +39,7 @@ class _ProfilePopupState extends State<ProfilePopup> {
       }
       return;
     }
-
+    
     try {
       final response = await supabase
           .from('adminTable')

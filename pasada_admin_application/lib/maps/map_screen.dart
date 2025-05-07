@@ -14,6 +14,7 @@ class Mapscreen extends StatefulWidget {
 
 class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixin {
   late GoogleMapController mapController;
+  GoogleMapController? _internalMapController;
   final LatLng _center =
       const LatLng(14.714213612467042, 120.9997533908128); // Novadeci route
   final Set<Marker> _markers = {};
@@ -53,24 +54,28 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
 
   @override
   void dispose() {
-    _locationUpdateTimer?.cancel(); // Cancel the timer when the widget is disposed
-    debugPrint('[MapsScreenState] dispose called, timer cancelled.'); // Added log
-    super.dispose();
+    debugPrint('[MapsScreenState] dispose starts.');
+    _locationUpdateTimer?.cancel();
+    debugPrint('[MapsScreenState] Timer cancelled.');
+
+    // The GoogleMap widget itself handles the disposal of its controller and JS resources
+    // when it's removed from the widget tree. Explicitly meddling here is often not necessary
+    // and can cause issues if not done correctly in sync with the plugin's internal logic.
+    
+    // Ensure super.dispose() is called synchronously.
+    super.dispose(); 
+    debugPrint('[MapsScreenState] dispose finished (super.dispose() called).');
   }
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
+    // _internalMapController = controller; // Remove if not used elsewhere
     debugPrint('[MapsScreenState] _onMapCreated called.');
 
-    // Ensure updates are started only once the controller is ready
-    // and the timer hasn't been started already.
     if (_locationUpdateTimer == null || !_locationUpdateTimer!.isActive) {
         debugPrint('[MapsScreenState] Map controller ready, starting location updates.');
         _startLocationUpdates();
     }
-
-    // No need for setState here unless other map configurations change
-    // setState(() { ... });
   }
 
   void _startLocationUpdates() {

@@ -197,7 +197,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
                 side: BorderSide(color: Palette.blackColor, width: 1.0),
               ),
               color: Palette.whiteColor,
-              onSelected: (String result) {
+              onSelected: (String result) async {
                 switch (result) {
                   case 'profile':
                     final currentAdminID = AuthService().currentAdminID;
@@ -241,7 +241,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
                     );
                     break;
                   case 'logout':
-                    AuthService().clearAdminID();
+                    await AuthService().clearAdminID();
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/login', 

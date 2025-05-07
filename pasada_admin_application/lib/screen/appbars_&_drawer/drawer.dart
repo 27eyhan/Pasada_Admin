@@ -104,6 +104,13 @@ class _MyDrawerState extends State<MyDrawer> {
               routeName: '/fleet',
               currentRoute: currentRoute,
             ),
+            _createDrawerItem(
+              context: context,
+              icon: Icons.person,
+              text: 'Drivers',
+              routeName: '/drivers',
+              currentRoute: currentRoute,
+            ),
             // --- Reports ListTile with dropdown ---
             GestureDetector(
               onTap: () {
@@ -179,13 +186,6 @@ class _MyDrawerState extends State<MyDrawer> {
                   ],
                 ),
               ),
-            _createDrawerItem(
-              context: context,
-              icon: Icons.person,
-              text: 'Drivers',
-              routeName: '/drivers',
-              currentRoute: currentRoute,
-            ),
             _createDrawerItem(
               context: context,
               icon: Icons.assistant,

@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
-import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
 
 class DriverTableScreen extends StatefulWidget {
@@ -96,15 +95,6 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
     
     try {
         // Await the boolean result from the DriverInfo dialog
-        final bool? saveSuccess = await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) {
-            return DriverInfo(
-              driver: selectedDriverData,
-              initialEditMode: true,
-            );
-          },
-        );
         fetchDriverData();
         
     } finally {

@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AuthService {
   // Private constructor to prevent external instantiation
   AuthService._internal();
@@ -10,20 +12,44 @@ class AuthService {
     return _instance;
   }
 
-  // The logged-in admin ID
+  static const String _adminIdKey = 'adminID';
+  SharedPreferences? _prefs;
   int? _adminID;
+
+  Future<void> _initPrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+  }
+
+  Future<void> loadAdminID() async {
+    await _initPrefs();
+    _adminID = _prefs?.getInt(_adminIdKey);
+    if (_adminID != null) {
+      print("AuthService: Admin ID loaded from prefs: $_adminID");
+    } else {
+      print("AuthService: No Admin ID found in prefs.");
+    }
+  }
 
   // Getter to access the ID
   int? get currentAdminID => _adminID;
 
   // Method to set the ID (e.g., after login)
-  void setAdminID(int? id) {
+  Future<void> setAdminID(int? id) async {
+    await _initPrefs();
     _adminID = id;
-    print("AuthService: Admin ID set to $_adminID"); // For debugging
+    if (id != null) {
+      await _prefs?.setInt(_adminIdKey, id);
+      print("AuthService: Admin ID set to $_adminID and saved to prefs");
+    } else {
+      await _prefs?.remove(_adminIdKey); // Also clear from prefs if id is null
+      print("AuthService: Admin ID set to null and removed from prefs");
+    }
   }
 
-  void clearAdminID() {
+  Future<void> clearAdminID() async {
+    await _initPrefs();
     _adminID = null;
-    print("AuthService: Admin ID cleared."); // For debugging
+    await _prefs?.remove(_adminIdKey);
+    print("AuthService: Admin ID cleared from state and prefs.");
   }
 } 

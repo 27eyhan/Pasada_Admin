@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Added for LogicalKeyboardKey
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import './login_password_util.dart';
@@ -18,10 +19,22 @@ class _LoginSignupState extends State<LoginSignup> {
   bool isObscure = true;
   bool _isLoading = false; // Add loading state
 
+  // FocusNodes for text fields
+  final FocusNode _usernameFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Add listener to focus nodes if needed for other purposes
+  }
+
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+    _usernameFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -76,7 +89,7 @@ class _LoginSignupState extends State<LoginSignup> {
             ),
           );
           // Store the adminID in the AuthService
-          AuthService().setAdminID(adminID);
+          await AuthService().setAdminID(adminID);
           // Navigate without arguments
           Navigator.pushReplacementNamed(context, '/dashboard');
         } else {
@@ -113,110 +126,124 @@ class _LoginSignupState extends State<LoginSignup> {
 
     return Scaffold(
       backgroundColor: Palette.whiteColor,
-      body: Stack(
-        children: [
-          Positioned(
-            top: 250,
-            left: horizontalPadding,
-            right: horizontalPadding,
-            child: Container(
-              height: 500,
-              padding: EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Palette.whiteColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Palette.blackColor),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 51),
-                    spreadRadius: 5,
-                    blurRadius: 15,
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Image.asset('assets/novadeci.png', width: 58, height: 58),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Text(
-                              "Novadeci Transport Cooperative",
-                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              softWrap: false,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 56),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "Log-in to your account",
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding: EdgeInsets.only(left: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildRichText('Enter your ', 'Username'),
-                                SizedBox(height: 8),
-                                _buildTextField(
-                                  "Enter your username",
-                                  _usernameController,
-                                ),
-                                SizedBox(height: 24),
-                                _buildRichText('Enter your ', 'password.'),
-                                SizedBox(height: 8),
-                                _buildPasswordField(_passwordController),
-                                SizedBox(height: 28),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: ElevatedButton(
-                                    onPressed: _login,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      minimumSize: Size(170, 50),
-                                    ),
-                                    child: _isLoading 
-                                           ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-                                           : Text("Log-in"),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+      body: RawKeyboardListener(
+        focusNode: FocusNode(), // Needs a focus node to receive events
+        onKey: (RawKeyEvent event) {
+          if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+            if (!_isLoading) { // Check if not already loading
+              _login();
+            }
+          }
+        },
+        child: Stack(
+          children: [
+            Positioned(
+              top: 250,
+              left: horizontalPadding,
+              right: horizontalPadding,
+              child: Container(
+                height: 500,
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Palette.whiteColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Palette.blackColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 51),
+                      spreadRadius: 5,
+                      blurRadius: 15,
                     ),
                   ],
                 ),
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Image.asset('assets/novadeci.png', width: 58, height: 58),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: Text(
+                                "Novadeci Transport Cooperative",
+                                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                softWrap: false,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 56),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "Log-in to your account",
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Padding(
+                              padding: EdgeInsets.only(left: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildRichText('Enter your ', 'Username'),
+                                  SizedBox(height: 8),
+                                  _buildTextField(
+                                    "Enter your username",
+                                    _usernameController,
+                                    _usernameFocusNode, // Pass focus node
+                                  ),
+                                  SizedBox(height: 24),
+                                  _buildRichText('Enter your ', 'password.'),
+                                  SizedBox(height: 8),
+                                  _buildPasswordField(
+                                    _passwordController,
+                                    _passwordFocusNode, // Pass focus node
+                                  ),
+                                  SizedBox(height: 28),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: ElevatedButton(
+                                      onPressed: _login,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.black,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(5),
+                                        ),
+                                        minimumSize: Size(170, 50),
+                                      ),
+                                      child: _isLoading 
+                                             ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                                             : Text("Log-in"),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -243,9 +270,10 @@ class _LoginSignupState extends State<LoginSignup> {
     );
   }
 
-  TextField _buildTextField(String hintText, TextEditingController controller) {
+  TextField _buildTextField(String hintText, TextEditingController controller, FocusNode focusNode) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(
@@ -255,9 +283,10 @@ class _LoginSignupState extends State<LoginSignup> {
     );
   }
 
-  TextField _buildPasswordField(TextEditingController controller) {
+  TextField _buildPasswordField(TextEditingController controller, FocusNode focusNode) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: isObscure,
       decoration: InputDecoration(
         hintText: "Enter your password",

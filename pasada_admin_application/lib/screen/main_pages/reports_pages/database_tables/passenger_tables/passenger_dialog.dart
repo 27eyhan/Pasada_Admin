@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
-import 'package:uuid/uuid.dart';
 
 class PassengerDialog extends StatefulWidget {
   final SupabaseClient supabase;
