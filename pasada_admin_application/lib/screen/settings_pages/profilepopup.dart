@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 class ProfilePopup extends StatefulWidget {
+  const ProfilePopup({Key? key}) : super(key: key);
+
   @override
   _ProfilePopupState createState() => _ProfilePopupState();
 }
@@ -24,11 +27,24 @@ class _ProfilePopupState extends State<ProfilePopup> {
       isLoading = true;
     });
     
+    final currentAdminID = AuthService().currentAdminID;
+
+    if (currentAdminID == null) {
+      print("Error in ProfilePopup: Admin ID not found in AuthService.");
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          adminData = null;
+        });
+      }
+      return;
+    }
+
     try {
       final response = await supabase
           .from('adminTable')
           .select('admin_id, first_name, last_name, admin_username, admin_mobile_number, created_at')
-          .limit(1)
+          .eq('admin_id', currentAdminID)
           .maybeSingle();
           
       if (mounted) {
@@ -59,7 +75,7 @@ class _ProfilePopupState extends State<ProfilePopup> {
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width * 0.7;
+    final double screenWidth = MediaQuery.of(context).size.width * 0.6;
     final double sideLength = screenWidth * 0.6;
     
     return Dialog(

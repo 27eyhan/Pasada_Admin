@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
-import 'package:uuid/uuid.dart'; // Import the uuid package
+import 'package:uuid/uuid.dart';
 
 class PassengerDialog extends StatefulWidget {
   final SupabaseClient supabase;
-  final VoidCallback onPassengerActionComplete; // Renamed callback
-  final Map<String, dynamic>? passengerData; // Optional data for editing
+  final VoidCallback onPassengerActionComplete;
+  final Map<String, dynamic>? passengerData;
   final bool isEditMode;
 
   const PassengerDialog({
@@ -14,7 +14,7 @@ class PassengerDialog extends StatefulWidget {
     required this.supabase,
     required this.onPassengerActionComplete,
     this.passengerData,
-    this.isEditMode = false, // Default to false (Add mode)
+    this.isEditMode = false,
   }) : super(key: key);
 
   @override
