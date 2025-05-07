@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase
-import './login_password_util.dart'; // Import the password utility
+import 'package:supabase_flutter/supabase_flutter.dart';
+import './login_password_util.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 class LoginSignup extends StatefulWidget {
   @override
@@ -19,7 +20,6 @@ class _LoginSignupState extends State<LoginSignup> {
 
   @override
   void dispose() {
-    // Dispose controllers when the widget is disposed
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -49,11 +49,10 @@ class _LoginSignupState extends State<LoginSignup> {
     }
 
     try {
-      // 1. Find potential user by username (case-insensitive initial lookup)
-      //    We select the exact username and password stored in the DB for later comparison.
+
       final response = await supabase
           .from('adminTable')
-          .select('admin_username, admin_password')
+          .select('admin_id, admin_username, admin_password')
           .ilike('admin_username', enteredUsername) // Find potential match ignoring case
           .limit(1)
           .maybeSingle();
@@ -65,6 +64,7 @@ class _LoginSignupState extends State<LoginSignup> {
 
         final String dbUsername = response['admin_username'];
         final String dbHashedPassword = response['admin_password'];
+        final int adminID = response['admin_id'];
 
         if (enteredUsername == dbUsername && 
             LoginPasswordUtil().checkPassword(enteredPassword, dbHashedPassword)) {
@@ -75,9 +75,11 @@ class _LoginSignupState extends State<LoginSignup> {
               duration: Duration(seconds: 2),
             ),
           );
+          // Store the adminID in the AuthService
+          AuthService().setAdminID(adminID);
+          // Navigate without arguments
           Navigator.pushReplacementNamed(context, '/dashboard');
         } else {
-          // FAILURE: EITHER username case didn't match OR password didn't match
           _showErrorSnackBar('Invalid username or password.');
         }
       }

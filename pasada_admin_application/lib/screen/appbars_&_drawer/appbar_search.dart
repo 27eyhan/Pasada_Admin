@@ -4,6 +4,7 @@ import 'package:pasada_admin_application/screen/settings_pages/profilepopup.dart
 import 'package:pasada_admin_application/screen/settings_pages/notifpopup.dart';
 import 'package:pasada_admin_application/screen/settings_pages/securitypopup.dart';
 import 'package:pasada_admin_application/screen/settings_pages/updatespopup.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
   @override
@@ -130,7 +131,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
                     ),
                     suffixIcon: _showClearButton
                         ? IconButton(
-                            icon: Icon(Icons.clear, color: Palette.blackColor.withOpacity(0.6)),
+                            icon: Icon(Icons.clear, color: Palette.blackColor.withAlpha(128)),
                             onPressed: () {
                               _searchController.clear();
                             },
@@ -199,10 +200,19 @@ class _AppBarSearchState extends State<AppBarSearch> {
               onSelected: (String result) {
                 switch (result) {
                   case 'profile':
+                    final currentAdminID = AuthService().currentAdminID;
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
-                        return ProfilePopup();
+                        if (currentAdminID != null) {
+                          return ProfilePopup();
+                        } else {
+                          return AlertDialog(
+                            title: Text("Error"),
+                            content: Text("Could not load profile. Admin ID missing."),
+                            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("OK"))],
+                          );
+                        }
                       },
                     );
                     break;
@@ -228,6 +238,14 @@ class _AppBarSearchState extends State<AppBarSearch> {
                       builder: (BuildContext context) {
                         return UpdatesPopup();
                       },
+                    );
+                    break;
+                  case 'logout':
+                    AuthService().clearAdminID();
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login', 
+                      (Route<dynamic> route) => false,
                     );
                     break;
                 }
@@ -266,6 +284,16 @@ class _AppBarSearchState extends State<AppBarSearch> {
                 const PopupMenuItem<String>(
                   value: 'updates',
                   child: Text('Updates'),
+                ),
+                const PopupMenuItem<String>(
+                  height: 1,
+                  padding: EdgeInsets.zero,
+                  enabled: false,
+                  child: Divider(color: Palette.greyColor, height: 1),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Text('Logout', style: TextStyle(color: Palette.redColor)),
                 ),
               ],
             ),
