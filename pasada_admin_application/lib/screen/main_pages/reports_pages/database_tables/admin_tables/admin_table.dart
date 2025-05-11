@@ -20,7 +20,7 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
   Timer? _refreshTimer;
   int? _selectedRowIndex; // State variable to track selected row index
   String? _pendingAction; // Reintroduce state variable for pending edit action
-  int _selectionWarningCounter = 0; // Counter for selection warning
+// Counter for selection warning
 
   @override
   void initState() {
@@ -119,7 +119,7 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                 : adminData.isEmpty
                     ? const Center(child: Text("No data found."))
                     : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
+                        scrollDirection: Axis.vertical,
                         child: Container(
                           margin: const EdgeInsets.all(16.0),
                           decoration: BoxDecoration(
@@ -131,14 +131,18 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                             ),
                           ),
                           child: DataTable(
+                            columnSpacing: 90.0, // Reduce column spacing
+                            horizontalMargin: 12.0, // Reduce horizontal margin
+                            headingRowHeight: 50.0, // Set heading row height
+                            dataRowMinHeight: 40.0, // Set minimum row height
+                            dataRowMaxHeight: 60.0, // Set maximum row height
+                            showCheckboxColumn: false, // Remove checkbox column
                             columns: const [
-                              DataColumn(label: Text('Admin ID')),
-                              DataColumn(label: Text('First Name')),
-                              DataColumn(label: Text('Last Name')),
-                              DataColumn(label: Text('Mobile Number')),
-                              DataColumn(label: Text('Admin Username')),
-                              DataColumn(label: Text('Password')),
-                              DataColumn(label: Text('Created At')),
+                              DataColumn(label: Text('Admin ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Name', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Mobile', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Username', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Created At', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                             ],
                             rows: adminData.asMap().entries.map((entry) {
                               final int index = entry.key;
@@ -154,13 +158,7 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                                   ? (bool? selected) {
                                     setState(() {
                                       if (selected ?? false) {
-                                        // Show warning only if selecting a DIFFERENT row when one is already selected
-                                         if (_selectedRowIndex != null && _selectedRowIndex != index) {
-                                            if (_selectionWarningCounter < 3) { // Limit warnings
-                                               _showInfoSnackBar('Only one admin can be selected at a time');
-                                               _selectionWarningCounter++;
-                                            }
-                                         }
+                                        // No need for warning logic with radio buttons
                                         _selectedRowIndex = index;
                                       } else {
                                         // Deselect if clicked again
@@ -172,13 +170,28 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                                   }
                                   : null, // Disable selection if not in edit mode
                                 cells: [
-                                  DataCell(Text(admin['admin_id'].toString())),
-                                  DataCell(Text(admin['first_name'].toString())),
-                                  DataCell(Text(admin['last_name'].toString())),
-                                  DataCell(Text(admin['admin_mobile_number'].toString())),
-                                  DataCell(Text(admin['admin_username']?.toString() ?? 'N/A')),
-                                  DataCell(Text(admin['admin_password'].toString())),
-                                  DataCell(Text(admin['created_at'].toString())),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        if (allowSelection)
+                                          Radio<int>(
+                                            value: index,
+                                            groupValue: _selectedRowIndex,
+                                            onChanged: (int? value) {
+                                              setState(() {
+                                                _selectedRowIndex = value;
+                                              });
+                                            },
+                                          ),
+                                        SizedBox(width: 8),
+                                        Text(admin['admin_id'].toString(), style: TextStyle(fontSize: 14.0)),
+                                      ],
+                                    )
+                                  ),
+                                  DataCell(Text('${admin['first_name'] ?? ''} ${admin['last_name'] ?? ''}', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(admin['admin_mobile_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(admin['admin_username']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(admin['created_at']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                 ],
                               );
                             }).toList(),
@@ -237,7 +250,7 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                        setState(() {
                           _pendingAction = 'edit';
                           _selectedRowIndex = null; // Clear selection when starting edit mode
-                          _selectionWarningCounter = 0; // Reset warning counter
+// Reset warning counter
                        });
                        _showInfoSnackBar('Please select an admin row to edit.');
                     }
@@ -272,8 +285,17 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Cancel Button
-                      TextButton(
-                        child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[200],
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                            side: BorderSide(color: Colors.grey[400]!),
+                          ),
+                        ),
                         onPressed: () {
                            _startRefreshTimer(); // Restart timer on cancel
                           setState(() {
@@ -281,27 +303,32 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                             _selectedRowIndex = null; 
                           });
                         },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cancel, size: 18),
+                            SizedBox(width: 8),
+                            Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8.0),
+                      const SizedBox(width: 15.0),
                       // Continue Button
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isRowSelected ? Colors.green : Colors.grey, 
+                          backgroundColor: isRowSelected ? Palette.greenColor : Colors.grey,
                           foregroundColor: Palette.whiteColor,
-                          disabledBackgroundColor: Colors.grey[400], 
-                          disabledForegroundColor: Colors.white70,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shadowColor: isRowSelected ? Palette.greenColor.withAlpha(128) : Colors.grey.withAlpha(128),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(10.0),
                           ),
                         ),
                         // Enable only if a row is selected
                         onPressed: isRowSelected 
                             ? () {
                                 final selectedData = adminData[_selectedRowIndex!];
-                                // Timer already cancelled by PopupMenuButton onSelected
-
-                                // Reset state *before* calling handler 
-                                // (Handler will restart timer in its finally block)
                                 setState(() {
                                   _pendingAction = null;
                                   _selectedRowIndex = null;
@@ -311,7 +338,14 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                                 _handleEditAdmin(selectedData); 
                               }
                             : null,
-                        child: const Text('Continue Edit'), // Explicit text
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit, size: 18),
+                            SizedBox(width: 8),
+                            Text('Continue Edit', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
