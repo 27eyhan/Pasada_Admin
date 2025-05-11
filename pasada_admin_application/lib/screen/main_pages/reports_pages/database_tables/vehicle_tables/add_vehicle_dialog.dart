@@ -122,48 +122,63 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double dialogWidth = screenWidth * 0.3;
+    final double dialogWidth = screenWidth * 0.35;
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(16.0),
+        side: BorderSide(color: Palette.greenColor, width: 2),
       ),
       backgroundColor: Palette.whiteColor,
       child: Container(
          width: dialogWidth,
-         padding: const EdgeInsets.all(20.0),
+         padding: const EdgeInsets.all(24.0),
          child: SingleChildScrollView(
             child: Column(
                mainAxisSize: MainAxisSize.min,
                crossAxisAlignment: CrossAxisAlignment.stretch,
                children: <Widget>[
+                  // Icon and title in a more prominent style
+                  Icon(Icons.directions_car_outlined, color: Palette.greenColor, size: 48),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
+                    padding: const EdgeInsets.only(bottom: 20.0),
                     child: Text(
                       'Add New Vehicle',
                       style: TextStyle(
-                        fontSize: 20.0,
+                        fontSize: 22.0,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.bold,
-                        color: Palette.blackColor,
+                        color: Palette.greenColor,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
+                  
+                  // Informative text
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Text(
+                      'Please fill in the details to add a new vehicle to the system.',
+                      style: TextStyle(fontSize: 14.0),
+                    ),
+                  ),
+                  
+                  // Form with improved styling
                   Form(
                     key: _formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        TextFormField(
+                        _buildFormField(
                           controller: _plateNumberController,
-                          decoration: const InputDecoration(labelText: 'Plate Number'),
+                          label: 'Plate Number',
+                          icon: Icons.credit_card,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter plate number' : null,
                         ),
-                         SizedBox(height: 8),
-                        TextFormField(
+                        _buildFormField(
                           controller: _routeIdController,
-                          decoration: const InputDecoration(labelText: 'Route ID'),
+                          label: 'Route ID',
+                          icon: Icons.route,
                           keyboardType: TextInputType.number,
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'Please enter route ID';
@@ -171,50 +186,121 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
                             return null;
                           },
                         ),
-                         SizedBox(height: 8),
-                        TextFormField(
+                        _buildFormField(
                           controller: _passengerCapacityController,
-                          decoration: const InputDecoration(labelText: 'Passenger Capacity'),
+                          label: 'Passenger Capacity',
+                          icon: Icons.people,
                           keyboardType: TextInputType.number,
-                           validator: (value) {
+                          validator: (value) {
                             if (value == null || value.isEmpty) return 'Please enter capacity';
                             if (int.tryParse(value) == null) return 'Please enter a valid number';
                             return null;
                           },
                         ),
-                        SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _vehicleLocationController,
-                          decoration: const InputDecoration(labelText: 'Vehicle Location'),
+                          label: 'Vehicle Location',
+                          icon: Icons.location_on,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter vehicle location' : null,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24.0),
+                  
+                  // Reduce spacing before buttons
+                  const SizedBox(height: 16.0),
+                  
+                  // Action buttons with enhanced styling
                   Row(
-                     mainAxisAlignment: MainAxisAlignment.end,
+                     mainAxisAlignment: MainAxisAlignment.center,
                      children: <Widget>[
-                        TextButton(
-                           child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                        ),
-                        const SizedBox(width: 8.0),
                         ElevatedButton(
                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: Colors.black,
+                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                              elevation: 3,
+                              minimumSize: Size(140, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                                side: BorderSide(color: Colors.grey[400]!),
+                              ),
+                           ),
+                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                           child: Row(
+                             mainAxisSize: MainAxisSize.min,
+                             children: [
+                               Icon(Icons.cancel, size: 20),
+                               SizedBox(width: 8),
+                               Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                             ],
+                           ),
+                        ),
+                        const SizedBox(width: 15.0),
+                        ElevatedButton(
+                           style: ElevatedButton.styleFrom(
+                              backgroundColor: Palette.greenColor,
                               foregroundColor: Palette.whiteColor,
+                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                              elevation: 3,
+                              minimumSize: Size(140, 50),
+                              shadowColor: Palette.greenColor.withAlpha(128),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
                            ),
                            onPressed: _isLoading ? null : _saveVehicle,
                            child: _isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Palette.whiteColor))
-                              : const Text('Save Vehicle'),
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Palette.whiteColor))
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.save, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Save Vehicle', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                                  ],
+                                ),
                         ),
                      ],
                   ),
                ],
             ),
          ),
+      ),
+    );
+  }
+  
+  // Helper method to build standardized form fields
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    required String? Function(String?) validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Palette.greenColor),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            borderSide: BorderSide(color: Colors.grey),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            borderSide: BorderSide(color: Palette.greenColor, width: 2.0),
+          ),
+          filled: true,
+          fillColor: Colors.grey[50],
+          contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+        ),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        validator: validator,
       ),
     );
   }

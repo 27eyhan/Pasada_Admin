@@ -113,50 +113,119 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
 
   void _handleDeleteVehicle(Map<String, dynamic> selectedVehicleData) async {
     final vehicleId = selectedVehicleData['vehicle_id'];
-    final plateNumber = selectedVehicleData['plate_number']?.toString() ?? 'ID: $vehicleId';
+    final plateNumber = selectedVehicleData['plate_number']?.toString() ?? 'N/A';
+    final routeId = selectedVehicleData['route_id']?.toString() ?? 'N/A';
+    final capacity = selectedVehicleData['passenger_capacity']?.toString() ?? 'N/A';
+    
     _refreshTimer?.cancel();
 
-    bool? confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Palette.whiteColor,
-          title: const Text('Confirm Deletion'),
-          contentPadding: const EdgeInsets.all(24.0),
-          content: Text('Are you sure you want to delete vehicle $plateNumber?'),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              onPressed: () => Navigator.of(context).pop(false),
+    try {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Palette.whiteColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.red, width: 2),
             ),
-            TextButton(
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onPressed: () => Navigator.of(context).pop(true),
+            icon: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
+            title: Text(
+              'Delete Vehicle Confirmation', 
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+              textAlign: TextAlign.center,
             ),
-          ],
-        );
-      },
-    );
+            contentPadding: const EdgeInsets.all(24.0),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('You are about to delete the following vehicle:'),
+                SizedBox(height: 16),
+                _buildInfoRow('Vehicle ID:', vehicleId.toString()),
+                _buildInfoRow('Plate Number:', plateNumber),
+                _buildInfoRow('Route ID:', routeId),
+                _buildInfoRow('Capacity:', capacity),
+                SizedBox(height: 16),
+                Text(
+                  'This action cannot be undone. All associated data will be permanently deleted.',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            actions: <Widget>[
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[200],
+                  foregroundColor: Colors.black,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+                child: const Text('Delete Vehicle', style: TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: () async {
+                  Navigator.of(context).pop(); // Close the dialog first
+                  try {
+                    // Show loading indicator
+                    _showInfoSnackBar('Deleting vehicle...');
+                    
+                    // Perform the delete operation
+                    await supabase
+                        .from('vehicleTable')
+                        .delete()
+                        .match({'vehicle_id': vehicleId});
 
-    _startRefreshTimer(); // Restart timer regardless of outcome
+                    _showInfoSnackBar('Vehicle $plateNumber deleted successfully.');
+                    fetchVehicleData(); // Refresh data after deletion
 
-    if (confirmed == true) {
-      try {
-        await supabase
-            .from('vehicleTable')
-            .delete()
-            .match({'vehicle_id': vehicleId});
-
-        _showInfoSnackBar('Vehicle $plateNumber deleted successfully.');
-        fetchVehicleData(); // Refresh data after deletion
-
-      } catch (e) {
-        _showInfoSnackBar('Error deleting vehicle: ${e.toString()}');
-      }
-    } else {
+                  } catch (e) {
+                    _showInfoSnackBar('Error deleting vehicle: ${e.toString()}');
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _startRefreshTimer(); // Restart timer when dialog closes
     }
+  }
+  
+  // Helper method to build info rows
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showInfoSnackBar(String message) {
@@ -198,7 +267,7 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                 : vehicleData.isEmpty
                     ? const Center(child: Text("No data found."))
                     : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
+                        scrollDirection: Axis.vertical,
                         child: Container(
                           margin: const EdgeInsets.all(16.0),
                           decoration: BoxDecoration(
@@ -210,13 +279,19 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                             ),
                           ),
                           child: DataTable(
+                            columnSpacing: 90.0, // Reduce column spacing
+                            horizontalMargin: 12.0, // Reduce horizontal margin
+                            headingRowHeight: 50.0, // Set heading row height
+                            dataRowMinHeight: 40.0, // Set minimum row height
+                            dataRowMaxHeight: 60.0, // Set maximum row height
+                            showCheckboxColumn: false, // Remove checkbox column
                             columns: const [
-                              DataColumn(label: Text('Vehicle ID')),
-                              DataColumn(label: Text('Plate Number')),
-                              DataColumn(label: Text('Route ID')),
-                              DataColumn(label: Text('Passenger Capacity')),
-                              DataColumn(label: Text('Vehicle Location')),
-                              DataColumn(label: Text('Created At')),
+                              DataColumn(label: Text('Vehicle ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Plate Number', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Route ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Capacity', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Location', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Created At', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                             ],
                             rows: vehicleData.asMap().entries.map((entry) { // Use asMap().entries
                                 final int index = entry.key;
@@ -239,12 +314,29 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                                   }
                                   : null,
                                 cells: [
-                                  DataCell(Text(vehicle['vehicle_id'].toString())),
-                                  DataCell(Text(vehicle['plate_number']?.toString() ?? 'N/A')),
-                                  DataCell(Text(vehicle['route_id']?.toString() ?? 'N/A')),
-                                  DataCell(Text(vehicle['passenger_capacity']?.toString() ?? 'N/A')),
-                                  DataCell(Text(vehicle['vehicle_location']?.toString() ?? 'N/A')),
-                                  DataCell(Text(vehicle['created_at'].toString())),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        if (allowSelection)
+                                          Radio<int>(
+                                            value: index,
+                                            groupValue: _selectedRowIndex,
+                                            onChanged: (int? value) {
+                                              setState(() {
+                                                _selectedRowIndex = value;
+                                              });
+                                            },
+                                          ),
+                                        SizedBox(width: 8),
+                                        Text(vehicle['vehicle_id'].toString(), style: TextStyle(fontSize: 14.0)),
+                                      ],
+                                    )
+                                  ),
+                                  DataCell(Text(vehicle['plate_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(vehicle['route_id']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(vehicle['passenger_capacity']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(vehicle['vehicle_location']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(vehicle['created_at'].toString(), style: TextStyle(fontSize: 14.0))),
                                 ],
                               );
                             }).toList(),
@@ -346,10 +438,18 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[200],
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                            side: BorderSide(color: Colors.grey[400]!),
+                          ),
+                        ),
                         onPressed: () {
-                          // Debug
                           _refreshTimer?.cancel(); 
                           _startRefreshTimer(); // Restart timer
                           setState(() {
@@ -357,16 +457,25 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                             _selectedRowIndex = null;
                           });
                         },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cancel, size: 18),
+                            SizedBox(width: 8),
+                            Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8.0),
+                      const SizedBox(width: 15.0),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isRowSelected ? Colors.green : Colors.grey,
+                          backgroundColor: isRowSelected ? (_pendingAction == 'edit' ? Palette.greenColor : (_pendingAction == 'delete' ? Colors.red : Colors.green)) : Colors.grey,
                           foregroundColor: Palette.whiteColor,
-                          disabledBackgroundColor: Colors.grey[400],
-                          disabledForegroundColor: Colors.white70,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shadowColor: isRowSelected ? (_pendingAction == 'edit' ? Palette.greenColor.withAlpha(128) : (_pendingAction == 'delete' ? Colors.red.withAlpha(128) : Colors.green.withAlpha(128))) : Colors.grey.withAlpha(128),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(10.0),
                           ),
                         ),
                         onPressed: isRowSelected
@@ -391,7 +500,15 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                                 }
                               }
                             : null,
-                        child: Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}'),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_pendingAction == 'edit' ? Icons.edit : (_pendingAction == 'delete' ? Icons.delete : Icons.check), size: 18),
+                            SizedBox(width: 8),
+                            Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}', 
+                                 style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     ],
                   ),

@@ -114,54 +114,122 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
   void _handleDeleteRoute(Map<String, dynamic> selectedRouteData) async {
     final routeId = selectedRouteData['route_id'];
     final routeName = selectedRouteData['route']?.toString() ?? 'ID: $routeId'; // Use route name or ID
+    final startingPlace = selectedRouteData['starting_place']?.toString() ?? 'N/A';
+    final endingPlace = selectedRouteData['ending_place']?.toString() ?? 'N/A';
+    
     _refreshTimer?.cancel();
 
-     bool? confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Palette.whiteColor,
-          title: const Text('Confirm Deletion'),
-          contentPadding: const EdgeInsets.all(24.0),
-          content: Text('Are you sure you want to delete route $routeName?'),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              onPressed: () => Navigator.of(context).pop(false),
+    try {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Palette.whiteColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.red, width: 2),
             ),
-            TextButton(
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onPressed: () => Navigator.of(context).pop(true),
+            icon: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
+            title: Text(
+              'Delete Route Confirmation', 
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+              textAlign: TextAlign.center,
             ),
-          ],
-        );
-      },
-    );
+            contentPadding: const EdgeInsets.all(24.0),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('You are about to delete the following route:'),
+                SizedBox(height: 16),
+                _buildInfoRow('Route ID:', routeId.toString()),
+                _buildInfoRow('Route Name:', routeName),
+                _buildInfoRow('Starting Place:', startingPlace),
+                _buildInfoRow('Ending Place:', endingPlace),
+                SizedBox(height: 16),
+                Text(
+                  'This action cannot be undone. All associated data will be permanently deleted.',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            actions: <Widget>[
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[200],
+                  foregroundColor: Colors.black,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+                child: const Text('Delete Route', style: TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: () async {
+                  Navigator.of(context).pop(); // Close the dialog first
+                  try {
+                    // Show loading indicator
+                    _showInfoSnackBar('Deleting route...');
+                    
+                    await supabase
+                        .from('driverRouteTable')
+                        .delete()
+                        .match({'route_id': routeId});
 
-    _startRefreshTimer(); // Restart timer regardless of outcome
+                    _showInfoSnackBar('Route $routeName deleted successfully.');
+                    fetchRouteData(); // Refresh data after deletion
 
-    if (confirmed == true) {
-      try {
-        await supabase
-            .from('driverRouteTable')
-            .delete()
-            .match({'route_id': routeId});
-
-        _showInfoSnackBar('Route $routeName deleted successfully.');
-        fetchRouteData(); // Refresh data after deletion
-
-      } catch (e) {
-        // Check for foreign key constraint violation (common issue)
-        if (e.toString().contains('violates foreign key constraint')) {
-           _showInfoSnackBar('Error: Cannot delete route. It might be assigned to a vehicle.');
-        } else {
-          _showInfoSnackBar('Error deleting route: ${e.toString()}');
-        }
-      }
-    } else {
+                  } catch (e) {
+                    // Check for foreign key constraint violation (common issue)
+                    if (e.toString().contains('violates foreign key constraint')) {
+                      _showInfoSnackBar('Error: Cannot delete route. It might be assigned to a vehicle.');
+                    } else {
+                      _showInfoSnackBar('Error deleting route: ${e.toString()}');
+                    }
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _startRefreshTimer(); // Restart timer when dialog closes
     }
+  }
+  
+  // Helper method to build info rows
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showInfoSnackBar(String message) {
@@ -215,23 +283,29 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                             ),
                           ),
                           child: DataTable(
+                            columnSpacing: 80.0, // Reduce column spacing
+                            horizontalMargin: 12.0, // Reduce horizontal margin
+                            headingRowHeight: 50.0, // Set heading row height
+                            dataRowMinHeight: 40.0, // Set minimum row height
+                            dataRowMaxHeight: 60.0, // Set maximum row height
+                            showCheckboxColumn: false, // Remove checkbox column
                             columns: const [
-                              DataColumn(label: Text('Route ID')),
-                              DataColumn(label: Text('Created At')),
-                              DataColumn(label: Text('Starting Place')),
-                              DataColumn(label: Text('Starting Location')),
-                              DataColumn(label: Text('Intermediate1 Place')),
-                              DataColumn(label: Text('Intermediate Location1')),
-                              DataColumn(label: Text('Intermediate2 Place')),
-                              DataColumn(label: Text('Intermediate Location2')),
-                              DataColumn(label: Text('Ending Place')),
-                              DataColumn(label: Text('Ending Location')),
-                              DataColumn(label: Text('Route')),
+                              DataColumn(label: Text('ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Route Name', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Origin', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Destination', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Description', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Status', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                             ],
                             rows: routeData.asMap().entries.map((entry) { // Use asMap().entries
                               final int index = entry.key;
                               final Map<String, dynamic> route = entry.value;
                               final bool allowSelection = _pendingAction != null;
+
+                              // Create a description from route data
+                              final String description = "Via ${route['intermediate1_place'] ?? 'N/A'} - ${route['intermediate2_place'] ?? 'N/A'}";
+                              // For status, we'll use a placeholder since it's not in the original data
+                              final String status = "Active"; // You may need to modify this based on your data model
 
                               return DataRow(
                                 selected: allowSelection && (_selectedRowIndex == index),
@@ -249,17 +323,46 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                                   }
                                   : null,
                                 cells: [
-                                  DataCell(Text(route['route_id'].toString())),
-                                  DataCell(Text(route['created_at'].toString())),
-                                  DataCell(Text(route['starting_place']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['starting_location']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['intermediate1_place']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['intermediate_location1']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['intermediate2_place']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['intermediate_location2']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['ending_place']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['ending_location']?.toString() ?? 'N/A')),
-                                  DataCell(Text(route['route']?.toString() ?? 'N/A')),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        if (allowSelection)
+                                          Radio<int>(
+                                            value: index,
+                                            groupValue: _selectedRowIndex,
+                                            onChanged: (int? value) {
+                                              setState(() {
+                                                _selectedRowIndex = value;
+                                              });
+                                            },
+                                          ),
+                                        SizedBox(width: 8),
+                                        Text(route['route_id'].toString(), style: TextStyle(fontSize: 14.0)),
+                                      ],
+                                    )
+                                  ),
+                                  DataCell(Text(route['route']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(route['starting_place']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(route['ending_place']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(description, style: TextStyle(fontSize: 14.0))),
+                                  DataCell(
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[100],
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.green[400]!),
+                                      ),
+                                      child: Text(
+                                        status,
+                                        style: TextStyle(
+                                          fontSize: 12.0,
+                                          color: Colors.green[800],
+                                          fontWeight: FontWeight.w600
+                                        ),
+                                      ),
+                                    )
+                                  ),
                                 ],
                               );
                             }).toList(),
@@ -360,8 +463,17 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[200],
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                            side: BorderSide(color: Colors.grey[400]!),
+                          ),
+                        ),
                         onPressed: () {
                           // Debug
                           _refreshTimer?.cancel();
@@ -371,16 +483,25 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                             _selectedRowIndex = null;
                           });
                         },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cancel, size: 18),
+                            SizedBox(width: 8),
+                            Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8.0),
+                      const SizedBox(width: 15.0),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isRowSelected ? Colors.green : Colors.grey,
+                          backgroundColor: isRowSelected ? (_pendingAction == 'edit' ? Palette.greenColor : (_pendingAction == 'delete' ? Colors.red : Colors.green)) : Colors.grey,
                           foregroundColor: Palette.whiteColor,
-                          disabledBackgroundColor: Colors.grey[400],
-                          disabledForegroundColor: Colors.white70,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shadowColor: isRowSelected ? (_pendingAction == 'edit' ? Palette.greenColor.withAlpha(128) : (_pendingAction == 'delete' ? Colors.red.withAlpha(128) : Colors.green.withAlpha(128))) : Colors.grey.withAlpha(128),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(10.0),
                           ),
                         ),
                         onPressed: isRowSelected
@@ -405,7 +526,15 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                                 }
                               }
                             : null,
-                        child: Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}'),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_pendingAction == 'edit' ? Icons.edit : (_pendingAction == 'delete' ? Icons.delete : Icons.check), size: 18),
+                            SizedBox(width: 8),
+                            Text('Continue ${_pendingAction == 'edit' ? 'Edit' : (_pendingAction == 'delete' ? 'Delete' : _pendingAction ?? '')}', 
+                                 style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     ],
                   ),

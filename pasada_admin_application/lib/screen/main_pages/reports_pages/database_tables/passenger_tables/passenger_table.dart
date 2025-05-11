@@ -20,7 +20,6 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
   Timer? _refreshTimer; // Timer variable for refreshing the state
   int? _selectedRowIndex; // State variable to track selected row index
   String? _pendingAction; // State variable for pending edit action
-  int _selectionWarningCounter = 0; // Counter for the selection warning snackbar
 
   // Function to start the periodic refresh timer
   void _startRefreshTimer() {
@@ -141,15 +140,21 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                             ),
                           ),
                           child: DataTable(
+                            columnSpacing: 70.0, // Reduce column spacing
+                            horizontalMargin: 12.0, // Reduce horizontal margin
+                            headingRowHeight: 50.0, // Set heading row height
+                            dataRowMinHeight: 40.0, // Set minimum row height
+                            dataRowMaxHeight: 60.0, // Set maximum row height
+                            showCheckboxColumn: false, // Remove checkbox column
                             columns: const [
-                              DataColumn(label: Text('Created At')),
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Contact Number')),
-                              DataColumn(label: Text('Passenger Email')),
-                              DataColumn(label: Text('Passenger Type')),
-                              DataColumn(label: Text('Valid ID')),
-                              DataColumn(label: Text('Last Login')),
-                              DataColumn(label: Text('ID')),
+                              DataColumn(label: Text('Created At', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Name', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Contact Number', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Passenger Email', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Passenger Type', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Valid ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Last Login', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                             ],
                             rows: passengerData.asMap().entries.map((entry) { // Use asMap().entries
                               final int index = entry.key;
@@ -165,13 +170,6 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                                   ? (bool? selected) {
                                     setState(() {
                                       if (selected ?? false) {
-                                         // Show warning only if selecting a DIFFERENT row when one is already selected
-                                         if (_selectedRowIndex != null && _selectedRowIndex != index) {
-                                            if (_selectionWarningCounter < 3) { // Limit warnings
-                                               _showInfoSnackBar('Only one passenger can be selected at a time');
-                                               _selectionWarningCounter++;
-                                            }
-                                         }
                                         _selectedRowIndex = index;
                                       } else {
                                         if (_selectedRowIndex == index) {
@@ -182,14 +180,31 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                                   }
                                   : null, // Disable selection if not in edit mode
                                 cells: [
-                                  DataCell(Text(passenger['created_at'].toString())),
-                                  DataCell(Text(passenger['display_name']?.toString() ?? 'N/A')),
-                                  DataCell(Text(passenger['contact_number']?.toString() ?? 'N/A')),
-                                  DataCell(Text(passenger['passenger_email']?.toString() ?? 'N/A')),
-                                  DataCell(Text(passenger['passenger_type']?.toString() ?? 'N/A')),
-                                  DataCell(Text(passenger['valid_id']?.toString() ?? 'N/A')),
-                                  DataCell(Text(passenger['last_login']?.toString() ?? 'N/A')),
-                                  DataCell(Text(passenger['id'].toString())),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        if (allowSelection)
+                                          Radio<int>(
+                                            value: index,
+                                            groupValue: _selectedRowIndex,
+                                            onChanged: (int? value) {
+                                              setState(() {
+                                                _selectedRowIndex = value;
+                                              });
+                                            },
+                                          ),
+                                        SizedBox(width: 8),
+                                        Text(passenger['created_at'].toString(), style: TextStyle(fontSize: 14.0)),
+                                      ],
+                                    )
+                                  ),
+                                  DataCell(Text(passenger['display_name']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(passenger['contact_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(passenger['passenger_email']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(passenger['passenger_type']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(passenger['valid_id']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(passenger['last_login']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(passenger['id'].toString(), style: TextStyle(fontSize: 14.0))),
                                 ],
                               );
                             }).toList(),
@@ -249,7 +264,6 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                        setState(() {
                           _pendingAction = 'edit';
                           _selectedRowIndex = null; // Clear selection
-                          _selectionWarningCounter = 0; // Reset counter
                        });
                        _showInfoSnackBar('Please select a passenger row to edit.');
                     } // No other actions
@@ -283,26 +297,43 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                    child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[200],
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                            side: BorderSide(color: Colors.grey[400]!),
+                          ),
+                        ),
                         onPressed: () {
                           _startRefreshTimer(); // Restart timer on cancel
                           setState(() {
                             _pendingAction = null;
                             _selectedRowIndex = null;
-                            _selectionWarningCounter = 0; // Reset counter
                           });
                         },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cancel, size: 18),
+                            SizedBox(width: 8),
+                            Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8.0),
+                      const SizedBox(width: 15.0),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isRowSelected ? Colors.green : Colors.grey,
+                          backgroundColor: isRowSelected ? Palette.greenColor : Colors.grey,
                           foregroundColor: Palette.whiteColor,
-                          disabledBackgroundColor: Colors.grey[400],
-                          disabledForegroundColor: Colors.white70,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          elevation: 3,
+                          shadowColor: isRowSelected ? Palette.greenColor.withAlpha(128) : Colors.grey.withAlpha(128),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(10.0),
                           ),
                         ),
                         onPressed: isRowSelected
@@ -314,7 +345,6 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                                 setState(() {
                                   _pendingAction = null;
                                   _selectedRowIndex = null;
-                                  _selectionWarningCounter = 0; // Reset counter
                                 });
 
                                 // Execute the edit action (handler will restart timer)
@@ -322,7 +352,14 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                                 
                               }
                             : null,
-                        child: const Text('Continue Edit'), // Explicit text
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit, size: 18),
+                            SizedBox(width: 8),
+                            Text('Continue Edit', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     ],
                   ),

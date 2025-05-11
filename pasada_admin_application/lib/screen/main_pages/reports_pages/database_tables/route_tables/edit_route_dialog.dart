@@ -109,111 +109,217 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(16.0),
+        side: BorderSide(color: Palette.orangeColor, width: 2),
       ),
       backgroundColor: Palette.whiteColor,
       child: Container(
          width: dialogWidth,
-         padding: const EdgeInsets.all(20.0),
+         padding: const EdgeInsets.all(24.0),
          child: SingleChildScrollView(
             child: Column(
                mainAxisSize: MainAxisSize.min,
                crossAxisAlignment: CrossAxisAlignment.stretch,
                children: <Widget>[
+                  // Icon and title
+                  Icon(Icons.edit_note, color: Palette.orangeColor, size: 48),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
+                    padding: const EdgeInsets.only(bottom: 20.0),
                     child: Text(
-                      'Edit Route',
+                      'Edit Route Information',
                       style: TextStyle(
-                        fontSize: 20.0,
+                        fontSize: 22.0,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.bold,
-                        color: Palette.blackColor,
+                        color: Palette.orangeColor,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
+                  
+                  // Non-editable fields
+                  _buildInfoRow('Route ID:', widget.routeData['route_id'].toString()),
+                  _buildInfoRow('Created At:', widget.routeData['created_at'].toString()),
+                  SizedBox(height: 16),
+                  
+                  // Form with improved styling
                   Form(
                     key: _formKey,
                      child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        TextFormField(
+                        _buildFormField(
                           controller: _startingPlaceController,
-                          decoration: const InputDecoration(labelText: 'Starting Place'),
+                          label: 'Starting Place',
+                          icon: Icons.location_on_outlined,
                           validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                         ),
-                         SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _startingLocationController,
-                          decoration: const InputDecoration(labelText: 'Starting Location (Lat, Lng)'),
+                          label: 'Starting Location (Lat, Lng)',
+                          icon: Icons.map_outlined,
                           validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                         ),
-                         SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _intermediate1PlaceController,
-                          decoration: const InputDecoration(labelText: 'Intermediate Place 1 (Optional)'),
+                          label: 'Intermediate Place 1 (Optional)',
+                          icon: Icons.location_on_outlined,
                         ),
-                         SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _intermediateLocation1Controller,
-                          decoration: const InputDecoration(labelText: 'Intermediate Location 1 (Optional)'),
+                          label: 'Intermediate Location 1 (Optional)',
+                          icon: Icons.map_outlined,
                         ),
-                        SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _intermediate2PlaceController,
-                          decoration: const InputDecoration(labelText: 'Intermediate Place 2 (Optional)'),
+                          label: 'Intermediate Place 2 (Optional)',
+                          icon: Icons.location_on_outlined,
                         ),
-                        SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _intermediateLocation2Controller,
-                          decoration: const InputDecoration(labelText: 'Intermediate Location 2 (Optional)'),
+                          label: 'Intermediate Location 2 (Optional)',
+                          icon: Icons.map_outlined,
                         ),
-                         SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _endingPlaceController,
-                          decoration: const InputDecoration(labelText: 'Ending Place'),
-                           validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                          label: 'Ending Place',
+                          icon: Icons.location_on_outlined,
+                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                         ),
-                         SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _endingLocationController,
-                          decoration: const InputDecoration(labelText: 'Ending Location (Lat, Lng)'),
-                           validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                          label: 'Ending Location (Lat, Lng)',
+                          icon: Icons.map_outlined,
+                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                         ),
-                         SizedBox(height: 8),
-                         TextFormField(
+                        _buildFormField(
                           controller: _routeController,
-                          decoration: const InputDecoration(labelText: 'Route Name/Code'),
+                          label: 'Route Name/Code',
+                          icon: Icons.label_outline,
                           validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24.0),
+                  
+                  const SizedBox(height: 16.0),
+                  
+                  // Action buttons with enhanced styling
                   Row(
-                     mainAxisAlignment: MainAxisAlignment.end,
+                     mainAxisAlignment: MainAxisAlignment.center,
                      children: <Widget>[
-                        TextButton(
-                           child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                        ),
-                        const SizedBox(width: 8.0),
                         ElevatedButton(
                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: Colors.black,
+                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                              elevation: 3,
+                              minimumSize: Size(140, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                                side: BorderSide(color: Colors.grey[400]!),
+                              ),
+                           ),
+                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                           child: Row(
+                             mainAxisSize: MainAxisSize.min,
+                             children: [
+                               Icon(Icons.cancel, size: 20),
+                               SizedBox(width: 8),
+                               Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                             ],
+                           ),
+                        ),
+                        const SizedBox(width: 15.0),
+                        ElevatedButton(
+                           style: ElevatedButton.styleFrom(
+                              backgroundColor: Palette.orangeColor,
                               foregroundColor: Palette.whiteColor,
+                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                              elevation: 3,
+                              minimumSize: Size(140, 50),
+                              shadowColor: Palette.orangeColor.withAlpha(128),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
                            ),
                            onPressed: _isLoading ? null : _updateRoute,
                            child: _isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Palette.whiteColor))
-                              : const Text('Save Changes'),
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Palette.whiteColor))
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.save, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                                  ],
+                                ),
                         ),
                      ],
                   ),
                ],
             ),
          ),
+      ),
+    );
+  }
+  
+  // Helper method to build read-only info rows
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Helper method to build form fields
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Palette.orangeColor),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            borderSide: BorderSide(color: Colors.grey),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            borderSide: BorderSide(color: Palette.orangeColor, width: 2.0),
+          ),
+          filled: true,
+          fillColor: Colors.grey[50],
+          contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+        ),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        validator: validator,
       ),
     );
   }
