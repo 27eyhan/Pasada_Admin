@@ -126,67 +126,83 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     // Calculate width slightly smaller than drivers_info.dart (e.g., 50%)
-    final double dialogWidth = screenWidth * 0.2;
+    final double dialogWidth = screenWidth * 0.35; // Made slightly wider
 
-    return Dialog( // Change AlertDialog to Dialog
+    return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(16.0),
+        side: BorderSide(color: Palette.greenColor, width: 2), // Changed to green
       ),
       backgroundColor: Palette.whiteColor,
-      child: Container( // Wrap content in a Container with specific width
+      child: Container(
          width: dialogWidth,
-         // Let height be determined by content, remove explicit height
-         padding: const EdgeInsets.all(20.0), // Adjust padding as needed
-         child: SingleChildScrollView( // Keep content scrollable
+         padding: const EdgeInsets.all(24.0),
+         child: SingleChildScrollView(
             child: Column(
                mainAxisSize: MainAxisSize.min,
-               crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch content to container width
+               crossAxisAlignment: CrossAxisAlignment.stretch,
                children: <Widget>[
-                  // Title (as a Text widget, Dialog doesn't have a title property)
+                  // Icon and title in a more prominent style
+                  Icon(Icons.person_add, color: Palette.greenColor, size: 48), // Changed to green
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
+                    padding: const EdgeInsets.only(bottom: 20.0),
                     child: Text(
                       'Add New Driver',
                       style: TextStyle(
-                        fontSize: 20.0,
+                        fontSize: 22.0,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.bold,
-                        color: Palette.blackColor,
+                        color: Palette.greenColor, // Changed to green
                       ),
-                      textAlign: TextAlign.center, // Center the title
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  // Form
+                  
+                  // Informative text
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Text(
+                      'Please fill in the details to add a new driver to the system.',
+                      style: TextStyle(fontSize: 14.0),
+                    ),
+                  ),
+                  
+                  // Form with improved styling
                   Form(
                     key: _formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        TextFormField(
+                        _buildFormField(
                           controller: _firstNameController,
-                          decoration: const InputDecoration(labelText: 'First Name'),
+                          label: 'First Name',
+                          icon: Icons.person_outline,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter first name' : null,
                         ),
-                        TextFormField(
+                        _buildFormField(
                           controller: _lastNameController,
-                          decoration: const InputDecoration(labelText: 'Last Name'),
+                          label: 'Last Name',
+                          icon: Icons.person_outline,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter last name' : null,
                         ),
-                        TextFormField(
+                        _buildFormField(
                           controller: _driverNumberController,
-                          decoration: const InputDecoration(labelText: 'Driver Number'),
+                          label: 'Driver Number',
+                          icon: Icons.phone,
                           keyboardType: TextInputType.phone,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter driver number' : null,
                         ),
-                        TextFormField( // Added Password Field
+                        _buildFormField(
                           controller: _passwordController,
-                          decoration: const InputDecoration(labelText: 'Password'),
-                          obscureText: true, // Hide password
+                          label: 'Password',
+                          icon: Icons.lock_outline,
+                          obscureText: true,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter a password' : null,
                         ),
-                        TextFormField(
+                        _buildFormField(
                           controller: _vehicleIdController,
-                          decoration: const InputDecoration(labelText: 'Vehicle ID'),
+                          label: 'Vehicle ID',
+                          icon: Icons.directions_car_outlined,
                           keyboardType: TextInputType.number,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -201,31 +217,103 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24.0), // Spacing before actions
-                  // Actions (as a Row)
+                  
+                  // Reduce the spacing before buttons
+                  const SizedBox(height: 16.0),
+                  
+                  // Actions with enhanced styling
                   Row(
-                     mainAxisAlignment: MainAxisAlignment.end,
+                     mainAxisAlignment: MainAxisAlignment.center,
                      children: <Widget>[
-                        TextButton(
-                           child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                        ),
-                        const SizedBox(width: 8.0),
                         ElevatedButton(
                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: Colors.black,
+                              // Increase button size
+                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                              elevation: 3,
+                              minimumSize: Size(140, 50), // Set minimum size
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                                side: BorderSide(color: Colors.grey[400]!),
+                              ),
+                           ),
+                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                           child: Row(
+                             mainAxisSize: MainAxisSize.min,
+                             children: [
+                               Icon(Icons.cancel, size: 20), // Larger icon
+                               SizedBox(width: 8),
+                               Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)), // Larger text
+                             ],
+                           ),
+                        ),
+                        const SizedBox(width: 15.0),
+                        ElevatedButton(
+                           style: ElevatedButton.styleFrom(
+                              backgroundColor: Palette.greenColor,
                               foregroundColor: Palette.whiteColor,
+                              // Increase button size
+                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                              elevation: 3,
+                              minimumSize: Size(140, 50), // Set minimum size
+                              shadowColor: Palette.greenColor.withAlpha(128),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
                            ),
                            onPressed: _isLoading ? null : _saveDriver,
                            child: _isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Palette.whiteColor))
-                              : const Text('Save Driver'),
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Palette.whiteColor)) // Larger spinner
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.save, size: 20), // Larger icon
+                                    SizedBox(width: 8),
+                                    Text('Save Driver', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)), // Larger text
+                                  ],
+                                ),
                         ),
                      ],
                   ),
                ],
             ),
          ),
+      ),
+    );
+  }
+  
+  // Helper method to build standardized form fields
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    required String? Function(String?) validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Palette.greenColor), // Changed to green
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            borderSide: BorderSide(color: Colors.grey),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            borderSide: BorderSide(color: Palette.greenColor, width: 2.0), // Changed to green
+          ),
+          filled: true,
+          fillColor: Colors.grey[50],
+          contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+        ),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        validator: validator,
       ),
     );
   }
