@@ -5,6 +5,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
 
 class Drivers extends StatefulWidget {
   @override
@@ -33,7 +34,6 @@ class _DriversState extends State<Drivers> {
 
   @override
   void dispose() {
-    // Cancel the timer to prevent memory leaks.
     _refreshTimer?.cancel();
     super.dispose();
   }
@@ -79,6 +79,21 @@ class _DriversState extends State<Drivers> {
       backgroundColor: Palette.whiteColor,
       appBar: AppBarSearch(),
       drawer: MyDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => AddDriverDialog(
+              supabase: supabase,
+              onDriverAdded: () {
+                fetchDriverData(); // Refresh the drivers list when a new driver is added
+              },
+            ),
+          );
+        },
+        backgroundColor: Palette.greenColor,
+        child: Icon(Icons.person_add, color: Palette.whiteColor),
+      ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

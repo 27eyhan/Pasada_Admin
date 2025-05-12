@@ -7,6 +7,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
 
 class Fleet extends StatefulWidget {
   @override
@@ -126,6 +127,19 @@ class _FleetState extends State<Fleet> {
       backgroundColor: Palette.whiteColor,
       appBar: AppBarSearch(),
       drawer: MyDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => AddVehicleDialog(
+              supabase: supabase,
+              onVehicleActionComplete: fetchVehicleData, // Refresh the vehicle list when a new vehicle is added
+            ),
+          );
+        },
+        backgroundColor: Palette.greenColor,
+        child: Icon(Icons.directions_car_outlined, color: Palette.whiteColor),
+      ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

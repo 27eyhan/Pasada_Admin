@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_tables/edit_admin_dialog.dart';
 
 class ProfilePopup extends StatefulWidget {
   const ProfilePopup({Key? key}) : super(key: key);
@@ -181,6 +182,19 @@ class _ProfilePopupState extends State<ProfilePopup> {
                   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 ),
                 onPressed: () {
+                  if (adminData != null) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => EditAdminDialog(
+                        supabase: supabase,
+                        adminData: adminData!,
+                      ),
+                    ).then((updated) {
+                      if (updated == true) {
+                        fetchAdminData(); // Refresh the data if changes were made
+                      }
+                    });
+                  }
                 },
                 child: Text(
                   "Edit Profile",
