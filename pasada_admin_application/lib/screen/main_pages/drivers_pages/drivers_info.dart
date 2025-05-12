@@ -23,8 +23,7 @@ class _DriverInfoState extends State<DriverInfo> {
   late bool _isEditMode;
   
   // Text editing controllers
-  late TextEditingController _firstNameController;
-  late TextEditingController _lastNameController;
+  late TextEditingController _fullNameController;
   late TextEditingController _driverNumberController;
   late TextEditingController _vehicleIdController;
   
@@ -37,8 +36,7 @@ class _DriverInfoState extends State<DriverInfo> {
   }
   
   void _initControllers() {
-    _firstNameController = TextEditingController(text: widget.driver['first_name'] ?? '');
-    _lastNameController = TextEditingController(text: widget.driver['last_name'] ?? '');
+    _fullNameController = TextEditingController(text: widget.driver['full_name'] ?? '');
     _driverNumberController = TextEditingController(text: widget.driver['driver_number'] ?? '');
     _vehicleIdController = TextEditingController(text: widget.driver['vehicle_id']?.toString() ?? '');
   }
@@ -46,8 +44,7 @@ class _DriverInfoState extends State<DriverInfo> {
   @override
   void dispose() {
     // Dispose controllers
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _fullNameController.dispose();
     _driverNumberController.dispose();
     _vehicleIdController.dispose();
     super.dispose();
@@ -68,8 +65,7 @@ class _DriverInfoState extends State<DriverInfo> {
   // Save changes to database
   void _saveChanges() async {
     // First check if any data has changed
-    if (_firstNameController.text == widget.driver['first_name'] &&
-        _lastNameController.text == widget.driver['last_name'] &&
+    if (_fullNameController.text == widget.driver['full_name'] &&
         _driverNumberController.text == widget.driver['driver_number'] &&
         _vehicleIdController.text == widget.driver['vehicle_id']?.toString()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,8 +110,7 @@ class _DriverInfoState extends State<DriverInfo> {
 
       // Create updated driver data
       final updatedDriver = {
-        'first_name': _firstNameController.text,
-        'last_name': _lastNameController.text,
+        'full_name': _fullNameController.text,
         'driver_number': _driverNumberController.text,
         'vehicle_id': _vehicleIdController.text,
       };
@@ -341,21 +336,21 @@ class _DriverInfoState extends State<DriverInfo> {
                   children: [
                     Icon(Icons.person, color: Palette.greenColor, size: 28),
                     SizedBox(width: 12.0),
-                    Text(
-                      "Driver Information",
-                      style: TextStyle(
+                Text(
+                  "Driver Information",
+                  style: TextStyle(
                         fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                         color: Palette.greenColor,
                         fontFamily: 'Inter',
                       ),
-                    ),
+                  ),
                   ],
                 ),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => Navigator.of(context).pop(),
+                  onTap: () => Navigator.of(context).pop(),
                     borderRadius: BorderRadius.circular(50),
                     child: Container(
                       padding: EdgeInsets.all(8),
@@ -363,10 +358,10 @@ class _DriverInfoState extends State<DriverInfo> {
                         color: Colors.grey[200],
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        Icons.close,
-                        size: 24,
-                        color: Palette.blackColor,
+                  child: Icon(
+                    Icons.close,
+                    size: 24,
+                    color: Palette.blackColor,
                       ),
                     ),
                   ),
@@ -374,7 +369,7 @@ class _DriverInfoState extends State<DriverInfo> {
               ],
             ),
             const SizedBox(height: 16.0),
-            Divider(color: Palette.greenColor.withOpacity(0.5), thickness: 1.5),
+            Divider(color: Palette.greenColor.withAlpha(50), thickness: 1.5),
             const SizedBox(height: 16.0),
             
             // Personal information section with better layout
@@ -393,10 +388,10 @@ class _DriverInfoState extends State<DriverInfo> {
                         border: Border.all(color: Palette.greenColor.withAlpha(100)),
                       ),
                       child: Text(
-                        "Driver ID: ${driver['driver_id']?.toString() ?? 'N/A'}",
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 16,
+                      "Driver ID: ${driver['driver_id']?.toString() ?? 'N/A'}",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Palette.greenColor,
                         ),
@@ -406,15 +401,9 @@ class _DriverInfoState extends State<DriverInfo> {
                     
                     // Editable fields with better styling
                     _buildEditableField(
-                      label: "First Name:",
-                      value: driver['first_name'] ?? '',
-                      controller: _firstNameController,
-                    ),
-                    const SizedBox(height: 12.0),
-                    _buildEditableField(
-                      label: "Last Name:",
-                      value: driver['last_name'] ?? '',
-                      controller: _lastNameController,
+                      label: "Name:",
+                      value: driver['full_name'] ?? '',
+                      controller: _fullNameController,
                     ),
                     const SizedBox(height: 12.0),
                     Row(
@@ -434,7 +423,7 @@ class _DriverInfoState extends State<DriverInfo> {
                         Expanded(
                           child: _isEditMode
                             ? TextFormField(
-                                controller: _driverNumberController,
+                      controller: _driverNumberController,
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: Colors.grey[50],
@@ -484,12 +473,12 @@ class _DriverInfoState extends State<DriverInfo> {
                           width: 100,
                           child: Text(
                             "Status:",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Palette.blackColor,
-                            ),
+                        color: Palette.blackColor,
+                      ),
                           ),
                         ),
                         Container(
@@ -519,9 +508,9 @@ class _DriverInfoState extends State<DriverInfo> {
                           width: 100,
                           child: Text(
                             "Last Online:",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Palette.blackColor,
                             ),
@@ -534,8 +523,8 @@ class _DriverInfoState extends State<DriverInfo> {
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 15,
-                            color: Palette.blackColor,
-                          ),
+                        color: Palette.blackColor,
+                      ),
                         ),
                       ],
                     ),
@@ -548,98 +537,98 @@ class _DriverInfoState extends State<DriverInfo> {
             Expanded(
               flex: 7, // Calendar gets more space than text info
               child: Center(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.35,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: MediaQuery.of(context).size.width * 0.35,
                       height: MediaQuery.of(context).size.height * 0.34, // Slightly reduced height
                       padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
                         borderRadius: BorderRadius.circular(12.0),
                         border: Border.all(color: Palette.greenColor.withAlpha(30)),
-                        boxShadow: [
-                          BoxShadow(
+                      boxShadow: [
+                        BoxShadow(
                             color: Colors.grey.withAlpha(20),
-                            spreadRadius: 1,
+                          spreadRadius: 1,
                             blurRadius: 4,
                             offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                           // Improved month header
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
                               Icon(Icons.calendar_today, color: Palette.greenColor, size: 20),
                               SizedBox(width: 8),
-                              Text(
-                                "Driver Activity",
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
+                            Text(
+                              "Driver Activity",
+                              style: TextStyle(
+                                fontFamily: 'Inter',
                                   fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                                   color: Palette.greenColor,
                                 ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
+                        ),
                           const SizedBox(height: 12),
-                          // Calendar with default navigation
-                          Expanded(
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                              child: HeatMapCalendar(
-                                datasets: _heatMapData,
-                                colorMode: ColorMode.color,
-                                defaultColor: Palette.greyColor,
-                                textColor: Palette.blackColor,
-                                colorsets: {
-                                  1: Palette.greenColor.withAlpha(100),
-                                  2: Palette.greenColor.withAlpha(150),
-                                  3: Palette.greenColor.withAlpha(200),
-                                  4: Palette.greenColor,
-                                },
-                                onClick: (date) {
-                                  setState(() {
-                                  });
-                                },
-                                monthFontSize: 14,
-                                weekFontSize: 10,
-                                initDate: DateTime(_currentMonth.year, _currentMonth.month),
-                                onMonthChange: (date) {
-                                  setState(() {
-                                    _currentMonth = date;
-                                    _generateHeatMapData();
-                                  });
-                                },
-                              ),
+                        // Calendar with default navigation
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                            child: HeatMapCalendar(
+                              datasets: _heatMapData,
+                              colorMode: ColorMode.color,
+                              defaultColor: Palette.greyColor,
+                              textColor: Palette.blackColor,
+                              colorsets: {
+                                1: Palette.greenColor.withAlpha(100),
+                                2: Palette.greenColor.withAlpha(150),
+                                3: Palette.greenColor.withAlpha(200),
+                                4: Palette.greenColor,
+                              },
+                              onClick: (date) {
+                                setState(() {
+                                });
+                              },
+                              monthFontSize: 14,
+                              weekFontSize: 10,
+                              initDate: DateTime(_currentMonth.year, _currentMonth.month),
+                              onMonthChange: (date) {
+                                setState(() {
+                                  _currentMonth = date;
+                                  _generateHeatMapData();
+                                });
+                              },
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
                     const SizedBox(height: 12.0),
                     // Improved legend with more compact layout
                     Wrap(
                       alignment: WrapAlignment.center,
                       spacing: 12,
                       runSpacing: 8,
-                      children: [
+                    children: [
                         _buildLegendItem(Palette.greyColor, "Inactive"),
                         _buildLegendItem(Palette.greenColor.withAlpha(100), "< 1 hour"),
                         _buildLegendItem(Palette.greenColor.withAlpha(150), "1-2 hours"),
                         _buildLegendItem(Palette.greenColor.withAlpha(200), "2-4 hours"),
                         _buildLegendItem(Palette.greenColor, "4+ hours"),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
+            ),
             ),
             
             const SizedBox(height: 5.0),
@@ -664,8 +653,7 @@ class _DriverInfoState extends State<DriverInfo> {
                   onPressed: () {
                     if (_isEditMode) {
                       // Reset the text controllers to original values
-                      _firstNameController.text = widget.driver['first_name'] ?? '';
-                      _lastNameController.text = widget.driver['last_name'] ?? '';
+                      _fullNameController.text = widget.driver['full_name'] ?? '';
                       _driverNumberController.text = widget.driver['driver_number'] ?? '';
                       _vehicleIdController.text = widget.driver['vehicle_id']?.toString() ?? '';
                       
@@ -692,13 +680,13 @@ class _DriverInfoState extends State<DriverInfo> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        _isEditMode ? "Cancel" : "Contact Driver",
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 16,
+                    _isEditMode ? "Cancel" : "Contact Driver",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: _isEditMode ? Colors.white : Palette.blackColor,
-                        ),
+                      color: _isEditMode ? Colors.white : Palette.blackColor,
+                    ),
                       ),
                     ],
                   ),
@@ -727,13 +715,13 @@ class _DriverInfoState extends State<DriverInfo> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        _isEditMode ? "Save Changes" : "Manage Driver",
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 16,
+                    _isEditMode ? "Save Changes" : "Manage Driver",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: _isEditMode ? Colors.white : Palette.blackColor,
-                        ),
+                      color: _isEditMode ? Colors.white : Palette.blackColor,
+                    ),
                       ),
                     ],
                   ),
@@ -860,11 +848,11 @@ class _DriverInfoState extends State<DriverInfo> {
               Expanded(
                 child: Text(
                   value,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                    color: Palette.blackColor,
-                  ),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: Palette.blackColor,
+            ),
                 ),
               ),
             ],

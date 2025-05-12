@@ -91,8 +91,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
 
   void _handleEditDriver(Map<String, dynamic> selectedDriverData) async {
     // Create controllers for editable fields
-    final TextEditingController firstNameController = TextEditingController(text: selectedDriverData['first_name'] ?? '');
-    final TextEditingController lastNameController = TextEditingController(text: selectedDriverData['last_name'] ?? '');
+    final TextEditingController fullNameController = TextEditingController(text: selectedDriverData['full_name'] ?? '');
     final TextEditingController driverNumberController = TextEditingController(text: selectedDriverData['driver_number'] ?? '');
     final TextEditingController vehicleIdController = TextEditingController(text: selectedDriverData['vehicle_id']?.toString() ?? '');
     
@@ -145,17 +144,10 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                         // Editable form fields
                         _buildFormField(
                           context: context,
-                          controller: firstNameController,
-                          label: 'First Name',
+                          controller: fullNameController,
+                          label: 'Name',
                           icon: Icons.person_outline,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter first name' : null,
-                        ),
-                        _buildFormField(
-                          context: context,
-                          controller: lastNameController,
-                          label: 'Last Name',
-                          icon: Icons.person_outline,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter last name' : null,
+                          validator: (value) => value == null || value.isEmpty ? 'Please enter driver name' : null,
                         ),
                         _buildFormField(
                           context: context,
@@ -225,8 +217,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                               ),
                               onPressed: isLoading ? null : () async {
                                 // Check if data has changed
-                                if (firstNameController.text == selectedDriverData['first_name'] &&
-                                    lastNameController.text == selectedDriverData['last_name'] &&
+                                if (fullNameController.text == selectedDriverData['full_name'] &&
                                     driverNumberController.text == selectedDriverData['driver_number'] &&
                                     vehicleIdController.text == selectedDriverData['vehicle_id']?.toString()) {
                                   _showInfoSnackBar('No changes were made');
@@ -258,8 +249,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                   
                                   // Create updated driver data with dynamic typing
                                   final Map<String, dynamic> updatedDriver = {
-                                    'first_name': firstNameController.text,
-                                    'last_name': lastNameController.text,
+                                    'full_name': fullNameController.text,
                                     'driver_number': driverNumberController.text,
                                   };
                                   
@@ -309,8 +299,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
       );
     } finally {
       // Clean up controllers
-      firstNameController.dispose();
-      lastNameController.dispose();
+      fullNameController.dispose();
       driverNumberController.dispose();
       vehicleIdController.dispose();
       _startRefreshTimer(); // Restart timer when dialog closes
@@ -579,7 +568,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                       ],
                                     )
                                   ),
-                                  DataCell(Text('${driver['first_name'] ?? ''} ${driver['last_name'] ?? ''}', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(driver['full_name'] ?? 'Unknown', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['driver_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['vehicle_id']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['driving_status']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),

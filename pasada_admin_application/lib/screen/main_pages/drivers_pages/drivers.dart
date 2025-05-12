@@ -194,7 +194,7 @@ class _DriversState extends State<Drivers> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            "${driver['last_name']}, ${driver['first_name']}",
+                                            "${driver['full_name'] ?? 'Unknown Driver'}",
                                             style: TextStyle(
                                               fontFamily: 'Inter',
                                               fontSize: 18.0,

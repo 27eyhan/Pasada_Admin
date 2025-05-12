@@ -19,8 +19,7 @@ class AddDriverDialog extends StatefulWidget {
 
 class _AddDriverDialogState extends State<AddDriverDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
+  final _fullNameController = TextEditingController();
   final _driverNumberController = TextEditingController();
   final _vehicleIdController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -28,8 +27,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _fullNameController.dispose();
     _driverNumberController.dispose();
     _vehicleIdController.dispose();
     _passwordController.dispose();
@@ -91,8 +89,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         final String hashedPassword = BCrypt.hashpw(_passwordController.text.trim(), BCrypt.gensalt());
         final newDriverData = {
           'driver_id': nextDriverId,
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
+          'full_name': _fullNameController.text.trim(),
           'driver_number': _driverNumberController.text.trim(),
           'driver_password': hashedPassword,
           'vehicle_id': vehicleId,
@@ -174,16 +171,10 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         _buildFormField(
-                          controller: _firstNameController,
-                          label: 'First Name',
+                          controller: _fullNameController,
+                          label: 'Name',
                           icon: Icons.person_outline,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter first name' : null,
-                        ),
-                        _buildFormField(
-                          controller: _lastNameController,
-                          label: 'Last Name',
-                          icon: Icons.person_outline,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter last name' : null,
+                          validator: (value) => value == null || value.isEmpty ? 'Please enter driver name' : null,
                         ),
                         _buildFormField(
                           controller: _driverNumberController,
