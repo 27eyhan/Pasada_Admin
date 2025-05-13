@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/driver_delete_handler.dart';
 
@@ -17,10 +18,16 @@ class DriverTableScreen extends StatefulWidget {
 class _DriverTableScreenState extends State<DriverTableScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> driverData = [];
+  List<Map<String, dynamic>> filteredDriverData = [];
   bool isLoading = true;
   Timer? _refreshTimer;
   int? _selectedRowIndex;
   String? _pendingAction;
+  
+  // Filter state
+  Set<String> selectedStatuses = {};
+  String? selectedVehicleId;
+  String sortOption = 'numeric'; // Default sorting
 
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
@@ -44,6 +51,91 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
     _refreshTimer?.cancel();
     super.dispose();
   }
+  
+  void _showFilterDialog() async {
+    _refreshTimer?.cancel(); // Pause timer during filtering
+    
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return DriverFilterDialog(
+          selectedStatuses: selectedStatuses,
+          selectedVehicleId: selectedVehicleId,
+          sortOption: sortOption,
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        selectedStatuses = result['selectedStatuses'] as Set<String>;
+        selectedVehicleId = result['selectedVehicleId'] as String?;
+        sortOption = result['sortOption'] as String;
+        _applyFilters();
+      });
+    }
+    
+    _startRefreshTimer(); // Resume timer
+  }
+  
+  void _applyFilters() {
+    setState(() {
+      if (selectedStatuses.isEmpty && selectedVehicleId == null) {
+        // No filters applied, show all data
+        filteredDriverData = List.from(driverData);
+      } else {
+        filteredDriverData = driverData.where((driver) {
+          // Filter by status
+          bool statusMatch = true;
+          if (selectedStatuses.isNotEmpty) {
+            final status = driver["driving_status"]?.toString() ?? "Offline";
+            
+            if (selectedStatuses.contains('Online')) {
+              // For Online, match any of these statuses
+              bool isActive = status.toLowerCase() == "driving" || 
+                              status.toLowerCase() == "online" || 
+                              status.toLowerCase() == "idling" || 
+                              status.toLowerCase() == "active";
+              
+              if (selectedStatuses.contains('Offline')) {
+                // If both Online and Offline are selected, show all
+                statusMatch = true;
+              } else {
+                // Only Online is selected
+                statusMatch = isActive;
+              }
+            } else if (selectedStatuses.contains('Offline')) {
+              // Only Offline is selected
+              bool isOffline = status.toLowerCase() == "offline" ||
+                               status.toLowerCase() == "";
+              statusMatch = isOffline;
+            }
+          }
+          
+          // Filter by vehicle ID
+          bool vehicleMatch = selectedVehicleId == null || 
+              driver['vehicle_id']?.toString() == selectedVehicleId;
+
+          return statusMatch && vehicleMatch;
+        }).toList();
+      }
+      
+      // Apply sorting
+      if (sortOption == 'alphabetical') {
+        filteredDriverData.sort((a, b) {
+          final nameA = a['full_name']?.toString() ?? '';
+          final nameB = b['full_name']?.toString() ?? '';
+          return nameA.compareTo(nameB);
+        });
+      } else { // numeric sorting is default
+        filteredDriverData.sort((a, b) {
+          final numA = int.tryParse(a['driver_id']?.toString() ?? '0') ?? 0;
+          final numB = int.tryParse(b['driver_id']?.toString() ?? '0') ?? 0;
+          return numA.compareTo(numB);
+        });
+      }
+    });
+  }
 
   Future<void> fetchDriverData() async {
     // Reset selection state on fetch
@@ -61,12 +153,17 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         setState(() {
           driverData = listData.cast<Map<String, dynamic>>();
           isLoading = false;
+          
+          // Apply any existing filters
+          _applyFilters();
         });
       }
     } catch (e) {
       if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
+          driverData = [];
+          filteredDriverData = [];
         });
       }
     }
@@ -408,10 +505,13 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
   Widget build(BuildContext context) {
      // Determine if Continue button should be enabled
     final bool isRowSelected = _selectedRowIndex != null;
+    final Map<String, dynamic>? selectedData = isRowSelected && _selectedRowIndex! < filteredDriverData.length 
+      ? filteredDriverData[_selectedRowIndex!] 
+      : null;
 
     return Scaffold(
       backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(),
+      appBar: AppBarSearch(onFilterPressed: _showFilterDialog),
       drawer: MyDrawer(),
       body: Stack(
         children: [
@@ -448,7 +548,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                               DataColumn(label: Text('Status', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Last Online', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                             ],
-                            rows: driverData.asMap().entries.map((entry) { // Use asMap().entries
+                            rows: filteredDriverData.asMap().entries.map((entry) { // Use filteredDriverData instead of driverData
                               final int index = entry.key;
                               final Map<String, dynamic> driver = entry.value;
                               final bool allowSelection = _pendingAction != null;
@@ -616,9 +716,8 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                         ),
-                        onPressed: isRowSelected
+                        onPressed: isRowSelected && selectedData != null
                             ? () {
-                                final selectedData = driverData[_selectedRowIndex!];
                                 _refreshTimer?.cancel(); // Cancel timer before action
                                 // Debug
 

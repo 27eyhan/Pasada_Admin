@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+import 'package:pasada_admin_application/screen/appbars_&_drawer/filter_dialog.dart';
 // Import dialogs
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/edit_vehicle_dialog.dart';
@@ -18,10 +19,15 @@ class VehicleTableScreen extends StatefulWidget {
 class _VehicleTableScreenState extends State<VehicleTableScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> vehicleData = [];
+  List<Map<String, dynamic>> filteredVehicleData = [];
   bool isLoading = true;
   Timer? _refreshTimer; // Timer variable for refreshing the state
   int? _selectedRowIndex; // State variable to track selected row index
   String? _pendingAction; // State variable for pending edit/delete action
+  
+  // Filter state
+  Set<String> selectedStatuses = {};
+  String? selectedRouteId;
 
   @override
   void initState() {
@@ -40,6 +46,85 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
     _refreshTimer?.cancel();
     super.dispose();
   }
+  
+  void _showFilterDialog() async {
+    _refreshTimer?.cancel(); // Pause timer during filtering
+    
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return FilterDialog(
+          selectedStatuses: selectedStatuses,
+          selectedRouteId: selectedRouteId,
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        selectedStatuses = result['selectedStatuses'] as Set<String>;
+        selectedRouteId = result['selectedRouteId'] as String?;
+        _applyFilters();
+      });
+    }
+    
+    _startRefreshTimer(); // Resume timer
+  }
+  
+  void _applyFilters() {
+    setState(() {
+      if (selectedStatuses.isEmpty && selectedRouteId == null) {
+        // No filters applied, show all data
+        filteredVehicleData = List.from(vehicleData);
+      } else {
+        filteredVehicleData = vehicleData.where((vehicle) {
+          // Get vehicle status from driverTable relationship
+          String? vehicleStatus = 'Offline';
+          
+          // Filter by status - using the vehicle's status
+          // For a vehicle table, we would need to determine the status differently
+          // This would depend on how status is stored in the actual data
+          // For now, we'll assume status is determined in a similar way to fleet.dart
+          bool statusMatch = selectedStatuses.isEmpty;
+          
+          if (!statusMatch && vehicle['driverTable'] != null) {
+            // If there is status data from a driver relationship
+            final driverData = vehicle['driverTable'];
+            if (driverData != null && driverData is List && driverData.isNotEmpty) {
+              final driverMap = driverData.first as Map<String, dynamic>?;
+              if (driverMap != null) {
+                vehicleStatus = driverMap['driving_status'] as String?;
+                statusMatch = selectedStatuses.contains(vehicleStatus);
+              }
+            }
+          }
+          
+          // Filter by route ID
+          bool routeMatch = selectedRouteId == null || 
+              vehicle['route_id']?.toString() == selectedRouteId;
+
+          return (selectedStatuses.isEmpty || statusMatch) && routeMatch;
+        }).toList();
+      }
+      
+      // Apply default sorting by Vehicle ID numerically
+      filteredVehicleData.sort((a, b) {
+        var aId = a['vehicle_id'];
+        var bId = b['vehicle_id'];
+        // Handle null values
+        if (aId == null) return 1;
+        if (bId == null) return -1;
+        // Try numeric sort if possible
+        int? aNum = int.tryParse(aId.toString());
+        int? bNum = int.tryParse(bId.toString());
+        if (aNum != null && bNum != null) {
+          return aNum.compareTo(bNum);
+        }
+        // Fall back to string comparison
+        return aId.toString().compareTo(bId.toString());
+      });
+    });
+  }
 
   Future<void> fetchVehicleData() async {
      // Reset selection state on fetch
@@ -50,19 +135,24 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
     });
     try {
       // Retrieve all columns from 'vehicleTable'
-      final data = await supabase.from('vehicleTable').select('*');
+      final data = await supabase.from('vehicleTable').select('*, driverTable(driver_id, driving_status)');
       // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) { // Check if the widget is still mounted
         setState(() {
           vehicleData = listData.cast<Map<String, dynamic>>();
           isLoading = false;
+          
+          // Apply any existing filters
+          _applyFilters();
         });
       }
     } catch (e) {
       if (mounted) { // Check if the widget is still mounted
         setState(() {
           isLoading = false;
+          vehicleData = [];
+          filteredVehicleData = [];
         });
       }
     }
@@ -253,10 +343,13 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
   Widget build(BuildContext context) {
      // Determine if Continue button should be enabled
     final bool isRowSelected = _selectedRowIndex != null;
+    final Map<String, dynamic>? selectedData = isRowSelected && _selectedRowIndex! < filteredVehicleData.length 
+        ? filteredVehicleData[_selectedRowIndex!] 
+        : null;
 
     return Scaffold(
       backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(),
+      appBar: AppBarSearch(onFilterPressed: _showFilterDialog),
       drawer: MyDrawer(),
       body: Stack(
         children: [
@@ -293,7 +386,7 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                               DataColumn(label: Text('Location', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Created At', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                             ],
-                            rows: vehicleData.asMap().entries.map((entry) { // Use asMap().entries
+                            rows: filteredVehicleData.asMap().entries.map((entry) { // Use filteredVehicleData
                                 final int index = entry.key;
                                 final Map<String, dynamic> vehicle = entry.value;
                                 final bool allowSelection = _pendingAction != null;
@@ -478,9 +571,8 @@ class _VehicleTableScreenState extends State<VehicleTableScreen> {
                             borderRadius: BorderRadius.circular(10.0),
                           ),
                         ),
-                        onPressed: isRowSelected
+                        onPressed: isRowSelected && selectedData != null
                             ? () {
-                                final selectedData = vehicleData[_selectedRowIndex!];
                                 // Timer already cancelled by PopupMenuButton onSelected
 
                                 // Store pending action locally
