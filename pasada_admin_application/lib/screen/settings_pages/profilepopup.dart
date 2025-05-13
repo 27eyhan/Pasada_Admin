@@ -81,13 +81,15 @@ class _ProfilePopupState extends State<ProfilePopup> {
     
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(16.0),
+        side: BorderSide(color: Palette.greenColor, width: 2),
       ),
+      elevation: 8.0,
       backgroundColor: Palette.whiteColor,
       child: Container(
         width: sideLength,
         height: sideLength,
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -95,35 +97,53 @@ class _ProfilePopupState extends State<ProfilePopup> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Profile",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Palette.blackColor,
-                  ),
+                Row(
+                  children: [
+                    Icon(Icons.person, color: Palette.greenColor, size: 28),
+                    SizedBox(width: 12.0),
+                    Text(
+                      "Profile",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Palette.greenColor,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
                 ),
-                InkWell(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Icon(
-                    Icons.close,
-                    size: 24,
-                    color: Palette.blackColor,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).pop(),
+                    borderRadius: BorderRadius.circular(50),
+                    child: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 24,
+                        color: Palette.blackColor,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8.0),
-            Divider(color: Palette.blackColor.withValues(alpha: 128)),
+            const SizedBox(height: 16.0),
+            Divider(color: Palette.greenColor.withAlpha(50), thickness: 1.5),
             const SizedBox(height: 16.0),
             Expanded(
               child: isLoading 
-                ? Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator(color: Palette.greenColor))
                 : adminData == null
                   ? Center(
-                child: Text(
+                      child: Text(
                         "No admin data found.",
-                        style: TextStyle(fontSize: 16, color: Palette.blackColor),
+                        style: TextStyle(fontSize: 16, color: Palette.blackColor, fontFamily: 'Inter'),
                       ),
                     )
                   : SingleChildScrollView(
@@ -132,19 +152,47 @@ class _ProfilePopupState extends State<ProfilePopup> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Palette.blackColor.withValues(alpha: 40),
-                              child: Icon(
-                                Icons.person,
-                                size: 50,
-                    color: Palette.blackColor,
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Palette.greenColor.withAlpha(40),
+                                    spreadRadius: 2,
+                                    blurRadius: 5,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Palette.greenColor.withAlpha(40),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 50,
+                                  color: Palette.greenColor,
+                                ),
                               ),
                             ),
                             SizedBox(height: 20),
-                            ProfileInfoTile(
-                              label: "Admin ID",
-                              value: adminData!['admin_id']?.toString() ?? 'N/A',
+                            // Admin ID with badge-like styling
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              margin: EdgeInsets.only(bottom: 15),
+                              decoration: BoxDecoration(
+                                color: Palette.greenColor.withAlpha(40),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Palette.greenColor.withAlpha(100)),
+                              ),
+                              child: Text(
+                                "Admin ID: ${adminData!['admin_id']?.toString() ?? 'N/A'}",
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Palette.greenColor,
+                                ),
+                              ),
                             ),
                             ProfileInfoTile(
                               label: "Name",
@@ -163,23 +211,23 @@ class _ProfilePopupState extends State<ProfilePopup> {
                               value: formatDate(adminData!['created_at']?.toString()),
                             ),
                           ],
-                  ),
-                ),
-              ),
+                        ),
+                      ),
+                    ),
             ),
             Align(
               alignment: Alignment.bottomRight,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Palette.whiteColor,
+                  backgroundColor: Palette.greenColor,
                   foregroundColor: Palette.blackColor,
-                  elevation: 6.0,
-                  shadowColor: Colors.grey,
-                  side: BorderSide(color: Colors.grey, width: 1.0),
+                  elevation: 4.0,
+                  shadowColor: Colors.grey.shade300,
+                  side: BorderSide(color: Palette.greenColor, width: 1.0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
                 ),
                 onPressed: () {
                   if (adminData != null) {
@@ -196,12 +244,21 @@ class _ProfilePopupState extends State<ProfilePopup> {
                     });
                   }
                 },
-                child: Text(
-                  "Edit Profile",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Palette.blackColor,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.edit, size: 20, color: Palette.whiteColor),
+                    SizedBox(width: 8),
+                    Text(
+                      "Edit Profile",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Palette.whiteColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -233,6 +290,7 @@ class ProfileInfoTile extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 14,
+              fontFamily: 'Inter',
               color: Colors.grey[600],
             ),
           ),
@@ -242,6 +300,7 @@ class ProfileInfoTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
               color: Palette.blackColor,
             ),
           ),

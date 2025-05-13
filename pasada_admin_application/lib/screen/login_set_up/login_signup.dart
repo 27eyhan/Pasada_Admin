@@ -221,15 +221,17 @@ class _LoginSignupState extends State<LoginSignup> {
                                     child: ElevatedButton(
                                       onPressed: _login,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.black,
-                                        foregroundColor: Colors.white,
+                                        backgroundColor: Palette.blackColor,
+                                        foregroundColor: Palette.whiteColor,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(5),
                                         ),
                                         minimumSize: Size(170, 50),
+                                        elevation: 5,
+                                        shadowColor: Palette.blackColor,
                                       ),
                                       child: _isLoading 
-                                             ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                                             ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Palette.whiteColor, strokeWidth: 2)) 
                                              : Text("Log-in"),
                                     ),
                                   ),
