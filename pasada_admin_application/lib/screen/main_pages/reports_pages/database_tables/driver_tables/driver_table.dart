@@ -5,6 +5,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/driver_delete_handler.dart';
 
 class DriverTableScreen extends StatefulWidget {
   const DriverTableScreen({Key? key}) : super(key: key);
@@ -307,96 +308,15 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
   }
 
   void _handleDeleteDriver(Map<String, dynamic> selectedDriverData) async {
-    final driverId = selectedDriverData['driver_id'];
-    final driverName = "${selectedDriverData['first_name'] ?? ''} ${selectedDriverData['last_name'] ?? ''}".trim();
-    final driverNumber = selectedDriverData['driver_number']?.toString() ?? 'N/A';
-    final vehicleId = selectedDriverData['vehicle_id']?.toString() ?? 'N/A';
-    
-    try {
-      await showDialog(
-        context: context,
-        barrierDismissible: false, // Prevent dismissing by tapping outside
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: Palette.whiteColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.red, width: 2),
-            ),
-            icon: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
-            title: Text(
-              'Delete Driver Confirmation', 
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            contentPadding: const EdgeInsets.all(24.0),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('You are about to delete the following driver:'),
-                SizedBox(height: 16),
-                _buildInfoRow('Driver ID:', driverId.toString()),
-                _buildInfoRow('Name:', driverName.isNotEmpty ? driverName : 'N/A'),
-                _buildInfoRow('Driver Number:', driverNumber),
-                _buildInfoRow('Vehicle ID:', vehicleId),
-                SizedBox(height: 16),
-                Text(
-                  'This action cannot be undone. All associated data will be permanently deleted.',
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-            actions: <Widget>[
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                ),
-                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                },
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                ),
-                child: const Text('Delete Driver', style: TextStyle(fontWeight: FontWeight.w600)),
-                onPressed: () async {
-                  Navigator.of(context).pop(); // Close the dialog first
-                  try {
-                    // Show loading indicator
-                    _showInfoSnackBar('Deleting driver...');
-                    
-                    // Perform the delete operation
-                    await supabase
-                        .from('driverTable')
-                        .delete()
-                        .match({'driver_id': driverId});
-
-                    _showInfoSnackBar('Driver $driverId deleted successfully.');
-                    fetchDriverData(); // Refresh data after deletion
-
-                  } catch (e) {
-                    _showInfoSnackBar('Error deleting driver: ${e.toString()}');
-                  }
-                },
-              ),
-            ],
-          );
-        },
-      );
-    } finally {
-      _startRefreshTimer(); // Restart timer when dialog closes
-    }
+    await DriverDeleteHandler.handleDeleteDriver(
+      context,
+      selectedDriverData,
+      fetchDriverData,
+      _showInfoSnackBar,
+    );
+    _startRefreshTimer();
   }
 
-  // Helper method to build info rows in the delete confirmation dialog
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),

@@ -24,6 +24,7 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
   void initState() {
     super.initState();
     fetchArchiveData();
+    cleanupOldArchives();
     // Set up a periodic timer that refreshes every 30 seconds.
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
       fetchArchiveData();
@@ -64,15 +65,157 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
     }
   }
 
-  // --- Action Handlers (Placeholders) ---
-   void _handleRestoreDriver(Map<String, dynamic> selectedArchiveData) {
-    _showInfoSnackBar('Restore Driver functionality not yet implemented.');
-    // Possibly call fetchArchiveData() again after restoration
+  // Clean up archives older than 30 days
+  Future<void> cleanupOldArchives() async {
+    try {
+      // Calculate the date 30 days ago
+      final DateTime thirtyDaysAgo = DateTime.now().subtract(Duration(days: 30));
+      final String thirtyDaysAgoStr = thirtyDaysAgo.toIso8601String();
+      
+      // Delete records where archived_at is older than 30 days
+      await supabase
+          .from('driverArchives')
+          .delete()
+          .lt('archived_at', thirtyDaysAgoStr);
+      
+      // Refresh data after cleanup
+      if (mounted) {
+        fetchArchiveData();
+      }
+    } catch (e) {
+      if (mounted) {
+        _showInfoSnackBar('Error cleaning up old archives: ${e.toString()}');
+      }
+    }
   }
 
-  void _handleDeleteDriverPermanent(Map<String, dynamic> selectedArchiveData) {
-    _showInfoSnackBar('Permanent Delete Driver functionality not yet implemented.');
-    // Possibly call fetchArchiveData() again after deletion
+  // --- Action Handlers ---
+  void _handleRestoreDriver(Map<String, dynamic> selectedArchiveData) async {
+    final archiveId = selectedArchiveData['archive_id'];
+    final driverId = selectedArchiveData['driver_id'];
+    
+    try {
+      // Show confirmation dialog
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Palette.whiteColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Palette.orangeColor, width: 2),
+            ),
+            icon: Icon(Icons.restore, color: Palette.orangeColor, size: 48),
+            title: Text(
+              'Restore Driver', 
+              style: TextStyle(fontWeight: FontWeight.bold, color: Palette.orangeColor),
+              textAlign: TextAlign.center,
+            ),
+            content: Text(
+              'Are you sure you want to restore this driver? This will move the driver back to the active drivers table.',
+              textAlign: TextAlign.center,
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: Text('Cancel'),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Palette.orangeColor,
+                ),
+                child: Text('Restore Driver'),
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          );
+        },
+      );
+      
+      if (confirm != true) return;
+      
+      _showInfoSnackBar('Restoring driver...');
+      
+      // Extract driver data from archive to create record in driver table
+      final Map<String, dynamic> driverData = {
+        'driver_id': driverId,
+        'full_name': selectedArchiveData['full_name'],
+        'driver_number': selectedArchiveData['driver_number'],
+        'vehicle_id': selectedArchiveData['last_vehicle_used'],
+        'driving_status': 'Offline',
+        'last_online': DateTime.now().toIso8601String(),
+      };
+      
+      // First insert into driver table
+      await supabase.from('driverTable').insert(driverData);
+      
+      // Then delete from archives
+      await supabase.from('driverArchives').delete().eq('archive_id', archiveId);
+      
+      _showInfoSnackBar('Driver restored successfully!');
+      fetchArchiveData();
+    } catch (e) {
+      _showInfoSnackBar('Error restoring driver: ${e.toString()}');
+    }
+  }
+
+  void _handleDeleteDriverPermanent(Map<String, dynamic> selectedArchiveData) async {
+    final archiveId = selectedArchiveData['archive_id'];
+    final driverId = selectedArchiveData['driver_id'];
+    
+    try {
+      // Show confirmation dialog
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Palette.whiteColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.red, width: 2),
+            ),
+            icon: Icon(Icons.delete_forever, color: Colors.red, size: 48),
+            title: Text(
+              'Permanent Deletion', 
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            content: Text(
+              'Are you sure you want to permanently delete this archived driver? This action cannot be undone.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.red.shade800),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: Text('Cancel'),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+                child: Text('Delete Permanently'),
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          );
+        },
+      );
+      
+      if (confirm != true) return;
+      
+      _showInfoSnackBar('Permanently deleting driver...');
+      
+      // Delete from archives table
+      await supabase.from('driverArchives').delete().eq('archive_id', archiveId);
+      
+      _showInfoSnackBar('Driver permanently deleted.');
+      fetchArchiveData();
+    } catch (e) {
+      _showInfoSnackBar('Error deleting driver: ${e.toString()}');
+    }
   }
 
   void _showInfoSnackBar(String message) {
@@ -118,8 +261,7 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
                             columns: const [
                               DataColumn(label: Text('Archive ID')),
                               DataColumn(label: Text('Driver ID')),
-                              DataColumn(label: Text('First Name')),
-                              DataColumn(label: Text('Last Name')),
+                              DataColumn(label: Text('Name')),
                               DataColumn(label: Text('Driver Number')),
                               DataColumn(label: Text('Driver Password')),
                               DataColumn(label: Text('Last Vehicle Used')),
@@ -148,10 +290,9 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
                                 cells: [
                                   DataCell(Text(archive['archive_id'].toString())),
                                   DataCell(Text(archive['driver_id']?.toString() ?? 'N/A')),
-                                  DataCell(Text(archive['first_name']?.toString() ?? 'N/A')),
-                                  DataCell(Text(archive['last_name']?.toString() ?? 'N/A')),
+                                  DataCell(Text(archive['full_name']?.toString() ?? 'N/A')),
                                   DataCell(Text(archive['driver_number']?.toString() ?? 'N/A')),
-                                  DataCell(Text(archive['driver_password']?.toString() ?? 'N/A')), // Careful with passwords
+                                  DataCell(Text(archive['driver_password']?.toString() ?? 'N/A')),
                                   DataCell(Text(archive['last_vehicle_used']?.toString() ?? 'N/A')),
                                   DataCell(Text(archive['archived_at'].toString())),
                                 ],
