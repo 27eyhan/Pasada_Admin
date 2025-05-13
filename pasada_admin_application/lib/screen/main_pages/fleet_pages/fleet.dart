@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+import 'package:pasada_admin_application/screen/appbars_&_drawer/filter_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
@@ -17,6 +18,7 @@ class Fleet extends StatefulWidget {
 class _FleetState extends State<Fleet> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> vehicleData = [];
+  List<Map<String, dynamic>> filteredVehicleData = [];
   bool isLoading = true;
   int totalVehicles = 0;
   int _onlineVehicles = 0;
@@ -24,6 +26,10 @@ class _FleetState extends State<Fleet> {
   int _drivingVehicles = 0;
   int _offlineVehicles = 0;
   Timer? _refreshTimer;
+  
+  // Filter state
+  Set<String> selectedStatuses = {};
+  String? selectedRouteId;
 
   @override
   void initState() {
@@ -38,6 +44,57 @@ class _FleetState extends State<Fleet> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  void _applyFilters() {
+    setState(() {
+      if (selectedStatuses.isEmpty && selectedRouteId == null) {
+        // No filters applied, show all data
+        filteredVehicleData = List.from(vehicleData);
+        return;
+      }
+
+      filteredVehicleData = vehicleData.where((vehicle) {
+        // Get vehicle status
+        String? vehicleStatus = 'Offline';
+        final driverData = vehicle['driverTable'];
+        if (driverData != null && driverData is List && driverData.isNotEmpty) {
+          final driverMap = driverData.first as Map<String, dynamic>?;
+          if (driverMap != null) {
+            vehicleStatus = driverMap['driving_status'] as String?;
+          }
+        }
+
+        // Filter by status
+        bool statusMatch = selectedStatuses.isEmpty || selectedStatuses.contains(vehicleStatus);
+        
+        // Filter by route ID
+        bool routeMatch = selectedRouteId == null || 
+            vehicle['route_id']?.toString() == selectedRouteId;
+
+        return statusMatch && routeMatch;
+      }).toList();
+    });
+  }
+
+  void _showFilterDialog() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return FilterDialog(
+          selectedStatuses: selectedStatuses,
+          selectedRouteId: selectedRouteId,
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        selectedStatuses = result['selectedStatuses'] as Set<String>;
+        selectedRouteId = result['selectedRouteId'] as String?;
+        _applyFilters();
+      });
+    }
   }
 
   Future<void> fetchVehicleData() async {
@@ -84,13 +141,34 @@ class _FleetState extends State<Fleet> {
 
       if (mounted) {
         setState(() {
-          vehicleData = listData.cast<Map<String, dynamic>>(); 
+          vehicleData = listData.cast<Map<String, dynamic>>();
+          
+          // Sort vehicleData by vehicle_id
+          vehicleData.sort((a, b) {
+            var aId = a['vehicle_id'];
+            var bId = b['vehicle_id'];
+            // Handle null values
+            if (aId == null) return 1;
+            if (bId == null) return -1;
+            // Try numeric sort if possible
+            int? aNum = int.tryParse(aId.toString());
+            int? bNum = int.tryParse(bId.toString());
+            if (aNum != null && bNum != null) {
+              return aNum.compareTo(bNum);
+            }
+            // Fall back to string comparison
+            return aId.toString().compareTo(bId.toString());
+          });
+          
           _onlineVehicles = onlineCount;
           _idlingVehicles = idlingCount;
           _drivingVehicles = drivingCount;
           _offlineVehicles = offlineCount;
           totalVehicles = totalCount; 
           isLoading = false;
+          
+          // Apply any existing filters
+          _applyFilters();
         });
       }
     } on PostgrestException {
@@ -103,6 +181,7 @@ class _FleetState extends State<Fleet> {
           _offlineVehicles = 0;
           totalVehicles = 0;
           vehicleData = [];
+          filteredVehicleData = [];
         });
       }
     } catch (e) {
@@ -116,6 +195,7 @@ class _FleetState extends State<Fleet> {
           _offlineVehicles = 0;
           totalVehicles = 0;
           vehicleData = [];
+          filteredVehicleData = [];
         });
       }
     }
@@ -125,7 +205,7 @@ class _FleetState extends State<Fleet> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(),
+      appBar: AppBarSearch(onFilterPressed: _showFilterDialog),
       drawer: MyDrawer(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -197,9 +277,9 @@ class _FleetState extends State<Fleet> {
                             mainAxisSpacing: 32.0,
                             childAspectRatio: 2,
                           ),
-                          itemCount: vehicleData.length,
+                          itemCount: filteredVehicleData.length,
                           itemBuilder: (context, index) {
-                            final vehicle = vehicleData[index];
+                            final vehicle = filteredVehicleData[index];
                             return GestureDetector(
                               onTap: () {
                                 showDialog(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
@@ -15,6 +16,7 @@ class Drivers extends StatefulWidget {
 class _DriversState extends State<Drivers> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> driverData = [];
+  List<Map<String, dynamic>> filteredDriverData = [];
   bool isLoading = true;
 
   int activeDrivers = 0;
@@ -22,6 +24,11 @@ class _DriversState extends State<Drivers> {
   int totalDrivers = 0;
 
   Timer? _refreshTimer;
+  
+  // Filter state
+  Set<String> selectedStatuses = {};
+  String? selectedVehicleId;
+  String sortOption = 'numeric'; // Default sorting
 
   @override
   void initState() {
@@ -37,6 +44,87 @@ class _DriversState extends State<Drivers> {
     _refreshTimer?.cancel();
     super.dispose();
   }
+  
+  void _showFilterDialog() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return DriverFilterDialog(
+          selectedStatuses: selectedStatuses,
+          selectedVehicleId: selectedVehicleId,
+          sortOption: sortOption,
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        selectedStatuses = result['selectedStatuses'] as Set<String>;
+        selectedVehicleId = result['selectedVehicleId'] as String?;
+        sortOption = result['sortOption'] as String;
+        _applyFilters();
+      });
+    }
+  }
+  
+  void _applyFilters() {
+    setState(() {
+      if (selectedStatuses.isEmpty && selectedVehicleId == null) {
+        // No filters applied, show all data
+        filteredDriverData = List.from(driverData);
+      } else {
+        filteredDriverData = driverData.where((driver) {
+          // Filter by status
+          bool statusMatch = true;
+          if (selectedStatuses.isNotEmpty) {
+            final status = driver["driving_status"]?.toString() ?? "Offline";
+            
+            if (selectedStatuses.contains('Online')) {
+              // For Online, match any of these statuses
+              bool isActive = status.toLowerCase() == "driving" || 
+                              status.toLowerCase() == "online" || 
+                              status.toLowerCase() == "idling" || 
+                              status.toLowerCase() == "active";
+              
+              if (selectedStatuses.contains('Offline')) {
+                // If both Online and Offline are selected, show all
+                statusMatch = true;
+              } else {
+                // Only Online is selected
+                statusMatch = isActive;
+              }
+            } else if (selectedStatuses.contains('Offline')) {
+              // Only Offline is selected
+              bool isOffline = status.toLowerCase() == "offline" ||
+                               status.toLowerCase() == "";
+              statusMatch = isOffline;
+            }
+          }
+          
+          // Filter by vehicle ID
+          bool vehicleMatch = selectedVehicleId == null || 
+              driver['vehicle_id']?.toString() == selectedVehicleId;
+
+          return statusMatch && vehicleMatch;
+        }).toList();
+      }
+      
+      // Apply sorting
+      if (sortOption == 'alphabetical') {
+        filteredDriverData.sort((a, b) {
+          final nameA = a['full_name']?.toString() ?? '';
+          final nameB = b['full_name']?.toString() ?? '';
+          return nameA.compareTo(nameB);
+        });
+      } else { // numeric sorting is default
+        filteredDriverData.sort((a, b) {
+          final numA = int.tryParse(a['driver_id']?.toString() ?? '0') ?? 0;
+          final numB = int.tryParse(b['driver_id']?.toString() ?? '0') ?? 0;
+          return numA.compareTo(numB);
+        });
+      }
+    });
+  }
 
   Future<void> fetchDriverData() async {
     try {
@@ -48,8 +136,8 @@ class _DriversState extends State<Drivers> {
         driverData = listData.cast<Map<String, dynamic>>();
         // Sort the list by driver_number numerically
         driverData.sort((a, b) {
-          final numA = int.tryParse(a['driver_number']?.toString() ?? '0') ?? 0;
-          final numB = int.tryParse(b['driver_number']?.toString() ?? '0') ?? 0;
+          final numA = int.tryParse(a['driver_id']?.toString() ?? '0') ?? 0;
+          final numB = int.tryParse(b['driver_id']?.toString() ?? '0') ?? 0;
           return numA.compareTo(numB);
         });
         totalDrivers = driverData.length;
@@ -65,10 +153,15 @@ class _DriversState extends State<Drivers> {
         
         offlineDrivers = totalDrivers - activeDrivers;
         isLoading = false;
+        
+        // Apply any existing filters
+        _applyFilters();
       });
     } catch (e) {
       setState(() {
         isLoading = false;
+        driverData = [];
+        filteredDriverData = [];
       });
     }
   }
@@ -77,7 +170,7 @@ class _DriversState extends State<Drivers> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(),
+      appBar: AppBarSearch(onFilterPressed: _showFilterDialog),
       drawer: MyDrawer(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -148,8 +241,8 @@ class _DriversState extends State<Drivers> {
                           crossAxisSpacing: 32.0,
                           mainAxisSpacing: 32.0,
                           childAspectRatio: 2,
-                          children: List.generate(driverData.length, (index) {
-                            final driver = driverData[index];
+                          children: List.generate(filteredDriverData.length, (index) {
+                            final driver = filteredDriverData[index];
                             return GestureDetector(
                               onTap: () {
                                 // Pass driver details to DriverInfo widget.

@@ -6,11 +6,14 @@ import 'package:pasada_admin_application/screen/settings_pages/securitypopup.dar
 import 'package:pasada_admin_application/screen/settings_pages/updatespopup.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 
+typedef FilterCallback = void Function();
+
 class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
   @override
   final Size preferredSize;
+  final FilterCallback? onFilterPressed;
 
-  AppBarSearch({Key? key})
+  AppBarSearch({Key? key, this.onFilterPressed})
       : preferredSize = const Size.fromHeight(70.0),
         super(key: key);
 
@@ -172,9 +175,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
               ),
               child: IconButton(
                 icon: Icon(Icons.filter_list, size: 30.0, color: Palette.blackColor),
-                onPressed: () {
-                  // Add your filter action here.
-                },
+                onPressed: widget.onFilterPressed,
                 padding: const EdgeInsets.all(8.0),
                 splashRadius: 20.0,
               ),
