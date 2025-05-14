@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
@@ -27,7 +25,6 @@ class _FleetState extends State<Fleet> {
   int _offlineVehicles = 0;
   Timer? _refreshTimer;
   
-  // Filter state
   Set<String> selectedStatuses = {};
   String? selectedRouteId;
 
@@ -49,13 +46,11 @@ class _FleetState extends State<Fleet> {
   void _applyFilters() {
     setState(() {
       if (selectedStatuses.isEmpty && selectedRouteId == null) {
-        // No filters applied, show all data
         filteredVehicleData = List.from(vehicleData);
         return;
       }
 
       filteredVehicleData = vehicleData.where((vehicle) {
-        // Get vehicle status
         String? vehicleStatus = 'Offline';
         final driverData = vehicle['driverTable'];
         if (driverData != null && driverData is List && driverData.isNotEmpty) {
@@ -65,10 +60,8 @@ class _FleetState extends State<Fleet> {
           }
         }
 
-        // Filter by status
         bool statusMatch = selectedStatuses.isEmpty || selectedStatuses.contains(vehicleStatus);
         
-        // Filter by route ID
         bool routeMatch = selectedRouteId == null || 
             vehicle['route_id']?.toString() == selectedRouteId;
 
@@ -150,7 +143,7 @@ class _FleetState extends State<Fleet> {
             // Handle null values
             if (aId == null) return 1;
             if (bId == null) return -1;
-            // Try numeric sort if possible
+            // Numeric sort
             int? aNum = int.tryParse(aId.toString());
             int? bNum = int.tryParse(bId.toString());
             if (aNum != null && bNum != null) {

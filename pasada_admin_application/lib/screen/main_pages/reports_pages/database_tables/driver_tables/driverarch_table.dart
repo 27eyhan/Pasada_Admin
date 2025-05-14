@@ -226,7 +226,6 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
       ),
     );
   }
-  // --------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -258,6 +257,7 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
                             ),
                           ),
                           child: DataTable(
+                            showCheckboxColumn: false,
                             columns: const [
                               DataColumn(label: Text('Archive ID')),
                               DataColumn(label: Text('Driver ID')),
@@ -288,7 +288,24 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
                                   }
                                   : null,
                                 cells: [
-                                  DataCell(Text(archive['archive_id'].toString())),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        if (allowSelection)
+                                          Radio<int>(
+                                            value: index,
+                                            groupValue: _selectedRowIndex,
+                                            onChanged: (int? value) {
+                                              setState(() {
+                                                _selectedRowIndex = value;
+                                              });
+                                            },
+                                          ),
+                                        SizedBox(width: 8),
+                                        Text(archive['archive_id'].toString()),
+                                      ],
+                                    )
+                                  ),
                                   DataCell(Text(archive['driver_id']?.toString() ?? 'N/A')),
                                   DataCell(Text(archive['full_name']?.toString() ?? 'N/A')),
                                   DataCell(Text(archive['driver_number']?.toString() ?? 'N/A')),
@@ -334,7 +351,7 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
                   color: Palette.whiteColor,
                 ),
                 child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Palette.blackColor), // Icon for archive actions
+                  icon: const Icon(Icons.edit, color: Palette.blackColor),
                   tooltip: 'Actions',
                   color: Palette.whiteColor,
                   elevation: 8.0,

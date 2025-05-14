@@ -8,7 +8,7 @@ import 'package:pasada_admin_application/screen/main_pages/reports_pages/databas
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/driverarch_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/vehicle_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/route_tables/route_table.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/ridehistory_table.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/bookings_tables/ridehistory_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_tables/adminarch_table.dart';
 
 class SelectTable extends StatefulWidget {
@@ -24,10 +24,10 @@ class _SelectTableState extends State<SelectTable> {
     'Driver',
     'Vehicle',
     'Route',
-    'Ride History',
-    'Admin Archives',
+    'Bookings',
+    'Bookings Archives',
     'Driver Archives',
-    'Passenger Archives',
+    'Admin Archives',
   ];
 
   @override
@@ -89,17 +89,14 @@ class _SelectTableState extends State<SelectTable> {
               MaterialPageRoute(builder: (context) => DriverRouteTableScreen()),
             );
             break;
-          case 'Ride History':
+          case 'Bookings':
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => RideHistoryTableScreen()),
+              MaterialPageRoute(builder: (context) => BookingsTableScreen()),
             );
             break;
-          case 'Admin Archives':
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AdminArchTableScreen()),
-            );
+            case 'Bookings Archives':
+            // Do nothing (or optionally handle this case separately)
             break;
           case 'Driver Archives':
             Navigator.push(
@@ -107,8 +104,11 @@ class _SelectTableState extends State<SelectTable> {
               MaterialPageRoute(builder: (context) => DriverArchTableScreen()),
             );
             break;
-          case 'Passenger Archives':
-            // Do nothing (or optionally handle this case separately)
+          case 'Admin Archives':
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AdminArchTableScreen()),
+            );
             break;
           default:
             Navigator.pushNamed(context, '/data_tables', arguments: title);
