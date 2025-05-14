@@ -13,7 +13,7 @@ class DriverLocationService {
       // Assuming current_location is stored in a format that includes latitude and longitude
       final response = await _supabase
           .from('driverTable')
-          .select('driver_id, first_name, last_name, vehicle_id, current_location, driving_status'); // Added driving_status
+          .select('driver_id, full_name, vehicle_id, current_location, driving_status'); // Added driving_status
 
       debugPrint('[DriverLocationService] Supabase response: $response');
       debugPrint('[DriverLocationService] Type of response: ${response.runtimeType}');
@@ -38,8 +38,7 @@ class DriverLocationService {
            if (position != null) {
                driverLocations.add({
                   'driver_id': data['driver_id'],
-                  'first_name': data['first_name'],
-                  'last_name': data['last_name'],
+                  'full_name': data['full_name'],
                   'vehicle_id': data['vehicle_id'],
                   'position': position,
                });

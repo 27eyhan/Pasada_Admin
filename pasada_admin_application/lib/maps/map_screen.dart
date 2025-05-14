@@ -14,6 +14,7 @@ class Mapscreen extends StatefulWidget {
 
 class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixin {
   late GoogleMapController mapController;
+  // ignore: unused_field
   GoogleMapController? _internalMapController;
   final LatLng _center =
       const LatLng(14.714213612467042, 120.9997533908128); // Novadeci route
@@ -103,10 +104,8 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     for (var driverData in driverLocations) {
       final String driverId = driverData['driver_id'].toString();
       final LatLng position = driverData['position'];
-      final String firstName = driverData['first_name'] ?? 'N/A';
-      final String lastName = driverData['last_name'] ?? 'N/A';
+      final String driverName = driverData['full_name'] ?? 'N/A';
       final String vehicleId = driverData['vehicle_id']?.toString() ?? 'N/A';
-      final String driverName = "$firstName $lastName".trim();
 
       updatedMarkers.add(
         Marker(
