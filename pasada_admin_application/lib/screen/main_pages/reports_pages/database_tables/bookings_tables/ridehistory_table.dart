@@ -7,7 +7,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class BookingsTableScreen extends StatefulWidget {
-  const BookingsTableScreen({Key? key}) : super(key: key);
+  const BookingsTableScreen({super.key});
 
   @override
   _BookingsTableScreenState createState() => _BookingsTableScreenState();
@@ -427,8 +427,8 @@ class _BookingsTableScreenState extends State<BookingsTableScreen> {
           alignment: Alignment.centerLeft,
           child: child is Text 
               ? Text(
-                  (child as Text).data ?? '',
-                  style: (child as Text).style,
+                  (child).data ?? '',
+                  style: (child).style,
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 )

@@ -162,6 +162,7 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
 
   void _handleDeleteDriverPermanent(Map<String, dynamic> selectedArchiveData) async {
     final archiveId = selectedArchiveData['archive_id'];
+    // ignore: unused_local_variable
     final driverId = selectedArchiveData['driver_id'];
     
     try {
