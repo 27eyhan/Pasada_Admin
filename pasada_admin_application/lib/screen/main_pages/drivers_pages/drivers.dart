@@ -201,7 +201,7 @@ class _DriversState extends State<Drivers> {
                           vertical: 16.0, horizontal: 8.0),
                       decoration: BoxDecoration(
                         color: Palette.whiteColor,
-                        border: Border.all(color: Palette.blackColor, width: 1.0),
+                        border: Border.all(color: Palette.greyColor, width: 1.0),
                         borderRadius: BorderRadius.circular(10.0),
                         boxShadow: [
                           BoxShadow(
@@ -257,7 +257,7 @@ class _DriversState extends State<Drivers> {
                                 decoration: BoxDecoration(
                                   color: Palette.whiteColor,
                                   border: Border.all(
-                                      color: Palette.blackColor, width: 1.0),
+                                      color: Palette.greyColor, width: 1.0),
                                   borderRadius: BorderRadius.circular(10.0),
                                   boxShadow: [
                                     BoxShadow(
@@ -383,7 +383,7 @@ class _DriversState extends State<Drivers> {
     return Container(
       height: 100.0,
       width: 1.0,
-      color: Palette.blackColor,
+      color: Palette.blackColor.withValues(alpha: 128),
     );
   }
 }

@@ -149,12 +149,12 @@ class _LoginSignupState extends State<LoginSignup> {
                 decoration: BoxDecoration(
                   color: Palette.whiteColor,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Palette.blackColor),
+                  border: Border.all(color: Palette.greyColor),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 51),
-                      spreadRadius: 5,
-                      blurRadius: 15,
+                      color: Palette.blackColor.withValues(alpha: 100),
+                      spreadRadius: 1,
+                      blurRadius: 10,
                     ),
                   ],
                 ),

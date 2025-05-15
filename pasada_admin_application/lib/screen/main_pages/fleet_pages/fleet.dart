@@ -224,7 +224,7 @@ class _FleetState extends State<Fleet> {
                       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
                       decoration: BoxDecoration(
                         color: Palette.whiteColor,
-                        border: Border.all(color: Palette.blackColor, width: 1.0),
+                        border: Border.all(color: Palette.greyColor, width: 1.0),
                         borderRadius: BorderRadius.circular(10.0),
                         boxShadow: [
                           BoxShadow(
