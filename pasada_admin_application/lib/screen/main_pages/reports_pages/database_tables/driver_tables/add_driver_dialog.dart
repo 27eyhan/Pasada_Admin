@@ -23,6 +23,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
   final _driverNumberController = TextEditingController();
   final _vehicleIdController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _licenseNumberController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -31,6 +32,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
     _driverNumberController.dispose();
     _vehicleIdController.dispose();
     _passwordController.dispose();
+    _licenseNumberController.dispose();
     super.dispose();
   }
 
@@ -91,6 +93,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
           'driver_id': nextDriverId,
           'full_name': _fullNameController.text.trim(),
           'driver_number': _driverNumberController.text.trim(),
+          'driver_license_number': _licenseNumberController.text.trim(),
           'driver_password': hashedPassword,
           'vehicle_id': vehicleId,
           'created_at': createdAt,
@@ -175,6 +178,24 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                           label: 'Name',
                           icon: Icons.person_outline,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter driver name' : null,
+                        ),
+                        _buildFormField(
+                          controller: _licenseNumberController,
+                          label: 'License Number',
+                          icon: Icons.credit_card,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter driver license number';
+                            }
+                            
+                            // Regex pattern for "XXX-XX-XXX XXX" format
+                            RegExp licenseFormat = RegExp(r'^[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{3} [A-Z0-9]{3}$');
+                            if (!licenseFormat.hasMatch(value)) {
+                              return 'Format should be XXX-XX-XXX XXX';
+                            }
+                            
+                            return null;
+                          },
                         ),
                         _buildFormField(
                           controller: _driverNumberController,

@@ -26,6 +26,7 @@ class _DriverInfoState extends State<DriverInfo> {
   late TextEditingController _fullNameController;
   late TextEditingController _driverNumberController;
   late TextEditingController _vehicleIdController;
+  late TextEditingController _driverLicenseController;
   
   @override
   void initState() {
@@ -39,6 +40,7 @@ class _DriverInfoState extends State<DriverInfo> {
     _fullNameController = TextEditingController(text: widget.driver['full_name'] ?? '');
     _driverNumberController = TextEditingController(text: widget.driver['driver_number'] ?? '');
     _vehicleIdController = TextEditingController(text: widget.driver['vehicle_id']?.toString() ?? '');
+    _driverLicenseController = TextEditingController(text: widget.driver['driver_license_number'] ?? '');
   }
   
   @override
@@ -47,6 +49,7 @@ class _DriverInfoState extends State<DriverInfo> {
     _fullNameController.dispose();
     _driverNumberController.dispose();
     _vehicleIdController.dispose();
+    _driverLicenseController.dispose();
     super.dispose();
   }
   
@@ -67,7 +70,8 @@ class _DriverInfoState extends State<DriverInfo> {
     // First check if any data has changed
     if (_fullNameController.text == widget.driver['full_name'] &&
         _driverNumberController.text == widget.driver['driver_number'] &&
-        _vehicleIdController.text == widget.driver['vehicle_id']?.toString()) {
+        _vehicleIdController.text == widget.driver['vehicle_id']?.toString() &&
+        _driverLicenseController.text == widget.driver['driver_license_number']) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No changes were made'),
@@ -113,6 +117,7 @@ class _DriverInfoState extends State<DriverInfo> {
         'full_name': _fullNameController.text,
         'driver_number': _driverNumberController.text,
         'vehicle_id': _vehicleIdController.text,
+        'driver_license_number': _driverLicenseController.text,
       };
       
       // Implement the actual database update
@@ -406,6 +411,12 @@ class _DriverInfoState extends State<DriverInfo> {
                       controller: _fullNameController,
                     ),
                     const SizedBox(height: 12.0),
+                    _buildEditableField(
+                      label: "License No.:",
+                      value: driver['driver_license_number'] ?? 'N/A',
+                      controller: _driverLicenseController,
+                    ),
+                    const SizedBox(height: 12.0),
                     Row(
                       children: [
                         Container(
@@ -656,6 +667,7 @@ class _DriverInfoState extends State<DriverInfo> {
                       _fullNameController.text = widget.driver['full_name'] ?? '';
                       _driverNumberController.text = widget.driver['driver_number'] ?? '';
                       _vehicleIdController.text = widget.driver['vehicle_id']?.toString() ?? '';
+                      _driverLicenseController.text = widget.driver['driver_license_number'] ?? '';
                       
                       // Exit edit mode
                       setState(() {

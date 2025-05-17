@@ -192,6 +192,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
     final TextEditingController fullNameController = TextEditingController(text: selectedDriverData['full_name'] ?? '');
     final TextEditingController driverNumberController = TextEditingController(text: selectedDriverData['driver_number'] ?? '');
     final TextEditingController vehicleIdController = TextEditingController(text: selectedDriverData['vehicle_id']?.toString() ?? '');
+    final TextEditingController licenseNumberController = TextEditingController(text: selectedDriverData['driver_license_number'] ?? '');
     
     final driverId = selectedDriverData['driver_id'];
     final driverStatus = selectedDriverData['driving_status'] ?? 'N/A';
@@ -246,6 +247,25 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                           label: 'Name',
                           icon: Icons.person_outline,
                           validator: (value) => value == null || value.isEmpty ? 'Please enter driver name' : null,
+                        ),
+                        _buildFormField(
+                          context: context,
+                          controller: licenseNumberController,
+                          label: 'License Number',
+                          icon: Icons.credit_card,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter driver license number';
+                            }
+                            
+                            // Regex pattern for "XXX-XX-XXX XXX" format
+                            RegExp licenseFormat = RegExp(r'^[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{3} [A-Z0-9]{3}$');
+                            if (!licenseFormat.hasMatch(value)) {
+                              return 'Format should be XXX-XX-XXX XXX';
+                            }
+                            
+                            return null;
+                          },
                         ),
                         _buildFormField(
                           context: context,
@@ -317,7 +337,8 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                 // Check if data has changed
                                 if (fullNameController.text == selectedDriverData['full_name'] &&
                                     driverNumberController.text == selectedDriverData['driver_number'] &&
-                                    vehicleIdController.text == selectedDriverData['vehicle_id']?.toString()) {
+                                    vehicleIdController.text == selectedDriverData['vehicle_id']?.toString() &&
+                                    licenseNumberController.text == selectedDriverData['driver_license_number']) {
                                   _showInfoSnackBar('No changes were made');
                                   Navigator.of(context).pop();
                                   return;
@@ -349,6 +370,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                   final Map<String, dynamic> updatedDriver = {
                                     'full_name': fullNameController.text,
                                     'driver_number': driverNumberController.text,
+                                    'driver_license_number': licenseNumberController.text,
                                   };
                                   
                                   // Only include vehicle_id if it's not empty
@@ -400,6 +422,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
       fullNameController.dispose();
       driverNumberController.dispose();
       vehicleIdController.dispose();
+      licenseNumberController.dispose();
       _startRefreshTimer(); // Restart timer when dialog closes
     }
   }
@@ -543,6 +566,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                             columns: const [
                               DataColumn(label: Text('Driver ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Name', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('License No.', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Number', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Vehicle ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Status', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
@@ -589,6 +613,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                     )
                                   ),
                                   DataCell(Text(driver['full_name'] ?? 'Unknown', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(driver['driver_license_number'] ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['driver_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['vehicle_id']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['driving_status']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
