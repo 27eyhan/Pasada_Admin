@@ -4,6 +4,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
+import 'package:pasada_admin_application/services/database_summary_service.dart';
 
 class AiChat extends StatefulWidget {
   @override
@@ -16,6 +17,9 @@ class _AiChatState extends State<AiChat> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   late Gemini gemini;
+  
+  // Database summary service
+  final DatabaseSummaryService _databaseService = DatabaseSummaryService();
   
   // Chat history for tracking the conversation
   final List<Content> _chatHistory = [];
@@ -86,10 +90,21 @@ You're role is to be an advisor, providing suggestions based on the data inside 
         return "I'm sorry, but I can't respond without an API key. Please configure the GEMINI_API in your .env file.";
       }
       
-      // Use a simpler approach: text-only input instead of chat
+      // Get database context from our service
+      String databaseContext = await _databaseService.getFullDatabaseContext();
+      
+      // Combine system instruction with database context
+      String enhancedInstruction = """$systemInstruction
+      
+Current System Data:
+$databaseContext
+
+Please use this data to provide informed suggestions.
+""";
+      
+      // Use a simpler approach: text-only input with enhanced instruction
       try {
-        // First, try the simple text approach
-        final response = await gemini.text("$systemInstruction\n\nUser: $message");
+        final response = await gemini.text("$enhancedInstruction\n\nUser: $message");
         
         if (response != null && response.output != null) {
           return response.output?.trim() ?? "No response";
