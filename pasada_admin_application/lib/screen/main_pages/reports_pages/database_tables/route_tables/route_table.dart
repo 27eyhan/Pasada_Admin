@@ -49,8 +49,8 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
       isLoading = true; // Set loading true at the beginning
     });
     try {
-      // Fetch all columns from 'driverRouteTable'
-      final data = await supabase.from('driverRouteTable').select('*');
+      // Fetch all columns from 'official_routes'
+      final data = await supabase.from('official_routes').select('*');
       // Debug: verify data retrieval
       final List listData = data as List;
        if (mounted) { // Check if the widget is still mounted
@@ -111,11 +111,12 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
    }
   }
 
-  void _handleDeleteRoute(Map<String, dynamic> selectedRouteData) async {
-    final routeId = selectedRouteData['route_id'];
-    final routeName = selectedRouteData['route']?.toString() ?? 'ID: $routeId'; // Use route name or ID
-    final startingPlace = selectedRouteData['starting_place']?.toString() ?? 'N/A';
-    final endingPlace = selectedRouteData['ending_place']?.toString() ?? 'N/A';
+    void _handleDeleteRoute(Map<String, dynamic> selectedRouteData) async {
+    final routeId = selectedRouteData['officialroute_id'];
+    final routeName = selectedRouteData['route_name']?.toString() ?? 'ID: $routeId'; // Use route name or ID
+    final startingPlace = selectedRouteData['origin_name']?.toString() ?? 'N/A';
+    final endingPlace = selectedRouteData['destination_name']?.toString() ?? 'N/A';
+    final description = selectedRouteData['description']?.toString() ?? 'N/A';
     
     _refreshTimer?.cancel();
 
@@ -181,9 +182,9 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                     _showInfoSnackBar('Deleting route...');
                     
                     await supabase
-                        .from('driverRouteTable')
+                        .from('official_routes')
                         .delete()
-                        .match({'route_id': routeId});
+                        .match({'officialroute_id': routeId});
 
                     _showInfoSnackBar('Route $routeName deleted successfully.');
                     fetchRouteData(); // Refresh data after deletion
@@ -304,8 +305,21 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
 
                               // Create a description from route data
                               final String description = "Via ${route['intermediate1_place'] ?? 'N/A'} - ${route['intermediate2_place'] ?? 'N/A'}";
-                              // For status, we'll use a placeholder since it's not in the original data
-                              final String status = "Active"; // You may need to modify this based on your data model
+                              // Get status from the database, default to "Inactive" if not available
+                              final String status = route['status']?.toString() ?? "Inactive";
+                              // Determine status color based on status value
+                              Color statusColor;
+                              Color statusTextColor;
+                              Color statusBorderColor;
+                              if (status.toLowerCase() == "active") {
+                                statusColor = Colors.green[100]!;
+                                statusTextColor = Colors.green[800]!;
+                                statusBorderColor = Colors.green[400]!;
+                              } else {
+                                statusColor = Colors.red[100]!;
+                                statusTextColor = Colors.red[800]!;
+                                statusBorderColor = Colors.red[400]!;
+                              }
 
                               return DataRow(
                                 selected: allowSelection && (_selectedRowIndex == index),
@@ -337,27 +351,27 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                                             },
                                           ),
                                         SizedBox(width: 8),
-                                        Text(route['route_id'].toString(), style: TextStyle(fontSize: 14.0)),
+                                        Text(route['officialroute_id'].toString(), style: TextStyle(fontSize: 14.0)),
                                       ],
                                     )
                                   ),
-                                  DataCell(Text(route['route']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(route['starting_place']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(route['ending_place']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(description, style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(route['route_name']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(route['origin_name']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(route['destination_name']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(route['description']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(
                                     Container(
                                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: Colors.green[100],
+                                        color: statusColor,
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.green[400]!),
+                                        border: Border.all(color: statusBorderColor),
                                       ),
                                       child: Text(
                                         status,
                                         style: TextStyle(
                                           fontSize: 12.0,
-                                          color: Colors.green[800],
+                                          color: statusTextColor,
                                           fontWeight: FontWeight.w600
                                         ),
                                       ),

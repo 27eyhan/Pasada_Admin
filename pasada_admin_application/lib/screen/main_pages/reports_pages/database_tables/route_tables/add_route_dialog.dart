@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'dart:convert';
 
 class AddRouteDialog extends StatefulWidget {
   final SupabaseClient supabase;
@@ -18,29 +19,30 @@ class AddRouteDialog extends StatefulWidget {
 
 class _AddRouteDialogState extends State<AddRouteDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _startingPlaceController = TextEditingController();
-  final _startingLocationController = TextEditingController();
-  final _intermediate1PlaceController = TextEditingController();
-  final _intermediateLocation1Controller = TextEditingController();
-  final _intermediate2PlaceController = TextEditingController();
-  final _intermediateLocation2Controller = TextEditingController();
-  final _endingPlaceController = TextEditingController();
-  final _endingLocationController = TextEditingController();
-  final _routeController = TextEditingController();
+  final _originNameController = TextEditingController();
+  final _originLatController = TextEditingController();
+  final _originLngController = TextEditingController();
+  final _destinationNameController = TextEditingController();
+  final _destinationLatController = TextEditingController();
+  final _destinationLngController = TextEditingController();
+  final _routeNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _intermediateCoordinatesController = TextEditingController();
+  String _status = 'Active'; // Default status
 
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _startingPlaceController.dispose();
-    _startingLocationController.dispose();
-    _intermediate1PlaceController.dispose();
-    _intermediateLocation1Controller.dispose();
-    _intermediate2PlaceController.dispose();
-    _intermediateLocation2Controller.dispose();
-    _endingPlaceController.dispose();
-    _endingLocationController.dispose();
-    _routeController.dispose();
+    _originNameController.dispose();
+    _originLatController.dispose();
+    _originLngController.dispose();
+    _destinationNameController.dispose();
+    _destinationLatController.dispose();
+    _destinationLngController.dispose();
+    _routeNameController.dispose();
+    _descriptionController.dispose();
+    _intermediateCoordinatesController.dispose();
     super.dispose();
   }
 
@@ -49,16 +51,16 @@ class _AddRouteDialogState extends State<AddRouteDialog> {
       setState(() { _isLoading = true; });
 
       try {
-        // 1. Find the highest current route_id
+        // 1. Find the highest current officialroute_id
         final List<dynamic> response = await widget.supabase
-            .from('driverRouteTable')
-            .select('route_id')
-            .order('route_id', ascending: false)
+            .from('official_routes')
+            .select('officialroute_id')
+            .order('officialroute_id', ascending: false)
             .limit(1);
 
         int nextRouteId = 1; // Default if table is empty
         if (response.isNotEmpty) {
-          final int? highestId = response[0]['route_id'];
+          final int? highestId = response[0]['officialroute_id'];
           if (highestId != null) {
             nextRouteId = highestId + 1;
           }
@@ -67,23 +69,41 @@ class _AddRouteDialogState extends State<AddRouteDialog> {
         // 2. Get current timestamp
         final String createdAt = DateTime.now().toIso8601String();
 
-        // 3. Prepare data for insertion (handle optional fields)
+        // 3. Parse intermediate coordinates JSON
+        dynamic intermediateCoordinates;
+        try {
+          if (_intermediateCoordinatesController.text.isNotEmpty) {
+            intermediateCoordinates = json.decode(_intermediateCoordinatesController.text);
+          } else {
+            // Default empty array if no coordinates provided
+            intermediateCoordinates = [];
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Invalid JSON format for intermediate coordinates')),
+          );
+          setState(() { _isLoading = false; });
+          return;
+        }
+
+        // 4. Prepare data for insertion
         final newRouteData = {
-          'route_id': nextRouteId,
-          'starting_place': _startingPlaceController.text.trim(),
-          'starting_location': _startingLocationController.text.trim(),
-          'intermediate1_place': _intermediate1PlaceController.text.trim(),
-          'intermediate_location1': _intermediateLocation1Controller.text.trim(),
-          'intermediate2_place': _intermediate2PlaceController.text.trim(),
-          'intermediate_location2': _intermediateLocation2Controller.text.trim(),
-          'ending_place': _endingPlaceController.text.trim(),
-          'ending_location': _endingLocationController.text.trim(),
-          'route': _routeController.text.trim(),
+          'officialroute_id': nextRouteId,
+          'route_name': _routeNameController.text.trim(),
+          'origin_name': _originNameController.text.trim(),
+          'destination_name': _destinationNameController.text.trim(),
+          'origin_lat': _originLatController.text.trim(),
+          'origin_lng': _originLngController.text.trim(),
+          'destination_lat': _destinationLatController.text.trim(),
+          'destination_lng': _destinationLngController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'intermediate_coordinates': intermediateCoordinates,
+          'status': _status,
           'created_at': createdAt,
         };
 
-        // 4. Insert into Supabase
-        await widget.supabase.from('driverRouteTable').insert(newRouteData);
+        // 5. Insert into Supabase
+        await widget.supabase.from('official_routes').insert(newRouteData);
 
         setState(() { _isLoading = false; });
         widget.onRouteActionComplete(); // Refresh the table
@@ -104,7 +124,6 @@ class _AddRouteDialogState extends State<AddRouteDialog> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    // Adjust width if needed, routes have many fields
     final double dialogWidth = screenWidth * 0.4; 
 
     return Dialog(
@@ -153,58 +172,128 @@ class _AddRouteDialogState extends State<AddRouteDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         _buildFormField(
-                          controller: _startingPlaceController,
-                          label: 'Starting Place',
-                          icon: Icons.location_on_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _startingLocationController,
-                          label: 'Starting Location (Lat, Lng)',
-                          icon: Icons.map_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _intermediate1PlaceController,
-                          label: 'Intermediate Place 1',
-                          icon: Icons.location_on_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _intermediateLocation1Controller,
-                          label: 'Intermediate Location 1',
-                          icon: Icons.map_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _intermediate2PlaceController,
-                          label: 'Intermediate Place 2',
-                          icon: Icons.location_on_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _intermediateLocation2Controller,
-                          label: 'Intermediate Location 2',
-                          icon: Icons.map_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _endingPlaceController,
-                          label: 'Ending Place',
-                          icon: Icons.location_on_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _endingLocationController,
-                          label: 'Ending Location (Lat, Lng)',
-                          icon: Icons.map_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        _buildFormField(
-                          controller: _routeController,
+                          controller: _routeNameController,
                           label: 'Route Name/Code',
                           icon: Icons.label_outline,
                           validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                        ),
+                        _buildFormField(
+                          controller: _originNameController,
+                          label: 'Origin Place',
+                          icon: Icons.location_on_outlined,
+                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildFormField(
+                                controller: _originLatController,
+                                label: 'Origin Latitude',
+                                icon: Icons.map_outlined,
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: _buildFormField(
+                                controller: _originLngController,
+                                label: 'Origin Longitude',
+                                icon: Icons.map_outlined,
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        _buildFormField(
+                          controller: _destinationNameController,
+                          label: 'Destination Place',
+                          icon: Icons.location_on_outlined,
+                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildFormField(
+                                controller: _destinationLatController,
+                                label: 'Destination Latitude',
+                                icon: Icons.map_outlined,
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: _buildFormField(
+                                controller: _destinationLngController,
+                                label: 'Destination Longitude',
+                                icon: Icons.map_outlined,
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        _buildFormField(
+                          controller: _intermediateCoordinatesController,
+                          label: 'Intermediate Coordinates (JSON)',
+                          icon: Icons.route_outlined,
+                          maxLines: 3,
+                          hintText: '[{"lat": 14.123, "lng": 121.456, "name": "Stop 1"}, ...]',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return null; // Optional field
+                            }
+                            try {
+                              json.decode(value);
+                              return null;
+                            } catch (e) {
+                              return 'Invalid JSON format';
+                            }
+                          },
+                        ),
+                        _buildFormField(
+                          controller: _descriptionController,
+                          label: 'Description',
+                          icon: Icons.description_outlined,
+                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                          maxLines: 2,
+                        ),
+                        // Status dropdown
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: DropdownButtonFormField<String>(
+                            decoration: InputDecoration(
+                              labelText: 'Status',
+                              prefixIcon: Icon(Icons.toggle_on_outlined, color: Palette.greenColor),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                                borderSide: BorderSide(color: Colors.grey),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                                borderSide: BorderSide(color: Palette.greenColor, width: 2.0),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                            ),
+                            value: _status,
+                            items: ['Active', 'Inactive'].map((String status) {
+                              return DropdownMenuItem<String>(
+                                value: status,
+                                child: Text(status),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  _status = newValue;
+                                });
+                              }
+                            },
+                          ),
                         ),
                       ],
                     ),
@@ -281,6 +370,8 @@ class _AddRouteDialogState extends State<AddRouteDialog> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     required String? Function(String?) validator,
+    int? maxLines = 1,
+    String? hintText,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -288,6 +379,7 @@ class _AddRouteDialogState extends State<AddRouteDialog> {
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hintText,
           prefixIcon: Icon(icon, color: Palette.greenColor),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
@@ -304,6 +396,7 @@ class _AddRouteDialogState extends State<AddRouteDialog> {
         keyboardType: keyboardType,
         obscureText: obscureText,
         validator: validator,
+        maxLines: maxLines,
       ),
     );
   }
