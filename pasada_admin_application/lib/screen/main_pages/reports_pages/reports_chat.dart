@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
-import 'package:intl/intl.dart';
 
 class EarningsBreakdownDialog extends StatelessWidget {
   final Map<String, dynamic> driver;

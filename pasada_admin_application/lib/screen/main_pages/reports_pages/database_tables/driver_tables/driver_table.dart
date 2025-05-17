@@ -7,6 +7,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/driver_delete_handler.dart';
+import 'package:flutter/services.dart';
 
 class DriverTableScreen extends StatefulWidget {
   const DriverTableScreen({Key? key}) : super(key: key);
@@ -253,15 +254,20 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                           controller: licenseNumberController,
                           label: 'License Number',
                           icon: Icons.credit_card,
+                          hintText: 'AXX-XX-XXXXXX',
+                          inputFormatters: [
+                            LicenseNumberFormatter(),
+                            LengthLimitingTextInputFormatter(12), // A00-00-000000 = 12 chars
+                          ],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter driver license number';
                             }
                             
-                            // Regex pattern for "XXX-XX-XXX XXX" format
-                            RegExp licenseFormat = RegExp(r'^[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{3} [A-Z0-9]{3}$');
+                            // Regex pattern for Philippine license format "A00-00-000000"
+                            RegExp licenseFormat = RegExp(r'^[A-Z]\d{2}-\d{2}-\d{6}$');
                             if (!licenseFormat.hasMatch(value)) {
-                              return 'Format should be XXX-XX-XXX XXX';
+                              return 'Format should be A00-00-000000 (letter-numbers)';
                             }
                             
                             return null;
@@ -479,6 +485,9 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     required String? Function(String?) validator,
+    String? hintText,
+    String? helperText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -486,6 +495,8 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hintText,
+          helperText: helperText,
           prefixIcon: Icon(icon, color: Palette.orangeColor),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
@@ -502,6 +513,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         keyboardType: keyboardType,
         obscureText: obscureText,
         validator: validator,
+        inputFormatters: inputFormatters,
       ),
     );
   }

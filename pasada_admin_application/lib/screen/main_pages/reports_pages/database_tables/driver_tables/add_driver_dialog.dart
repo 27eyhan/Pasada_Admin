@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter/services.dart';
 
 class AddDriverDialog extends StatefulWidget {
   final SupabaseClient supabase;
@@ -183,15 +184,20 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                           controller: _licenseNumberController,
                           label: 'License Number',
                           icon: Icons.credit_card,
+                          hintText: 'AXX-XX-XXXXXX',
+                          inputFormatters: [
+                            LicenseNumberFormatter(),
+                            LengthLimitingTextInputFormatter(12), // A00-00-000000 = 12 chars
+                          ],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter driver license number';
                             }
                             
-                            // Regex pattern for "XXX-XX-XXX XXX" format
-                            RegExp licenseFormat = RegExp(r'^[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{3} [A-Z0-9]{3}$');
+                            // Regex pattern for Philippine license format "A00-00-000000"
+                            RegExp licenseFormat = RegExp(r'^[A-Z]\d{2}-\d{2}-\d{6}$');
                             if (!licenseFormat.hasMatch(value)) {
-                              return 'Format should be XXX-XX-XXX XXX';
+                              return 'Format should be A00-00-000000 (letter-numbers)';
                             }
                             
                             return null;
@@ -303,6 +309,9 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     required String? Function(String?) validator,
+    String? hintText,
+    String? helperText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -310,6 +319,8 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hintText,
+          helperText: helperText,
           prefixIcon: Icon(icon, color: Palette.greenColor), // Changed to green
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
@@ -326,7 +337,53 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         keyboardType: keyboardType,
         obscureText: obscureText,
         validator: validator,
+        inputFormatters: inputFormatters,
       ),
+    );
+  }
+}
+
+// Custom input formatter for license number
+class LicenseNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    // Return if deleting
+    if (newValue.text.length < oldValue.text.length) {
+      return newValue;
+    }
+
+    String newText = newValue.text.toUpperCase();
+    final buffer = StringBuffer();
+    int index = 0;
+    
+    // Format as A00-00-000000
+    for (int i = 0; i < newText.length && index < 12; i++) {
+      if (index == 0 && RegExp(r'[A-Z]').hasMatch(newText[i])) {
+        buffer.write(newText[i]);
+        index++;
+      } else if ((index >= 1 && index <= 2) && RegExp(r'\d').hasMatch(newText[i])) {
+        buffer.write(newText[i]);
+        index++;
+      } else if (index == 3) {
+        buffer.write('-');
+        i--; // Don't consume the character
+        index++;
+      } else if ((index >= 4 && index <= 5) && RegExp(r'\d').hasMatch(newText[i])) {
+        buffer.write(newText[i]);
+        index++;
+      } else if (index == 6) {
+        buffer.write('-');
+        i--; // Don't consume the character
+        index++;
+      } else if (index >= 7 && RegExp(r'\d').hasMatch(newText[i])) {
+        buffer.write(newText[i]);
+        index++;
+      }
+    }
+
+    return TextEditingValue(
+      text: buffer.toString(),
+      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 } 
