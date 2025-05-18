@@ -127,6 +127,14 @@ class _DriverInfoState extends State<DriverInfo> {
           .update(updatedDriver)
           .eq('driver_id', widget.driver['driver_id']);
       
+      // Explicitly force an activity log to be created with current status
+      String? currentStatus = widget.driver['driving_status'];
+      if (currentStatus != null) {
+        await logDriverActivity(currentStatus, DateTime.now());
+        print('_saveChanges: Explicitly logged activity for status $currentStatus');
+      } else {
+        print('_saveChanges: No status available to log activity');
+      }
       
       // Close loading dialog
       Navigator.pop(context);
@@ -138,6 +146,10 @@ class _DriverInfoState extends State<DriverInfo> {
           backgroundColor: Colors.green,
         ),
       );
+
+      // Force refresh of heatmap data
+      _generateHeatMapData();
+      
     } catch (e) {
       // Close loading dialog
       Navigator.pop(context);
@@ -266,6 +278,7 @@ class _DriverInfoState extends State<DriverInfo> {
   // Log driver activity when status changes
   Future<void> logDriverActivity(String status, DateTime timestamp) async {
     try {
+      print('Starting logDriverActivity for driver ${widget.driver['driver_id']} with status $status');
       final supabase = Supabase.instance.client;
       
       // Check if there's an ongoing session without a logout
@@ -276,46 +289,109 @@ class _DriverInfoState extends State<DriverInfo> {
           .filter('logout_timestamp', 'is', null)
           .maybeSingle();
       
+      print('Checked for ongoing session: ${ongoingSession != null ? 'Found' : 'Not found'}');
+      
       if (ongoingSession != null) {
         // Calculate session duration in seconds
         final loginTime = DateTime.parse(ongoingSession['login_timestamp']);
         final duration = timestamp.difference(loginTime).inSeconds;
         
+        print('Updating session with log_id: ${ongoingSession['log_id']} - duration: $duration seconds');
+        
         // Update the existing session with logout time and duration
-        await supabase
+        final updateResponse = await supabase
             .from('driverActivityLog')
             .update({
               'logout_timestamp': timestamp.toIso8601String(),
               'session_duration': duration,
             })
             .eq('log_id', ongoingSession['log_id']);
+        
+        print('Updated existing driver activity log: ID ${ongoingSession['log_id']} with logout time and duration');
       }
       
       // If status is one of the active statuses, create a new session
       if (status == 'Online' || status == 'Driving' || status == 'Idling') {
-        // Insert new activity log with auto-generated UUID (handled by Supabase)
-        await supabase
+        // Generate a unique log_id
+        final int driverId = int.parse(widget.driver['driver_id'].toString());
+        final int logId = DateTime.now().millisecondsSinceEpoch * 100 + (driverId % 100);
+        
+        print('Creating new activity log with ID $logId for driver $driverId with status $status');
+        
+        final activityData = {
+          'log_id': logId,
+          'driver_id': widget.driver['driver_id'],
+          'login_timestamp': timestamp.toIso8601String(),
+          'status': status,
+        };
+        
+        print('Activity data for insertion: $activityData');
+        
+        final insertResponse = await supabase
             .from('driverActivityLog')
-            .insert({
-              'driver_id': widget.driver['driver_id'],
-              'login_timestamp': timestamp.toIso8601String(),
-              'status': status,
-            });
+            .insert(activityData)
+            .select();
+        
+        print('Insertion response: $insertResponse');
+        print('Successfully created new driver activity log: ID $logId for driver $driverId with status $status');
       }
       
       // Refresh heatmap data
       _generateHeatMapData();
       
     } catch (e) {
+      print('Error logging driver activity: ${e.toString()}');
+      // Check if exception is a PostgreSQL error with more details
+      if (e is PostgrestException) {
+        print('PostgreSQL error code: ${e.code}');
+        print('PostgreSQL error message: ${e.message}');
+        print('PostgreSQL error details: ${e.details}');
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error logging driver activity: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Add this explicit method to be called when we want to update driver status
+  Future<void> updateDriverStatus(String newStatus) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final now = DateTime.now();
+      
+      // Update driver status in driver table
+      await supabase
+          .from('driverTable')
+          .update({'driving_status': newStatus, 'last_online': now.toIso8601String()})
+          .eq('driver_id', widget.driver['driver_id']);
+      
+      // Log this activity
+      await logDriverActivity(newStatus, now);
+      
+      // Refresh UI
+      setState(() {});
+      
+    } catch (e) {
+      print('Error updating driver status: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating driver status: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width * 0.65;
-    final double dialogWidth = screenWidth * 0.6;
-    // Make dialog taller than it is wide
-    final double dialogHeight = screenWidth * 0.85;
+    final double screenWidth = MediaQuery.of(context).size.width * 0.45; // Increased width ratio
+    final double dialogWidth = screenWidth;
+    // Make dialog wider than it is tall
+    final double dialogHeight = screenWidth * 0.7; // Reduced height ratio
     final driver = widget.driver;
 
     return Dialog(
@@ -341,21 +417,21 @@ class _DriverInfoState extends State<DriverInfo> {
                   children: [
                     Icon(Icons.person, color: Palette.greenColor, size: 28),
                     SizedBox(width: 12.0),
-                Text(
-                  "Driver Information",
-                  style: TextStyle(
+                    Text(
+                      "Driver Information",
+                      style: TextStyle(
                         fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                         color: Palette.greenColor,
                         fontFamily: 'Inter',
                       ),
-                  ),
+                    ),
                   ],
                 ),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                  onTap: () => Navigator.of(context).pop(),
+                    onTap: () => Navigator.of(context).pop(),
                     borderRadius: BorderRadius.circular(50),
                     child: Container(
                       padding: EdgeInsets.all(8),
@@ -363,286 +439,294 @@ class _DriverInfoState extends State<DriverInfo> {
                         color: Colors.grey[200],
                         shape: BoxShape.circle,
                       ),
-                  child: Icon(
-                    Icons.close,
-                    size: 24,
-                    color: Palette.blackColor,
+                      child: Icon(
+                        Icons.close,
+                        size: 24,
+                        color: Palette.blackColor,
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 12.0),
             Divider(color: Palette.greenColor.withAlpha(50), thickness: 1.5),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 12.0),
             
-            // Personal information section with better layout
+            // Main content with two columns
             Expanded(
-              flex: 5, // Give more space to driver information
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Driver ID with badge-like styling
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Palette.greenColor.withAlpha(40),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Palette.greenColor.withAlpha(100)),
-                      ),
-                      child: Text(
-                      "Driver ID: ${driver['driver_id']?.toString() ?? 'N/A'}",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Palette.greenColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20.0),
-                    
-                    // Editable fields with better styling
-                    _buildEditableField(
-                      label: "Name:",
-                      value: driver['full_name'] ?? '',
-                      controller: _fullNameController,
-                    ),
-                    const SizedBox(height: 12.0),
-                    _buildEditableField(
-                      label: "License No.:",
-                      value: driver['driver_license_number'] ?? 'N/A',
-                      controller: _driverLicenseController,
-                    ),
-                    const SizedBox(height: 12.0),
-                    Row(
-                      children: [
-                        Container(
-                          width: 100,
-                          child: Text(
-                            "Driver Number:",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Palette.blackColor,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // LEFT COLUMN - Driver Information (switched from right)
+                  Expanded(
+                    flex: 5,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Driver ID with badge-like styling
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Palette.greenColor.withAlpha(40),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Palette.greenColor.withAlpha(100)),
+                            ),
+                            child: Text(
+                              "Driver ID: ${driver['driver_id']?.toString() ?? 'N/A'}",
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Palette.greenColor,
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: _isEditMode
-                            ? TextFormField(
-                      controller: _driverNumberController,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.grey[50],
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey[400]!),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Palette.greenColor, width: 2),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey[400]!),
+                          const SizedBox(height: 20.0),
+                          
+                          // Editable fields with better styling
+                          _buildEditableField(
+                            label: "Name:",
+                            value: driver['full_name'] ?? '',
+                            controller: _fullNameController,
+                          ),
+                          const SizedBox(height: 12.0),
+                          _buildEditableField(
+                            label: "License No.:",
+                            value: driver['driver_license_number'] ?? 'N/A',
+                            controller: _driverLicenseController,
+                          ),
+                          const SizedBox(height: 12.0),
+                          Row(
+                            children: [
+                              Container(
+                                width: 100,
+                                child: Text(
+                                  "Driver Number:",
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Palette.blackColor,
                                   ),
                                 ),
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16,
-                                  color: Palette.blackColor,
+                              ),
+                              Expanded(
+                                child: _isEditMode
+                                  ? TextFormField(
+                                    controller: _driverNumberController,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.grey[50],
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: Colors.grey[400]!),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: Palette.greenColor, width: 2),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: Colors.grey[400]!),
+                                      ),
+                                    ),
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 16,
+                                      color: Palette.blackColor,
+                                    ),
+                                  )
+                                  : Text(
+                                    driver['driver_number'] ?? 'N/A',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 16,
+                                      color: Palette.blackColor,
+                                    ),
+                                  ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12.0),
+                          _buildEditableField(
+                            label: "Vehicle ID:",
+                            value: driver['vehicle_id']?.toString() ?? 'N/A',
+                            controller: _vehicleIdController,
+                          ),
+                          const SizedBox(height: 12.0),
+                          
+                          // Status indicator with color coding
+                          Row(
+                            children: [
+                              Container(
+                                width: 100,
+                                child: Text(
+                                  "Status:",
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Palette.blackColor,
+                                  ),
                                 ),
-                              )
-                            : Text(
-                                driver['driver_number'] ?? 'N/A',
+                              ),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(driver['driving_status']),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  "${driver['driving_status'] ?? 'N/A'}",
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 15,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12.0),
+                          
+                          // Last online with icon
+                          Row(
+                            children: [
+                              Container(
+                                width: 100,
+                                child: Text(
+                                  "Last Online:",
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Palette.blackColor,
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                              SizedBox(width: 6),
+                              Text(
+                                _formatLastOnline(driver['last_online']),
                                 style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   color: Palette.blackColor,
                                 ),
                               ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12.0),
-                    _buildEditableField(
-                      label: "Vehicle ID:",
-                      value: driver['vehicle_id']?.toString() ?? 'N/A',
-                      controller: _vehicleIdController,
-                    ),
-                    const SizedBox(height: 12.0),
-                    
-                    // Status indicator with color coding
-                    Row(
-                      children: [
-                        Container(
-                          width: 100,
-                          child: Text(
-                            "Status:",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                        color: Palette.blackColor,
+                            ],
+                          ),
+                        ],
                       ),
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(driver['driving_status']),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            "${driver['driving_status'] ?? 'N/A'}",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 15,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12.0),
-                    
-                    // Last online with icon
-                    Row(
-                      children: [
-                        Container(
-                          width: 100,
-                          child: Text(
-                            "Last Online:",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Palette.blackColor,
-                            ),
-                          ),
-                        ),
-                        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                        SizedBox(width: 6),
-                        Text(
-                          _formatLastOnline(driver['last_online']),
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 15,
-                        color: Palette.blackColor,
-                      ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Activity calendar section with improved container
-            Expanded(
-              flex: 7, // Calendar gets more space than text info
-              child: Center(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: MediaQuery.of(context).size.width * 0.35,
-                      height: MediaQuery.of(context).size.height * 0.34, // Slightly reduced height
-                      padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(color: Palette.greenColor.withAlpha(30)),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.grey.withAlpha(20),
-                          spreadRadius: 1,
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                          // Improved month header
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                              Icon(Icons.calendar_today, color: Palette.greenColor, size: 20),
-                              SizedBox(width: 8),
-                            Text(
-                              "Driver Activity",
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                  fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                  color: Palette.greenColor,
-                                ),
-                            ),
-                          ],
-                        ),
-                          const SizedBox(height: 12),
-                        // Calendar with default navigation
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: HeatMapCalendar(
-                              datasets: _heatMapData,
-                              colorMode: ColorMode.color,
-                              defaultColor: Palette.greyColor,
-                              textColor: Palette.blackColor,
-                              colorsets: {
-                                1: Palette.greenColor.withAlpha(100),
-                                2: Palette.greenColor.withAlpha(150),
-                                3: Palette.greenColor.withAlpha(200),
-                                4: Palette.greenColor,
-                              },
-                              onClick: (date) {
-                                setState(() {
-                                });
-                              },
-                              monthFontSize: 14,
-                              weekFontSize: 10,
-                              initDate: DateTime(_currentMonth.year, _currentMonth.month),
-                              onMonthChange: (date) {
-                                setState(() {
-                                  _currentMonth = date;
-                                  _generateHeatMapData();
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-                    const SizedBox(height: 12.0),
-                    // Improved legend with more compact layout
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 8,
-                    children: [
-                        _buildLegendItem(Palette.greyColor, "Inactive"),
-                        _buildLegendItem(Palette.greenColor.withAlpha(100), "< 1 hour"),
-                        _buildLegendItem(Palette.greenColor.withAlpha(150), "1-2 hours"),
-                        _buildLegendItem(Palette.greenColor.withAlpha(200), "2-4 hours"),
-                        _buildLegendItem(Palette.greenColor, "4+ hours"),
-                    ],
+                  
+                  SizedBox(width: 20), // Spacing between columns
+                  
+                  // RIGHT COLUMN - Driver Activity (switched from left)
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Calendar section
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(16.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12.0),
+                              border: Border.all(color: Palette.greenColor.withAlpha(30)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withAlpha(20),
+                                  spreadRadius: 1,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Calendar header
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.calendar_today, color: Palette.greenColor, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "Driver Activity",
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Palette.greenColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // Calendar with default navigation
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                    child: HeatMapCalendar(
+                                      datasets: _heatMapData,
+                                      colorMode: ColorMode.color,
+                                      defaultColor: Palette.greyColor,
+                                      textColor: Palette.blackColor,
+                                      colorsets: {
+                                        1: Palette.greenColor.withAlpha(100),
+                                        2: Palette.greenColor.withAlpha(150),
+                                        3: Palette.greenColor.withAlpha(200),
+                                        4: Palette.greenColor,
+                                      },
+                                      onClick: (date) {
+                                        setState(() {});
+                                      },
+                                      monthFontSize: 14,
+                                      weekFontSize: 10,
+                                      initDate: DateTime(_currentMonth.year, _currentMonth.month),
+                                      onMonthChange: (date) {
+                                        setState(() {
+                                          _currentMonth = date;
+                                          _generateHeatMapData();
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8.0),
+                        // Legend with more compact layout
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 12,
+                          runSpacing: 8,
+                          children: [
+                            _buildLegendItem(Palette.greyColor, "Inactive"),
+                            _buildLegendItem(Palette.greenColor.withAlpha(100), "< 1 hour"),
+                            _buildLegendItem(Palette.greenColor.withAlpha(150), "1-2 hours"),
+                            _buildLegendItem(Palette.greenColor.withAlpha(200), "2-4 hours"),
+                            _buildLegendItem(Palette.greenColor, "4+ hours"),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            ),
             
-            const SizedBox(height: 5.0),
+            const SizedBox(height: 16.0),
             
             // Enhanced buttons with consistent styling
             Row(
@@ -692,13 +776,13 @@ class _DriverInfoState extends State<DriverInfo> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                    _isEditMode ? "Cancel" : "Contact Driver",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
+                        _isEditMode ? "Cancel" : "Contact Driver",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
-                      color: _isEditMode ? Colors.white : Palette.blackColor,
-                    ),
+                          color: _isEditMode ? Colors.white : Palette.blackColor,
+                        ),
                       ),
                     ],
                   ),
@@ -727,13 +811,13 @@ class _DriverInfoState extends State<DriverInfo> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                    _isEditMode ? "Save Changes" : "Manage Driver",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
+                        _isEditMode ? "Save Changes" : "Manage Driver",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
-                      color: _isEditMode ? Colors.white : Palette.blackColor,
-                    ),
+                          color: _isEditMode ? Colors.white : Palette.blackColor,
+                        ),
                       ),
                     ],
                   ),
@@ -781,13 +865,13 @@ class _DriverInfoState extends State<DriverInfo> {
       case 'active':
         return Palette.greenColor;
       case 'driving':
-        return Colors.blue;
+        return Palette.greenColor;
       case 'idling':
         return Palette.orangeColor;
       case 'offline':
-        return Colors.grey;
+        return Palette.redColor;
       default:
-        return Colors.grey;
+        return Palette.greyColor;
     }
   }
 
