@@ -407,7 +407,7 @@ class _FleetState extends State<Fleet> {
   // Vehicle card for grid view
   Widget _buildVehicleCard(Map<String, dynamic> vehicle) {
     final status = _getVehicleStatus(vehicle);
-    final isActive = _isVehicleActive(status);
+    _isVehicleActive(status);
     final statusColor = _getStatusColor(status);
     final statusIcon = _getStatusIcon(status);
     
@@ -536,7 +536,7 @@ class _FleetState extends State<Fleet> {
   // List item for the list view
   Widget _buildVehicleListItem(Map<String, dynamic> vehicle) {
     final status = _getVehicleStatus(vehicle);
-    final isActive = _isVehicleActive(status);
+    _isVehicleActive(status);
     final statusColor = _getStatusColor(status);
     final statusIcon = _getStatusIcon(status);
     
