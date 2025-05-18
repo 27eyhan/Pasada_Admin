@@ -116,7 +116,6 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
     final routeName = selectedRouteData['route_name']?.toString() ?? 'ID: $routeId'; // Use route name or ID
     final startingPlace = selectedRouteData['origin_name']?.toString() ?? 'N/A';
     final endingPlace = selectedRouteData['destination_name']?.toString() ?? 'N/A';
-    final description = selectedRouteData['description']?.toString() ?? 'N/A';
     
     _refreshTimer?.cancel();
 
@@ -304,7 +303,6 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                               final bool allowSelection = _pendingAction != null;
 
                               // Create a description from route data
-                              final String description = "Via ${route['intermediate1_place'] ?? 'N/A'} - ${route['intermediate2_place'] ?? 'N/A'}";
                               // Get status from the database, default to "Inactive" if not available
                               final String status = route['status']?.toString() ?? "Inactive";
                               // Determine status color based on status value
