@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'drivers_actlogs.dart';
 
 class DriverInfo extends StatefulWidget {
   final Map<String, dynamic> driver;
@@ -21,6 +22,7 @@ class _DriverInfoState extends State<DriverInfo> {
   late Map<DateTime, int> _heatMapData = {};
   late DateTime _currentMonth = DateTime.now();
   late bool _isEditMode;
+  late DriverActivityLogs _activityLogs;
   
   // Text editing controllers
   late TextEditingController _fullNameController;
@@ -32,6 +34,10 @@ class _DriverInfoState extends State<DriverInfo> {
   void initState() {
     super.initState();
     _isEditMode = widget.initialEditMode;
+    _activityLogs = DriverActivityLogs(
+      driverId: int.parse(widget.driver['driver_id'].toString()),
+      context: context,
+    );
     _generateHeatMapData();
     _initControllers();
   }
@@ -130,7 +136,7 @@ class _DriverInfoState extends State<DriverInfo> {
       // Explicitly force an activity log to be created with current status
       String? currentStatus = widget.driver['driving_status'];
       if (currentStatus != null) {
-        await logDriverActivity(currentStatus, DateTime.now());
+        await _activityLogs.logDriverActivity(currentStatus, DateTime.now());
         print('_saveChanges: Explicitly logged activity for status $currentStatus');
       } else {
         print('_saveChanges: No status available to log activity');
@@ -200,7 +206,7 @@ class _DriverInfoState extends State<DriverInfo> {
     }
     
     // Fetch driver activity logs for the current month
-    fetchDriverActivityLogs(firstDayOfMonth, lastDayOfMonth).then((activityLogs) {
+    _activityLogs.fetchDriverActivityLogs(firstDayOfMonth, lastDayOfMonth).then((activityLogs) {
       if (activityLogs.isNotEmpty) {
         // Process activity logs
         for (var log in activityLogs) {
@@ -258,105 +264,6 @@ class _DriverInfoState extends State<DriverInfo> {
     });
   }
   
-  Future<List<Map<String, dynamic>>> fetchDriverActivityLogs(DateTime startDate, DateTime endDate) async {
-    try {
-      final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('driverActivityLog')
-          .select('log_id, driver_id, login_timestamp, logout_timestamp, session_duration, status')
-          .eq('driver_id', widget.driver['driver_id'])
-          .gte('login_timestamp', startDate.toIso8601String())
-          .lte('login_timestamp', endDate.toIso8601String())
-          .order('login_timestamp');
-      
-      return response;
-    } catch (e) {
-      return [];
-    }
-  }
-
-  // Log driver activity when status changes
-  Future<void> logDriverActivity(String status, DateTime timestamp) async {
-    try {
-      print('Starting logDriverActivity for driver ${widget.driver['driver_id']} with status $status');
-      final supabase = Supabase.instance.client;
-      
-      // Check if there's an ongoing session without a logout
-      final ongoingSession = await supabase
-          .from('driverActivityLog')
-          .select()
-          .eq('driver_id', widget.driver['driver_id'])
-          .filter('logout_timestamp', 'is', null)
-          .maybeSingle();
-      
-      print('Checked for ongoing session: ${ongoingSession != null ? 'Found' : 'Not found'}');
-      
-      if (ongoingSession != null) {
-        // Calculate session duration in seconds
-        final loginTime = DateTime.parse(ongoingSession['login_timestamp']);
-        final duration = timestamp.difference(loginTime).inSeconds;
-        
-        print('Updating session with log_id: ${ongoingSession['log_id']} - duration: $duration seconds');
-        
-        // Update the existing session with logout time and duration
-        final updateResponse = await supabase
-            .from('driverActivityLog')
-            .update({
-              'logout_timestamp': timestamp.toIso8601String(),
-              'session_duration': duration,
-            })
-            .eq('log_id', ongoingSession['log_id']);
-        
-        print('Updated existing driver activity log: ID ${ongoingSession['log_id']} with logout time and duration');
-      }
-      
-      // If status is one of the active statuses, create a new session
-      if (status == 'Online' || status == 'Driving' || status == 'Idling') {
-        // Generate a unique log_id
-        final int driverId = int.parse(widget.driver['driver_id'].toString());
-        final int logId = DateTime.now().millisecondsSinceEpoch * 100 + (driverId % 100);
-        
-        print('Creating new activity log with ID $logId for driver $driverId with status $status');
-        
-        final activityData = {
-          'log_id': logId,
-          'driver_id': widget.driver['driver_id'],
-          'login_timestamp': timestamp.toIso8601String(),
-          'status': status,
-        };
-        
-        print('Activity data for insertion: $activityData');
-        
-        final insertResponse = await supabase
-            .from('driverActivityLog')
-            .insert(activityData)
-            .select();
-        
-        print('Insertion response: $insertResponse');
-        print('Successfully created new driver activity log: ID $logId for driver $driverId with status $status');
-      }
-      
-      // Refresh heatmap data
-      _generateHeatMapData();
-      
-    } catch (e) {
-      print('Error logging driver activity: ${e.toString()}');
-      // Check if exception is a PostgreSQL error with more details
-      if (e is PostgrestException) {
-        print('PostgreSQL error code: ${e.code}');
-        print('PostgreSQL error message: ${e.message}');
-        print('PostgreSQL error details: ${e.details}');
-      }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error logging driver activity: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   // Add this explicit method to be called when we want to update driver status
   Future<void> updateDriverStatus(String newStatus) async {
     try {
@@ -370,7 +277,7 @@ class _DriverInfoState extends State<DriverInfo> {
           .eq('driver_id', widget.driver['driver_id']);
       
       // Log this activity
-      await logDriverActivity(newStatus, now);
+      await _activityLogs.logDriverActivity(newStatus, now);
       
       // Refresh UI
       setState(() {});
