@@ -271,10 +271,21 @@ class _FleetDataState extends State<FleetData> {
         Icons.badge_outlined
       ),
       _buildEnhancedDetailRow(
+        "Full Name:", 
+        driverData['full_name']?.toString() ?? 'N/A',
+        Icons.person_outlined
+      ),
+      _buildEnhancedDetailRow(
         "Status:", 
-        driverData['driving_status'] ?? 'N/A',
+        _capitalizeFirstLetter(driverData['driving_status'] ?? 'N/A'),
         Icons.local_taxi_outlined
       ),
     ];
+  }
+
+  // Helper method to capitalize first letter
+  String _capitalizeFirstLetter(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
   }
 }

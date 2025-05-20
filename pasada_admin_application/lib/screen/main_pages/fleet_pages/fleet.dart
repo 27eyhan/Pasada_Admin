@@ -98,7 +98,7 @@ class _FleetState extends State<Fleet> {
     try {
       final response = await supabase
           .from('vehicleTable')
-          .select('*, driverTable!inner(driver_id, driving_status)');
+          .select('*, driverTable!left(driver_id, driving_status, full_name)');
 
       final List listData = response as List;
 
@@ -120,13 +120,13 @@ class _FleetState extends State<Fleet> {
         }
 
         switch (status) {
-          case 'Online':
+          case 'online':
             onlineCount++; 
             break;
-          case 'Driving':
+          case 'driving':
             drivingCount++; 
             break;
-          case 'Idling':
+          case 'idling':
             idlingCount++;
             break;
           default:
@@ -251,7 +251,7 @@ class _FleetState extends State<Fleet> {
                           _buildVerticalDivider(),
                           _buildVehicleStatus("Idling", _idlingVehicles, Palette.orangeColor, Icons.hourglass_bottom),
                           _buildVerticalDivider(),
-                          _buildVehicleStatus("Driving", _drivingVehicles, Colors.blue, Icons.directions_car),
+                          _buildVehicleStatus("Driving", _drivingVehicles, Palette.greenColor, Icons.directions_car),
                           _buildVerticalDivider(),
                           _buildVehicleStatus("Offline", _offlineVehicles, Palette.redColor, Icons.wifi_off),
                           _buildVerticalDivider(),
@@ -378,12 +378,12 @@ class _FleetState extends State<Fleet> {
   
   // Get status color based on vehicle status
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Online':
+    switch (status.toLowerCase()) {
+      case 'online':
         return Palette.greenColor;
-      case 'Driving':
-        return Colors.blue;
-      case 'Idling':
+      case 'driving':
+        return Palette.greenColor;
+      case 'idling':
         return Palette.orangeColor;
       default:
         return Palette.redColor;
@@ -392,12 +392,12 @@ class _FleetState extends State<Fleet> {
   
   // Get status icon based on vehicle status
   IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'Online':
+    switch (status.toLowerCase()) {
+      case 'online':
         return Icons.wifi;
-      case 'Driving':
+      case 'driving':
         return Icons.directions_car;
-      case 'Idling':
+      case 'idling':
         return Icons.hourglass_bottom;
       default:
         return Icons.wifi_off;
@@ -518,7 +518,7 @@ class _FleetState extends State<Fleet> {
                         _buildVehicleInfoRow(Icons.route, "Route ID: ${vehicle['route_id'] ?? 'N/A'}"),
                         _buildVehicleInfoRow(
                           statusIcon,
-                          "Status: $status",
+                          "Status: ${_capitalizeFirstLetter(status)}",
                           textColor: statusColor,
                         ),
                       ],
@@ -695,7 +695,7 @@ class _FleetState extends State<Fleet> {
                         children: [
                           _buildVehicleInfoRow(
                             statusIcon,
-                            status,
+                            "Status: ${_capitalizeFirstLetter(status)}",
                             textColor: statusColor,
                           ),
                         ],
@@ -788,5 +788,11 @@ class _FleetState extends State<Fleet> {
       color: Palette.blackColor.withValues(alpha: 40),
       margin: const EdgeInsets.symmetric(horizontal: 2.0),
     );
+  }
+  
+  // Helper method to capitalize first letter
+  String _capitalizeFirstLetter(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
   }
 }
