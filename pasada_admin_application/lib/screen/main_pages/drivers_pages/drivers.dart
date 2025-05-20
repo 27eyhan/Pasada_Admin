@@ -500,7 +500,7 @@ class _DriversState extends State<Drivers> {
                         children: [
                           _buildDriverInfoRow(
                             isActive ? Icons.play_circle_outline : Icons.pause_circle_outline,
-                            "${driver['driving_status'] ?? 'Offline'}",
+                            "Status: ${_capitalizeFirstLetter(driver['driving_status'] ?? 'Offline')}",
                             textColor: isActive ? Colors.green : Colors.red,
                           ),
                         ],
@@ -629,7 +629,7 @@ class _DriversState extends State<Drivers> {
                         _buildDriverInfoRow(Icons.directions_car_outlined, "Vehicle: ${driver['vehicle_id']}"),
                         _buildDriverInfoRow(
                           isActive ? Icons.play_circle_outline : Icons.pause_circle_outline,
-                          "Status: ${driver['driving_status'] ?? 'Offline'}",
+                          "Status: ${_capitalizeFirstLetter(driver['driving_status'] ?? 'Offline')}",
                           textColor: isActive ? Colors.green : Colors.red,
                         ),
                       ],
@@ -760,5 +760,11 @@ class _DriversState extends State<Drivers> {
       width: 1.0,
       color: Palette.blackColor.withValues(alpha: 40),
     );
+  }
+  
+  // Helper method to capitalize first letter
+  String _capitalizeFirstLetter(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
   }
 }

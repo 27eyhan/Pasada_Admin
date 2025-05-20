@@ -46,8 +46,11 @@ class DriverActivityLogs {
                 'session_duration': duration,
                 'status': 'SAVED', // Mark as SAVED once updated
               })
-              .eq('log_id', ongoingSession['log_id']);
+              .eq('log_id', ongoingSession['log_id'])
+              .select();
           
+          print('Update response: $updateResponse');
+          print('Updated session duration: ${updateResponse.isNotEmpty ? updateResponse[0]['session_duration'] : 'unknown'} seconds');
           print('Updated existing driver activity log: ID ${ongoingSession['log_id']} with logout time and duration');
         }
         

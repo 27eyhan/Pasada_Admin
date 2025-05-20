@@ -205,59 +205,82 @@ class _DriverInfoState extends State<DriverInfo> {
       _heatMapData[date] = 0;
     }
     
+    print('Fetching driver activity logs for driver ${widget.driver['driver_id']} from $firstDayOfMonth to $lastDayOfMonth');
+    
     // Fetch driver activity logs for the current month
     _activityLogs.fetchDriverActivityLogs(firstDayOfMonth, lastDayOfMonth).then((activityLogs) {
+      bool hasActivityData = false;
+      
       if (activityLogs.isNotEmpty) {
+        print('Found ${activityLogs.length} activity logs for the current month');
         // Process activity logs
         for (var log in activityLogs) {
-          final DateTime loginDate = DateTime.parse(log['login_timestamp']).toLocal();
-          final DateTime logDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
-          
-          // Set the activity level based on session duration
-          if (log['session_duration'] != null) {
-            int sessionDuration = log['session_duration'];
-            int activityLevel = 1; // Default to level 1 (active)
-            
-            // Assign activity levels based on session duration
-            if (sessionDuration > 4 * 60 * 60) { // > 4 hours
-              activityLevel = 4; // High activity
-            } else if (sessionDuration > 2 * 60 * 60) { // > 2 hours
-              activityLevel = 3; // Medium-high activity
-            } else if (sessionDuration > 1 * 60 * 60) { // > 1 hour
-              activityLevel = 2; // Medium activity
-            }
-            
-            _heatMapData[logDate] = activityLevel;
-          } else {
-            // If no session duration, just mark as active
-            _heatMapData[logDate] = 1;
-          }
-        }
-        setState(() {});
-      } else {
-        // Fallback to last_online if no activity logs
-        if (widget.driver['last_online'] != null) {
           try {
-            final DateTime lastOnline = DateTime.parse(widget.driver['last_online'].toString());
-            if (lastOnline.month == _currentMonth.month && lastOnline.year == _currentMonth.year) {
-              _heatMapData[DateTime(lastOnline.year, lastOnline.month, lastOnline.day)] = 1;
+            final DateTime loginDate = DateTime.parse(log['login_timestamp']).toLocal();
+            final DateTime logDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
+            
+            // Set the activity level based on session duration
+            if (log['session_duration'] != null) {
+              int sessionDuration = log['session_duration'];
+              int activityLevel = 1; // Default to level 1 (active)
+              
+              // Assign activity levels based on session duration
+              if (sessionDuration > 4 * 60 * 60) { // > 4 hours
+                activityLevel = 4; // High activity
+              } else if (sessionDuration > 2 * 60 * 60) { // > 2 hours
+                activityLevel = 3; // Medium-high activity
+              } else if (sessionDuration > 1 * 60 * 60) { // > 1 hour
+                activityLevel = 2; // Medium activity
+              }
+              
+              _heatMapData[logDate] = activityLevel;
+              hasActivityData = true;
+              print('Added activity level $activityLevel for date $logDate (session duration: ${sessionDuration/3600} hours)');
+            } else {
+              // If no session duration, just mark as active
+              _heatMapData[logDate] = 1;
+              hasActivityData = true;
+              print('Added activity level 1 for date $logDate (no session duration)');
             }
           } catch (e) {
-            // Error parsing date, continue
+            print('Error processing activity log: $e');
+            // Continue with other logs instead of failing completely
+            continue;
           }
         }
-        setState(() {});
+      } else {
+        print('No activity logs found for the current month');
       }
-    }).catchError((error) {
-      // Fallback to last_online in case of error
-      if (widget.driver['last_online'] != null) {
+      
+      // Only use last_online as fallback if we couldn't find ANY activity data
+      if (!hasActivityData && widget.driver['last_online'] != null) {
         try {
+          print('No activity data found, using last_online as fallback');
           final DateTime lastOnline = DateTime.parse(widget.driver['last_online'].toString());
           if (lastOnline.month == _currentMonth.month && lastOnline.year == _currentMonth.year) {
-            _heatMapData[DateTime(lastOnline.year, lastOnline.month, lastOnline.day)] = 4;
+            _heatMapData[DateTime(lastOnline.year, lastOnline.month, lastOnline.day)] = 1;
+            print('Added last_online data for ${lastOnline.toString()} with level 1');
           }
         } catch (e) {
-          // Error parsing date, continue
+          print('Error parsing last_online date: $e');
+        }
+      }
+      
+      setState(() {});
+    }).catchError((error) {
+      print('Error fetching activity logs: $error');
+      
+      // Only use last_online if we couldn't fetch activity logs at all
+      if (widget.driver['last_online'] != null) {
+        try {
+          print('Using last_online as fallback due to error fetching logs');
+          final DateTime lastOnline = DateTime.parse(widget.driver['last_online'].toString());
+          if (lastOnline.month == _currentMonth.month && lastOnline.year == _currentMonth.year) {
+            _heatMapData[DateTime(lastOnline.year, lastOnline.month, lastOnline.day)] = 1; // Changed from 4 to 1 for consistency
+            print('Added last_online data for ${lastOnline.toString()} with level 1');
+          }
+        } catch (e) {
+          print('Error parsing last_online date: $e');
         }
       }
       setState(() {});
@@ -487,7 +510,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  "${driver['driving_status'] ?? 'N/A'}",
+                                  "${_capitalizeFirstLetter(driver['driving_status'] ?? 'N/A')}",
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 15,
@@ -874,6 +897,12 @@ class _DriverInfoState extends State<DriverInfo> {
     } catch (e) {
       return 'Invalid Date';
     }
+  }
+  
+  // Helper method to capitalize first letter
+  String _capitalizeFirstLetter(String text) {
+    if (text == null || text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
   }
   
   // Method to get month name from month number

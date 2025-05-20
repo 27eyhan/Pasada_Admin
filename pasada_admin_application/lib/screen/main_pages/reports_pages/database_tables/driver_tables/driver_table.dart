@@ -628,7 +628,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                   DataCell(Text(driver['driver_license_number'] ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['driver_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['vehicle_id']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(driver['driving_status']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(_capitalizeFirstLetter(driver['driving_status']?.toString() ?? 'N/A'), style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(driver['last_online']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
                                 ],
                               );
@@ -780,5 +780,11 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         ],
       ),
     );
+  }
+
+  // Helper method to capitalize first letter
+  String _capitalizeFirstLetter(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
   }
 }
