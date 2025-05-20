@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:pasada_admin_application/services/database_summary_service.dart';
 import 'package:pasada_admin_application/services/chat_history_service.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';  // Add this import for Clipboard
 
@@ -25,6 +26,7 @@ class _AiChatState extends State<AiChat> {
   // Services
   final DatabaseSummaryService _databaseService = DatabaseSummaryService();
   final ChatHistoryService _chatService = ChatHistoryService();
+  final AuthService _authService = AuthService();
   
   // Chat history for tracking the conversation
   final List<Content> _chatHistory = [];
@@ -40,6 +42,7 @@ You're role is to be an advisor, providing suggestions based on the data inside 
   @override
   void initState() {
     super.initState();
+    _loadAuthentication();
     _loadChatHistory();
     // Initialize Gemini with the API key
     final apiKey = dotenv.env['GEMINI_API'] ?? '';
@@ -77,6 +80,16 @@ You're role is to be an advisor, providing suggestions based on the data inside 
     }
   }
 
+  // Load admin authentication
+  Future<void> _loadAuthentication() async {
+    await _authService.loadAdminID();
+    if (_authService.currentAdminID == null) {
+      print('Warning: No admin ID found. AI Chat history functionality may be limited.');
+    } else {
+      print('Admin ID loaded: ${_authService.currentAdminID}');
+    }
+  }
+
   // Load chat history from the database
   Future<void> _loadChatHistory() async {
     try {
@@ -94,17 +107,60 @@ You're role is to be an advisor, providing suggestions based on the data inside 
     if (_messages.isEmpty) return;
     
     try {
+      // Generate a title from first message for display purposes
       final title = _messages.first.text.split(' ').take(5).join(' ') + '...';
-      final messages = _messages.map((msg) => {
-        'text': msg.text,
-        'isUser': msg.isUser,
-        'timestamp': DateTime.now().toIso8601String(),
-      }).toList();
       
-      await _chatService.saveChatSession(title, messages);
+      // Separate user messages and AI responses
+      final userMessages = _messages
+          .where((msg) => msg.isUser)
+          .map((msg) => {
+                'text': msg.text,
+                'timestamp': DateTime.now().toIso8601String(),
+              })
+          .toList();
+      
+      final aiMessages = _messages
+          .where((msg) => !msg.isUser)
+          .map((msg) => {
+                'text': msg.text,
+                'timestamp': DateTime.now().toIso8601String(),
+              })
+          .toList();
+      
+      // Ensure admin ID is loaded before saving
+      if (_authService.currentAdminID == null) {
+        await _authService.loadAdminID();
+        if (_authService.currentAdminID == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cannot save chat: You need to be logged in.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
+      
+      // Pass separate arrays to the service
+      await _chatService.saveChatSession(title, userMessages, aiMessages);
       await _loadChatHistory(); // Reload the chat history
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chat saved successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       print('Error saving chat session: $e');
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving chat: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -112,11 +168,42 @@ You're role is to be an advisor, providing suggestions based on the data inside 
   Future<void> _loadChatSession(String chatId) async {
     try {
       final chat = await _chatService.getChatSession(chatId);
-      if (chat != null && chat['messages'] != null) {
+      if (chat != null) {
         setState(() {
           _messages.clear();
-          List<dynamic> messages = chat['messages'];
-          for (var msg in messages) {
+          
+          // Create a temporary list to hold all messages with timestamps
+          final List<Map<String, dynamic>> tempMessages = [];
+          
+          // Load user messages
+          if (chat['messages'] is List && (chat['messages'] as List).isNotEmpty) {
+            List<dynamic> userMessages = chat['messages'];
+            for (var msg in userMessages) {
+              tempMessages.add({
+                'text': msg['text'],
+                'isUser': true,
+                'timestamp': msg['timestamp'] ?? '',
+              });
+            }
+          }
+          
+          // Load AI messages
+          if (chat['ai_message'] is List && (chat['ai_message'] as List).isNotEmpty) {
+            List<dynamic> aiMessages = chat['ai_message'];
+            for (var msg in aiMessages) {
+              tempMessages.add({
+                'text': msg['text'],
+                'isUser': false,
+                'timestamp': msg['timestamp'] ?? '',
+              });
+            }
+          }
+          
+          // Sort messages by timestamp
+          tempMessages.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
+          
+          // Add sorted messages to the UI
+          for (var msg in tempMessages) {
             _messages.add(ChatMessage(
               text: msg['text'],
               isUser: msg['isUser'],
@@ -348,9 +435,9 @@ Please use this data to provide informed suggestions.
                             ),
                             trailing: IconButton(
                               icon: Icon(Icons.delete_outline),
-                              onPressed: () => _deleteChatSession(chat['id']),
+                              onPressed: () => _deleteChatSession(chat['history_id']),
                             ),
-                            onTap: () => _loadChatSession(chat['id']),
+                            onTap: () => _loadChatSession(chat['history_id']),
                           );
                         },
                       ),

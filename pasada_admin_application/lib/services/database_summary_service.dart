@@ -99,17 +99,17 @@ class DatabaseSummaryService {
   // Fetch and summarize route data
   Future<Map<String, dynamic>> getRoutesSummary() async {
     try {
-      // Get routes data from driverRouteTable
+      // Get routes data from official_routes
       final routesData = await supabase
-          .from('driverRouteTable')
-          .select('route_id, route, starting_place, ending_place');
+          .from('official_routes')
+          .select('officialroute_id, route_name, origin_name, destination_name');
       
       // Calculate metrics manually
       int totalRoutes = routesData.length;
       
       // Find most popular route (simplified - we can't easily count bookings per route)
       String mostPopularRoute = routesData.isNotEmpty ? 
-          '${routesData[0]['starting_place']} to ${routesData[0]['ending_place']}' : 
+          '${routesData[0]['origin_name']} to ${routesData[0]['destination_name']}' : 
           'Unknown';
           
       return {
