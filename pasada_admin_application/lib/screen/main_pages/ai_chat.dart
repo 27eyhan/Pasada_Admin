@@ -5,6 +5,9 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:pasada_admin_application/services/database_summary_service.dart';
+import 'package:pasada_admin_application/services/chat_history_service.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';  // Add this import for Clipboard
 
 class AiChat extends StatefulWidget {
   @override
@@ -16,13 +19,16 @@ class _AiChatState extends State<AiChat> {
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
+  bool _isHistoryOpen = false; // Track if history drawer is open
   late Gemini gemini;
   
-  // Database summary service
+  // Services
   final DatabaseSummaryService _databaseService = DatabaseSummaryService();
+  final ChatHistoryService _chatService = ChatHistoryService();
   
   // Chat history for tracking the conversation
   final List<Content> _chatHistory = [];
+  List<Map<String, dynamic>> _savedChats = [];
   
   // System instruction to guide AI responses
   String systemInstruction = """You are Manong, a helpful AI assistant for Pasada, a modern jeepney transportation system in the Philippines. Our team is composed of Calvin John Crehencia, Adrian De Guzman, Ethan Andrei Humarang and Fyke Simon Tonel, we are called CAFE Tech. Don't use emoji.
@@ -34,6 +40,7 @@ You're role is to be an advisor, providing suggestions based on the data inside 
   @override
   void initState() {
     super.initState();
+    _loadChatHistory();
     // Initialize Gemini with the API key
     final apiKey = dotenv.env['GEMINI_API'] ?? '';
     
@@ -69,7 +76,69 @@ You're role is to be an advisor, providing suggestions based on the data inside 
       });
     }
   }
-  
+
+  // Load chat history from the database
+  Future<void> _loadChatHistory() async {
+    try {
+      final chats = await _chatService.getChatHistories();
+      setState(() {
+        _savedChats = chats;
+      });
+    } catch (e) {
+      print('Error loading chat history: $e');
+    }
+  }
+
+  // Save current chat session
+  Future<void> _saveChatSession() async {
+    if (_messages.isEmpty) return;
+    
+    try {
+      final title = _messages.first.text.split(' ').take(5).join(' ') + '...';
+      final messages = _messages.map((msg) => {
+        'text': msg.text,
+        'isUser': msg.isUser,
+        'timestamp': DateTime.now().toIso8601String(),
+      }).toList();
+      
+      await _chatService.saveChatSession(title, messages);
+      await _loadChatHistory(); // Reload the chat history
+    } catch (e) {
+      print('Error saving chat session: $e');
+    }
+  }
+
+  // Load a specific chat session
+  Future<void> _loadChatSession(String chatId) async {
+    try {
+      final chat = await _chatService.getChatSession(chatId);
+      if (chat != null && chat['messages'] != null) {
+        setState(() {
+          _messages.clear();
+          List<dynamic> messages = chat['messages'];
+          for (var msg in messages) {
+            _messages.add(ChatMessage(
+              text: msg['text'],
+              isUser: msg['isUser'],
+            ));
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading chat session: $e');
+    }
+  }
+
+  // Delete a chat session
+  Future<void> _deleteChatSession(String chatId) async {
+    try {
+      await _chatService.deleteChatSession(chatId);
+      await _loadChatHistory(); // Reload the chat history
+    } catch (e) {
+      print('Error deleting chat session: $e');
+    }
+  }
+
   // Method to set system instruction
   void setSystemInstruction(String instruction) {
     setState(() {
@@ -160,6 +229,7 @@ Please use this data to provide informed suggestions.
         _messages.add(ChatMessage(
           text: aiResponse,
           isUser: false,
+          onRefresh: () => _regenerateResponse(text),
         ));
       });
 
@@ -176,151 +246,288 @@ Please use this data to provide informed suggestions.
     });
   }
 
-    @override
-    Widget build(BuildContext context) {
+  Future<void> _regenerateResponse(String originalQuery) async {
+    setState(() {
+      _isTyping = true;
+    });
+
+    try {
+      final response = await _getGeminiResponse(originalQuery);
+      setState(() {
+        // Remove the last message (the one we're regenerating)
+        _messages.removeLast();
+        // Add the new response
+        _messages.add(ChatMessage(
+          text: response,
+          isUser: false,
+          onRefresh: () => _regenerateResponse(originalQuery),
+        ));
+        _isTyping = false;
+      });
+
+      // Scroll to the new message
+      Future.delayed(Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isTyping = false;
+      });
+      print('Error regenerating response: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final padding = mediaQuery.padding;
     
-      return Scaffold(
+    return Scaffold(
       backgroundColor: Palette.whiteColor,
       appBar: AppBarSearch(),
       drawer: MyDrawer(),
       body: SafeArea(
-        child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 212, vertical: 48),
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: Palette.greyColor, width: 1.5),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Palette.blackColor.withValues(alpha: 128),
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-            color: Palette.whiteColor,
-          ),
-          child: Column(
-            children: [
-              // AI Assistant header
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                color: Palette.whiteColor.withValues(alpha: 128),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Palette.blackColor,
-                      child: Icon(Icons.smart_toy, color: Colors.white),
-                    ),
-                    SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Manong',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Chat messages area
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      return _messages[index];
-                    },
-                  ),
-                ),
-              ),
-              
-              // AI typing indicator
-              if (_isTyping)
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Manong is typing...',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              
-              // Input area
-              Container(
-                padding: EdgeInsets.only(
-                  bottom: padding.bottom + 8,
-                  top: 8,
-                ),
+        child: Row(
+          children: [
+            // Chat History Drawer
+            AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              width: _isHistoryOpen ? 300 : 0,
+              child: _isHistoryOpen ? Container(
                 decoration: BoxDecoration(
-                  color: Palette.whiteColor,
+                  border: Border(
+                    right: BorderSide(color: Palette.greyColor, width: 1),
+                  ),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    // Text input field
                     Container(
-                      margin: EdgeInsets.only(right: 8),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Palette.blackColor,
-                        shape: BoxShape.circle,
+                        border: Border(
+                          bottom: BorderSide(color: Palette.greyColor),
+                        ),
                       ),
-                      child: IconButton(
-                        icon: Icon(Icons.add, color: Colors.white),
-                        onPressed: () {
-                          // Handle plus button action here
-                        },
-                        padding: EdgeInsets.all(8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Chat History',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close),
+                            onPressed: () => setState(() => _isHistoryOpen = false),
+                          ),
+                        ],
                       ),
                     ),
                     Expanded(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Palette.greyColor,
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: TextField(
-                          controller: _messageController,
-                          decoration: InputDecoration(
-                            hintText: 'Ask me anything...',
-                            border: InputBorder.none,
-                          ),
-                          maxLines: null,
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: _handleSubmitted,
-                        ),
-                      ),
-                    ),
-                    
-                    // Send button
-                    SizedBox(width: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Palette.blackColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: Icon(Icons.send, color: Colors.white),
-                        onPressed: () => _handleSubmitted(_messageController.text),
+                      child: ListView.builder(
+                        itemCount: _savedChats.length,
+                        itemBuilder: (context, index) {
+                          final chat = _savedChats[index];
+                          return ListTile(
+                            title: Text(
+                              chat['title'] ?? 'Untitled Chat',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              DateTime.parse(chat['created_at']).toString(),
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(Icons.delete_outline),
+                              onPressed: () => _deleteChatSession(chat['id']),
+                            ),
+                            onTap: () => _loadChatSession(chat['id']),
+                          );
+                        },
                       ),
                     ),
                   ],
                 ),
+              ) : null,
+            ),
+            
+            // Main Chat Area
+            Expanded(
+              child: Column(
+                children: [
+                  // Top bar with history and save buttons
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 212, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.history),
+                          onPressed: () => setState(() => _isHistoryOpen = !_isHistoryOpen),
+                          tooltip: 'Chat History',
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.save_outlined),
+                          onPressed: _saveChatSession,
+                          tooltip: 'Save Chat',
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Main chat container
+                  Expanded(
+                    child: Container(
+                      margin: EdgeInsets.symmetric(horizontal: 212, vertical: 8),
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Palette.greyColor, width: 1.5),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Palette.blackColor.withValues(alpha: 128),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                        color: Palette.whiteColor,
+                      ),
+                      child: Column(
+                        children: [
+                          // AI Assistant header
+                          Container(
+                            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            color: Palette.whiteColor.withValues(alpha: 128),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Palette.blackColor,
+                                  child: Icon(Icons.smart_toy, color: Colors.white),
+                                ),
+                                SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Manong',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          
+                          // Chat messages area
+                          Expanded(
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _messages.length,
+                                itemBuilder: (context, index) {
+                                  return _messages[index];
+                                },
+                              ),
+                            ),
+                          ),
+                          
+                          // AI typing indicator
+                          if (_isTyping)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Manong is typing...',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          
+                          // Input area
+                          Container(
+                            padding: EdgeInsets.only(
+                              bottom: padding.bottom + 8,
+                              top: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Palette.whiteColor,
+                            ),
+                            child: Row(
+                              children: [
+                                // Text input field
+                                Container(
+                                  margin: EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: Palette.blackColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(Icons.add, color: Colors.white),
+                                    onPressed: () {
+                                      // Handle plus button action here
+                                    },
+                                    padding: EdgeInsets.all(8),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 16),
+                                    decoration: BoxDecoration(
+                                      color: Palette.greyColor,
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                    child: TextField(
+                                      controller: _messageController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Ask me anything...',
+                                        border: InputBorder.none,
+                                      ),
+                                      maxLines: null,
+                                      textInputAction: TextInputAction.send,
+                                      onSubmitted: _handleSubmitted,
+                                    ),
+                                  ),
+                                ),
+                                
+                                // Send button
+                                SizedBox(width: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Palette.blackColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(Icons.send, color: Colors.white),
+                                    onPressed: () => _handleSubmitted(_messageController.text),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -330,8 +537,24 @@ Please use this data to provide informed suggestions.
 class ChatMessage extends StatelessWidget {
   final String text;
   final bool isUser;
+  final VoidCallback? onRefresh;
 
-  ChatMessage({required this.text, required this.isUser});
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.onRefresh,
+  });
+
+  void _copyToClipboard(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Message copied to clipboard'),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -354,21 +577,57 @@ class ChatMessage extends StatelessWidget {
           ],
           
           Flexible(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              constraints: BoxConstraints(
-                maxWidth: screenWidth * 0.7,
-              ),
-              decoration: BoxDecoration(
-                color: isUser ? Palette.greyColor : Palette.greyColor,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: isUser ? Palette.blackColor : Palette.blackColor,
+            child: Column(
+              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  constraints: BoxConstraints(
+                    maxWidth: screenWidth * 0.7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isUser ? Palette.greyColor : Palette.greyColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      color: isUser ? Palette.blackColor : Palette.blackColor,
+                    ),
+                  ),
                 ),
-              ),
+                
+                // Action buttons for AI messages
+                if (!isUser) ...[
+                  SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.copy_outlined, size: 16),
+                        onPressed: () => _copyToClipboard(context),
+                        tooltip: 'Copy message',
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      if (onRefresh != null) IconButton(
+                        icon: Icon(Icons.refresh_outlined, size: 16),
+                        onPressed: onRefresh,
+                        tooltip: 'Regenerate response',
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
           
