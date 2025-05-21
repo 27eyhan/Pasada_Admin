@@ -194,44 +194,44 @@ class _BookingsTableScreenState extends State<BookingsTableScreen> {
           ),
           
           // Positioned Action Button (Top Right)
-          Positioned(
-            top: 26.0,
-            right: 26.0,
-            child: SafeArea(
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Palette.blackColor, width: 1.0),
-                  borderRadius: BorderRadius.circular(30.0),
-                  color: Palette.whiteColor,
-                ),
-                child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.edit, color: Palette.blackColor),
-                  tooltip: 'Actions',
-                  color: Palette.whiteColor,
-                  elevation: 8.0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    side: BorderSide(color: Palette.greyColor, width: 1.0),
-                  ),
-                  offset: const Offset(0, kToolbarHeight * 0.8),
-                  onSelected: (String value) {
-                    if (value == 'delete') {
-                      setState(() {
-                        _pendingAction = value;
-                      });
-                    }
-                  },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                    const PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Text('Delete Selected'),
-                      textStyle: TextStyle(color: Colors.red),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // Positioned(
+          //   top: 26.0,
+          //   right: 26.0,
+          //   child: SafeArea(
+          //     child: Container(
+          //       decoration: BoxDecoration(
+          //         border: Border.all(color: Palette.blackColor, width: 1.0),
+          //         borderRadius: BorderRadius.circular(30.0),
+          //         color: Palette.whiteColor,
+          //       ),
+          //       child: PopupMenuButton<String>(
+          //         icon: const Icon(Icons.edit, color: Palette.blackColor),
+          //         tooltip: 'Actions',
+          //         color: Palette.whiteColor,
+          //         elevation: 8.0,
+          //         shape: RoundedRectangleBorder(
+          //           borderRadius: BorderRadius.circular(10.0),
+          //           side: BorderSide(color: Palette.greyColor, width: 1.0),
+          //         ),
+          //         offset: const Offset(0, kToolbarHeight * 0.8),
+          //         onSelected: (String value) {
+          //           if (value == 'delete') {
+          //             setState(() {
+          //               _pendingAction = value;
+          //             });
+          //           }
+          //         },
+          //         itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+          //           const PopupMenuItem<String>(
+          //             value: 'delete',
+          //             child: Text('Delete Selected'),
+          //             textStyle: TextStyle(color: Colors.red),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
+          // ),
           
           // Confirmation Buttons (Bottom Center)
           if (_pendingAction == 'delete')

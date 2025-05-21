@@ -25,9 +25,9 @@ class _SelectTableState extends State<SelectTable> {
     'Vehicle',
     'Route',
     'Bookings',
-    'Bookings Archives',
+    // 'Bookings Archives',
     'Driver Archives',
-    'Admin Archives',
+    // 'Admin Archives',
   ];
 
   @override

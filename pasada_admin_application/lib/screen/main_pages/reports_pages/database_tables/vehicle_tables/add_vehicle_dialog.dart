@@ -96,7 +96,6 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
           'plate_number': _plateNumberController.text.trim(),
           'route_id': routeId,
           'passenger_capacity': capacity,
-          'vehicle_location': _vehicleLocationController.text.trim(),
           'created_at': createdAt,
         };
 
@@ -197,12 +196,12 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
                             return null;
                           },
                         ),
-                        _buildFormField(
-                          controller: _vehicleLocationController,
-                          label: 'Vehicle Location',
-                          icon: Icons.location_on,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter vehicle location' : null,
-                        ),
+                        // _buildFormField(
+                        //   controller: _vehicleLocationController,
+                        //   label: 'Vehicle Location',
+                        //   icon: Icons.location_on,
+                        //   validator: (value) => value == null || value.isEmpty ? 'Please enter vehicle location' : null,
+                        // ),
                       ],
                     ),
                   ),

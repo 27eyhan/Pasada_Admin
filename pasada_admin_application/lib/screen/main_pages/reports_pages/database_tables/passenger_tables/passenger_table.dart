@@ -237,48 +237,48 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
             ),
           ),
           // Positioned Action Button (Top Right) - Only Edit
-          Positioned(
-            top: 26.0,
-            right: 26.0,
-            child: SafeArea(
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Palette.blackColor, width: 1.0),
-                  borderRadius: BorderRadius.circular(30.0),
-                  color: Palette.whiteColor,
-                ),
-                child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.edit, color: Palette.blackColor),
-                  tooltip: 'Edit Passenger', // Updated tooltip
-                  color: Palette.whiteColor,
-                  elevation: 8.0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    side: BorderSide(color: Palette.greyColor, width: 1.0),
-                  ),
-                  offset: const Offset(0, kToolbarHeight * 0.8),
-                  onSelected: (String value) {
-                    // Only action is 'edit'
-                    if (value == 'edit') {
-                       _refreshTimer?.cancel(); // Stop timer to allow selection
-                       setState(() {
-                          _pendingAction = 'edit';
-                          _selectedRowIndex = null; // Clear selection
-                       });
-                       _showInfoSnackBar('Please select a passenger row to edit.');
-                    } // No other actions
-                  },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                    // Only show Edit Selected
-                    const PopupMenuItem<String>(
-                      value: 'edit',
-                      child: Text('Edit Selected'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // Positioned(
+          //   top: 26.0,
+          //   right: 26.0,
+          //   child: SafeArea(
+          //     child: Container(
+          //       decoration: BoxDecoration(
+          //         border: Border.all(color: Palette.blackColor, width: 1.0),
+          //         borderRadius: BorderRadius.circular(30.0),
+          //         color: Palette.whiteColor,
+          //       ),
+          //       child: PopupMenuButton<String>(
+          //         icon: const Icon(Icons.edit, color: Palette.blackColor),
+          //         tooltip: 'Edit Passenger', // Updated tooltip
+          //         color: Palette.whiteColor,
+          //         elevation: 8.0,
+          //         shape: RoundedRectangleBorder(
+          //           borderRadius: BorderRadius.circular(10.0),
+          //           side: BorderSide(color: Palette.greyColor, width: 1.0),
+          //         ),
+          //         offset: const Offset(0, kToolbarHeight * 0.8),
+          //         onSelected: (String value) {
+          //           // Only action is 'edit'
+          //           if (value == 'edit') {
+          //              _refreshTimer?.cancel(); // Stop timer to allow selection
+          //              setState(() {
+          //                 _pendingAction = 'edit';
+          //                 _selectedRowIndex = null; // Clear selection
+          //              });
+          //              _showInfoSnackBar('Please select a passenger row to edit.');
+          //           } // No other actions
+          //         },
+          //         itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+          //           // Only show Edit Selected
+          //           const PopupMenuItem<String>(
+          //             value: 'edit',
+          //             child: Text('Edit Selected'),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
+          // ),
            // Confirmation Buttons (Bottom Center)
           Positioned(
             bottom: 16.0,

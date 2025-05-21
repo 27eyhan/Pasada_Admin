@@ -39,7 +39,9 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
 
   Future<void> _saveDriver() async {
     if (_formKey.currentState!.validate()) {
-      setState(() { _isLoading = true; });
+      setState(() {
+        _isLoading = true;
+      });
 
       final String vehicleIdText = _vehicleIdController.text.trim();
       final int? vehicleId = int.tryParse(vehicleIdText);
@@ -53,19 +55,25 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
               .eq('vehicle_id', vehicleId)
               .limit(1); // Check if at least one row exists
 
-           final List vehicleList = vehicleCheckResponse as List;
+          final List vehicleList = vehicleCheckResponse as List;
           if (vehicleList.isEmpty) {
-             setState(() { _isLoading = false; });
-             ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(content: Text('Error: Vehicle ID $vehicleId does not exist.')),
-             );
-             return; // Stop execution if vehicle ID is invalid
+            setState(() {
+              _isLoading = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content:
+                      Text('Error: Vehicle ID $vehicleId does not exist.')),
+            );
+            return; // Stop execution if vehicle ID is invalid
           }
         } else {
           // This case should technically be caught by the validator, but good to double-check
-          setState(() { _isLoading = false; });
+          setState(() {
+            _isLoading = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Error: Invalid Vehicle ID format.')),
+            const SnackBar(content: Text('Error: Invalid Vehicle ID format.')),
           );
           return;
         }
@@ -89,7 +97,8 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         final String createdAt = DateTime.now().toIso8601String();
 
         // 3. Prepare data for insertion
-        final String hashedPassword = BCrypt.hashpw(_passwordController.text.trim(), BCrypt.gensalt());
+        final String hashedPassword =
+            BCrypt.hashpw(_passwordController.text.trim(), BCrypt.gensalt());
         final newDriverData = {
           'driver_id': nextDriverId,
           'full_name': _fullNameController.text.trim(),
@@ -105,15 +114,20 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         // 4. Insert into Supabase
         await widget.supabase.from('driverTable').insert(newDriverData);
 
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         widget.onDriverAdded(); // Refresh the table in the parent widget
         Navigator.of(context).pop(); // Close the dialog
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Driver added successfully! Driver ID: $nextDriverId')),
+          SnackBar(
+              content:
+                  Text('Driver added successfully! Driver ID: $nextDriverId')),
         );
-
       } catch (e) {
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         // Log the detailed error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error adding driver: ${e.toString()}')),
@@ -121,7 +135,6 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -132,175 +145,199 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: Palette.greenColor, width: 2), // Changed to green
+        side:
+            BorderSide(color: Palette.greenColor, width: 2), // Changed to green
       ),
       backgroundColor: Palette.whiteColor,
       child: Container(
-         width: dialogWidth,
-         padding: const EdgeInsets.all(24.0),
-         child: SingleChildScrollView(
-            child: Column(
-               mainAxisSize: MainAxisSize.min,
-               crossAxisAlignment: CrossAxisAlignment.stretch,
-               children: <Widget>[
-                  // Icon and title in a more prominent style
-                  Icon(Icons.person_add, color: Palette.greenColor, size: 48), // Changed to green
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 20.0),
-                    child: Text(
-                      'Add New Driver',
-                      style: TextStyle(
-                        fontSize: 22.0,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.bold,
-                        color: Palette.greenColor, // Changed to green
+        width: dialogWidth,
+        padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // Icon and title in a more prominent style
+              Icon(Icons.person_add,
+                  color: Palette.greenColor, size: 48), // Changed to green
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20.0),
+                child: Text(
+                  'Add New Driver',
+                  style: TextStyle(
+                    fontSize: 22.0,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.bold,
+                    color: Palette.greenColor, // Changed to green
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+              // Informative text
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Text(
+                  'Please fill in the details to add a new driver to the system.',
+                  style: TextStyle(fontSize: 14.0),
+                ),
+              ),
+
+              // Form with improved styling
+              Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _buildFormField(
+                      controller: _fullNameController,
+                      label: 'Name',
+                      icon: Icons.person_outline,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter driver name'
+                          : null,
+                    ),
+                    _buildFormField(
+                      controller: _licenseNumberController,
+                      label: 'License Number',
+                      icon: Icons.credit_card,
+                      hintText: 'AXX-XX-XXXXXX',
+                      inputFormatters: [
+                        LicenseNumberFormatter(),
+                        LengthLimitingTextInputFormatter(
+                            13), // A00-00-000000 = 12 chars
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter driver license number';
+                        }
+
+                        // Regex pattern for Philippine license format "A00-00-000000"
+                        RegExp licenseFormat =
+                            RegExp(r'^[A-Z]\d{2}-\d{2}-\d{6}$');
+                        if (!licenseFormat.hasMatch(value)) {
+                          return 'Format should be A00-00-000000 (letter-numbers)';
+                        }
+
+                        return null;
+                      },
+                    ),
+                    _buildFormField(
+                      controller: _driverNumberController,
+                      label: 'Driver Number',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter driver number'
+                          : null,
+                    ),
+                    _buildFormField(
+                      controller: _passwordController,
+                      label: 'Password',
+                      icon: Icons.lock_outline,
+                      obscureText: true,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter a password'
+                          : null,
+                    ),
+                    _buildFormField(
+                      controller: _vehicleIdController,
+                      label: 'Vehicle ID',
+                      icon: Icons.directions_car_outlined,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter vehicle ID';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Please enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Reduce the spacing before buttons
+              const SizedBox(height: 16.0),
+
+              // Actions with enhanced styling
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[200],
+                      foregroundColor: Colors.black,
+                      // Increase button size
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                      elevation: 3,
+                      minimumSize: Size(140, 50), // Set minimum size
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        side: BorderSide(color: Colors.grey[400]!),
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  
-                  // Informative text
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Text(
-                      'Please fill in the details to add a new driver to the system.',
-                      style: TextStyle(fontSize: 14.0),
-                    ),
-                  ),
-                  
-                  // Form with improved styling
-                  Form(
-                    key: _formKey,
-                    child: Column(
+                    onPressed:
+                        _isLoading ? null : () => Navigator.of(context).pop(),
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _buildFormField(
-                          controller: _fullNameController,
-                          label: 'Name',
-                          icon: Icons.person_outline,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter driver name' : null,
-                        ),
-                        _buildFormField(
-                          controller: _licenseNumberController,
-                          label: 'License Number',
-                          icon: Icons.credit_card,
-                          hintText: 'AXX-XX-XXXXXX',
-                          inputFormatters: [
-                            LicenseNumberFormatter(),
-                            LengthLimitingTextInputFormatter(12), // A00-00-000000 = 12 chars
-                          ],
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter driver license number';
-                            }
-                            
-                            // Regex pattern for Philippine license format "A00-00-000000"
-                            RegExp licenseFormat = RegExp(r'^[A-Z]\d{2}-\d{2}-\d{6}$');
-                            if (!licenseFormat.hasMatch(value)) {
-                              return 'Format should be A00-00-000000 (letter-numbers)';
-                            }
-                            
-                            return null;
-                          },
-                        ),
-                        _buildFormField(
-                          controller: _driverNumberController,
-                          label: 'Driver Number',
-                          icon: Icons.phone,
-                          keyboardType: TextInputType.phone,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter driver number' : null,
-                        ),
-                        _buildFormField(
-                          controller: _passwordController,
-                          label: 'Password',
-                          icon: Icons.lock_outline,
-                          obscureText: true,
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter a password' : null,
-                        ),
-                        _buildFormField(
-                          controller: _vehicleIdController,
-                          label: 'Vehicle ID',
-                          icon: Icons.directions_car_outlined,
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter vehicle ID';
-                            }
-                            if (int.tryParse(value) == null) {
-                              return 'Please enter a valid number';
-                            }
-                            return null;
-                          },
-                        ),
+                      children: [
+                        Icon(Icons.cancel, size: 20), // Larger icon
+                        SizedBox(width: 8),
+                        Text('Cancel',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16)), // Larger text
                       ],
                     ),
                   ),
-                  
-                  // Reduce the spacing before buttons
-                  const SizedBox(height: 16.0),
-                  
-                  // Actions with enhanced styling
-                  Row(
-                     mainAxisAlignment: MainAxisAlignment.center,
-                     children: <Widget>[
-                        ElevatedButton(
-                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[200],
-                              foregroundColor: Colors.black,
-                              // Increase button size
-                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-                              elevation: 3,
-                              minimumSize: Size(140, 50), // Set minimum size
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                                side: BorderSide(color: Colors.grey[400]!),
-                              ),
-                           ),
-                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                           child: Row(
-                             mainAxisSize: MainAxisSize.min,
-                             children: [
-                               Icon(Icons.cancel, size: 20), // Larger icon
-                               SizedBox(width: 8),
-                               Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)), // Larger text
-                             ],
-                           ),
-                        ),
-                        const SizedBox(width: 15.0),
-                        ElevatedButton(
-                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Palette.greenColor,
-                              foregroundColor: Palette.whiteColor,
-                              // Increase button size
-                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-                              elevation: 3,
-                              minimumSize: Size(140, 50), // Set minimum size
-                              shadowColor: Palette.greenColor.withAlpha(128),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                           ),
-                           onPressed: _isLoading ? null : _saveDriver,
-                           child: _isLoading
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Palette.whiteColor)) // Larger spinner
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.save, size: 20), // Larger icon
-                                    SizedBox(width: 8),
-                                    Text('Save Driver', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)), // Larger text
-                                  ],
-                                ),
-                        ),
-                     ],
+                  const SizedBox(width: 15.0),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Palette.greenColor,
+                      foregroundColor: Palette.whiteColor,
+                      // Increase button size
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                      elevation: 3,
+                      minimumSize: Size(140, 50), // Set minimum size
+                      shadowColor: Palette.greenColor.withAlpha(128),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    onPressed: _isLoading ? null : _saveDriver,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Palette.whiteColor)) // Larger spinner
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.save, size: 20), // Larger icon
+                              SizedBox(width: 8),
+                              Text('Save Driver',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16)), // Larger text
+                            ],
+                          ),
                   ),
-               ],
-            ),
-         ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-  
+
   // Helper method to build standardized form fields
   Widget _buildFormField({
     required TextEditingController controller,
@@ -328,11 +365,13 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(color: Palette.greenColor, width: 2.0), // Changed to green
+            borderSide: BorderSide(
+                color: Palette.greenColor, width: 2.0), // Changed to green
           ),
           filled: true,
           fillColor: Colors.grey[50],
-          contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+          contentPadding:
+              EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
         ),
         keyboardType: keyboardType,
         obscureText: obscureText,
@@ -346,7 +385,8 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
 // Custom input formatter for license number
 class LicenseNumberFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     // Return if deleting
     if (newValue.text.length < oldValue.text.length) {
       return newValue;
@@ -355,20 +395,22 @@ class LicenseNumberFormatter extends TextInputFormatter {
     String newText = newValue.text.toUpperCase();
     final buffer = StringBuffer();
     int index = 0;
-    
+
     // Format as A00-00-000000
-    for (int i = 0; i < newText.length && index < 12; i++) {
+    for (int i = 0; i < newText.length && index < 13; i++) {
       if (index == 0 && RegExp(r'[A-Z]').hasMatch(newText[i])) {
         buffer.write(newText[i]);
         index++;
-      } else if ((index >= 1 && index <= 2) && RegExp(r'\d').hasMatch(newText[i])) {
+      } else if ((index >= 1 && index <= 2) &&
+          RegExp(r'\d').hasMatch(newText[i])) {
         buffer.write(newText[i]);
         index++;
       } else if (index == 3) {
         buffer.write('-');
         i--; // Don't consume the character
         index++;
-      } else if ((index >= 4 && index <= 5) && RegExp(r'\d').hasMatch(newText[i])) {
+      } else if ((index >= 4 && index <= 5) &&
+          RegExp(r'\d').hasMatch(newText[i])) {
         buffer.write(newText[i]);
         index++;
       } else if (index == 6) {
@@ -386,4 +428,4 @@ class LicenseNumberFormatter extends TextInputFormatter {
       selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
-} 
+}
