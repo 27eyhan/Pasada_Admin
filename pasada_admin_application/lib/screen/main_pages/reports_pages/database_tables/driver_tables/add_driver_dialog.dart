@@ -25,6 +25,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
   final _vehicleIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _licenseNumberController = TextEditingController();
+  final _routeIdController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -34,6 +35,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
     _vehicleIdController.dispose();
     _passwordController.dispose();
     _licenseNumberController.dispose();
+    _routeIdController.dispose();
     super.dispose();
   }
 
@@ -67,6 +69,26 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
             );
             return; // Stop execution if vehicle ID is invalid
           }
+          
+          // Check if vehicle ID is already assigned to another driver
+          final driverVehicleCheck = await widget.supabase
+              .from('driverTable')
+              .select('driver_id, full_name')
+              .eq('vehicle_id', vehicleId)
+              .limit(1);
+              
+          final List existingDriversWithVehicle = driverVehicleCheck as List;
+          if (existingDriversWithVehicle.isNotEmpty) {
+            setState(() {
+              _isLoading = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('There\'s already a driver in Vehicle ID: $vehicleId. Please choose a different vehicle.'),
+              ),
+            );
+            return; // Stop execution if vehicle ID is already assigned
+          }
         } else {
           // This case should technically be caught by the validator, but good to double-check
           setState(() {
@@ -76,6 +98,59 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
             const SnackBar(content: Text('Error: Invalid Vehicle ID format.')),
           );
           return;
+        }
+        
+        // Validate that route_id exists in officialroute table
+        final routeIdText = _routeIdController.text.trim();
+        final int? routeId = int.tryParse(routeIdText);
+        
+        if (routeId != null) {
+          final routeCheckResponse = await widget.supabase
+              .from('officialrouteTable')
+              .select('officialroute_id')
+              .eq('officialroute_id', routeId)
+              .limit(1);
+              
+          final List routeList = routeCheckResponse as List;
+          if (routeList.isEmpty) {
+            setState(() {
+              _isLoading = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: Route ID $routeId does not exist.'),
+              ),
+            );
+            return; // Stop execution if route ID is invalid
+          }
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: Invalid Route ID format.')),
+          );
+          return;
+        }
+        
+        // Check for license number duplication
+        final licenseNumberCheck = await widget.supabase
+            .from('driverTable')
+            .select('driver_id')
+            .eq('driver_license_number', _licenseNumberController.text.trim())
+            .limit(1);
+            
+        final List existingLicenseNumbers = licenseNumberCheck as List;
+        if (existingLicenseNumbers.isNotEmpty) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Duplication of Driver\'s License Number is not allowed.'),
+            ),
+          );
+          return; // Stop execution if license number is already used
         }
 
         // 1. Find the highest current driver_id
@@ -106,6 +181,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
           'driver_license_number': _licenseNumberController.text.trim(),
           'driver_password': hashedPassword,
           'vehicle_id': vehicleId,
+          'route_id': int.tryParse(_routeIdController.text.trim()),
           'created_at': createdAt,
           'driving_status': 'Offline',
           'last_online': null,
@@ -227,9 +303,24 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                       label: 'Driver Number',
                       icon: Icons.phone,
                       keyboardType: TextInputType.phone,
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Please enter driver number'
-                          : null,
+                      hintText: '+63',
+                      inputFormatters: [
+                        PhoneNumberFormatter(),
+                        LengthLimitingTextInputFormatter(13), // +63 + 10 digits
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter driver number';
+                        }
+                        
+                        // Check for proper Philippines phone format
+                        RegExp phoneFormat = RegExp(r'^\+63\d{10}$');
+                        if (!phoneFormat.hasMatch(value)) {
+                          return 'Format should be +63 followed by 10 digits';
+                        }
+                        
+                        return null;
+                      },
                     ),
                     _buildFormField(
                       controller: _passwordController,
@@ -248,6 +339,22 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter vehicle ID';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Please enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                    _buildFormField(
+                      controller: _routeIdController,
+                      label: 'Route ID',
+                      icon: Icons.route,
+                      keyboardType: TextInputType.number,
+                      hintText: 'Enter official route ID',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter route ID';
                         }
                         if (int.tryParse(value) == null) {
                           return 'Please enter a valid number';
@@ -420,6 +527,52 @@ class LicenseNumberFormatter extends TextInputFormatter {
       } else if (index >= 7 && RegExp(r'\d').hasMatch(newText[i])) {
         buffer.write(newText[i]);
         index++;
+      }
+    }
+
+    return TextEditingValue(
+      text: buffer.toString(),
+      selection: TextSelection.collapsed(offset: buffer.length),
+    );
+  }
+}
+
+// Custom input formatter for Philippine phone numbers
+class PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    // Return if deleting
+    if (newValue.text.length < oldValue.text.length) {
+      return newValue;
+    }
+
+    String newText = newValue.text;
+    
+    // If the text doesn't start with +63, add it
+    if (!newText.startsWith('+63') && newText.isNotEmpty) {
+      if (newText.startsWith('+')) {
+        if (newText.length > 1 && newText[1] != '6') {
+          newText = '+6' + newText.substring(1);
+        }
+        if (newText.length > 2 && newText[2] != '3') {
+          newText = '+63' + newText.substring(2);
+        }
+      } else {
+        newText = '+63' + newText;
+      }
+    }
+    
+    // Ensure only digits after +63
+    final buffer = StringBuffer();
+    buffer.write('+63');
+    
+    // Only add digits after +63, up to 10 digits
+    int digitCount = 0;
+    for (int i = 3; i < newText.length && digitCount < 10; i++) {
+      if (RegExp(r'\d').hasMatch(newText[i])) {
+        buffer.write(newText[i]);
+        digitCount++;
       }
     }
 
