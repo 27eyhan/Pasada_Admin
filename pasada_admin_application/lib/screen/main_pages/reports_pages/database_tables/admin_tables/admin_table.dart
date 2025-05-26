@@ -18,8 +18,8 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
   List<Map<String, dynamic>> adminData = [];
   bool isLoading = true;
   Timer? _refreshTimer;
-  int? _selectedRowIndex; // State variable to track selected row index
-  String? _pendingAction; // Reintroduce state variable for pending edit action
+  // int? _selectedRowIndex; // State variable to track selected row index
+  // String? _pendingAction; // Reintroduce state variable for pending edit action
 // Counter for selection warning
 
   @override
@@ -38,8 +38,8 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
 
   Future<void> fetchAdminData() async {
     setState(() {
-      _selectedRowIndex = null;
-      _pendingAction = null; // Reset pending action on refresh
+      // _selectedRowIndex = null;
+      // _pendingAction = null; // Reset pending action on refresh
       isLoading = true;
     });
     try {
@@ -105,7 +105,7 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isRowSelected = _selectedRowIndex != null;
+    // final bool isRowSelected = _selectedRowIndex != null;
 
     return Scaffold(
       backgroundColor: Palette.whiteColor,
@@ -148,45 +148,45 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                               final int index = entry.key;
                               final Map<String, dynamic> admin = entry.value;
                               // Determine if row selection should be active
-                              final bool allowSelection = _pendingAction == 'edit';
+                              // final bool allowSelection = _pendingAction == 'edit';
 
                               return DataRow(
                                 // Highlight selected row only when selection is allowed
-                                selected: allowSelection && (_selectedRowIndex == index),
+                                // selected: allowSelection && (_selectedRowIndex == index),
                                 // Enable selection change only when allowed
-                                onSelectChanged: allowSelection
-                                  ? (bool? selected) {
-                                    setState(() {
-                                      if (selected ?? false) {
-                                        // No need for warning logic with radio buttons
-                                        _selectedRowIndex = index;
-                                      } else {
-                                        // Deselect if clicked again
-                                        if (_selectedRowIndex == index) {
-                                          _selectedRowIndex = null;
-                                        }
-                                      }
-                                    });
-                                  }
-                                  : null, // Disable selection if not in edit mode
+                                // onSelectChanged: allowSelection
+                                //  ? (bool? selected) {
+                                //    setState(() {
+                                //      if (selected ?? false) {
+                                //        // No need for warning logic with radio buttons
+                                //        _selectedRowIndex = index;
+                                //      } else {
+                                //        // Deselect if clicked again
+                                //        if (_selectedRowIndex == index) {
+                                //          _selectedRowIndex = null;
+                                //        }
+                                //      }
+                                //    });
+                                //  }
+                                //  : null, // Disable selection if not in edit mode
                                 cells: [
                                   DataCell(
-                                    Row(
-                                      children: [
-                                        if (allowSelection)
-                                          Radio<int>(
-                                            value: index,
-                                            groupValue: _selectedRowIndex,
-                                            onChanged: (int? value) {
-                                              setState(() {
-                                                _selectedRowIndex = value;
-                                              });
-                                            },
-                                          ),
-                                        SizedBox(width: 8),
+                                    // Row(
+                                    //  children: [
+                                    //    if (allowSelection)
+                                    //      Radio<int>(
+                                    //        value: index,
+                                    //        groupValue: _selectedRowIndex,
+                                    //        onChanged: (int? value) {
+                                    //          setState(() {
+                                    //            _selectedRowIndex = value;
+                                    //          });
+                                    //        },
+                                    //      ),
+                                    //    SizedBox(width: 8),
                                         Text(admin['admin_id'].toString(), style: TextStyle(fontSize: 14.0)),
-                                      ],
-                                    )
+                                    //  ],
+                                    // )
                                   ),
                                   DataCell(Text('${admin['first_name'] ?? ''} ${admin['last_name'] ?? ''}', style: TextStyle(fontSize: 14.0))),
                                   DataCell(Text(admin['admin_mobile_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
@@ -214,14 +214,15 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                   onPressed: () {
                     // Always cancel timer and pending action when going back
                     _refreshTimer?.cancel();
-                    _pendingAction = null;
-                    _selectedRowIndex = null;
+                    // _pendingAction = null;
+                    // _selectedRowIndex = null;
                     Navigator.pop(context);
                   },
                 ),
               ),
             ),
           ),
+          /* Commenting out PopupMenuButton since only online admin can edit itself
           Positioned(
             top: 26.0,
             right: 26.0,
@@ -266,6 +267,8 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
               ),
             ),
           ),
+          */
+          /* Commenting out confirmation buttons
           // Reintroduce Confirmation Buttons
           Positioned(
             bottom: 16.0,
@@ -352,7 +355,8 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                 ),
               ), 
             ), 
-          ), 
+          ),
+          */
         ],
       ),
     );
