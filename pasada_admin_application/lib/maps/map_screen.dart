@@ -6,7 +6,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_admin_application/maps/maps_call_driver.dart'; // Import the service
 
 class Mapscreen extends StatefulWidget {
-  const Mapscreen({super.key});
+  // Add parameters to focus on a specific driver
+  final dynamic driverToFocus;
+  final bool initialShowDriverInfo;
+  
+  const Mapscreen({
+    super.key, 
+    this.driverToFocus,
+    this.initialShowDriverInfo = false,
+  });
 
   @override
   State<Mapscreen> createState() => MapsScreenState();
@@ -21,6 +29,7 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _isMapReady = false;
+  LatLng? _driverLocation;
 
   final DriverLocationService _driverLocationService = DriverLocationService(); // Instantiate the service
   Timer? _locationUpdateTimer; // Timer for periodic updates
@@ -32,6 +41,12 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
   void initState() {
     super.initState();
     debugPrint('[MapsScreenState] initState called.');
+    
+    // Log if we should focus on a specific driver
+    if (widget.driverToFocus != null) {
+      debugPrint('[MapsScreenState] Should focus on driver: ${widget.driverToFocus}');
+    }
+    
     // For web platform, we need to ensure the Google Maps API is loaded
     if (kIsWeb) {
       // Check if API key is set
@@ -100,12 +115,41 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     debugPrint('[MapsScreenState] Received driver locations: ${driverLocations.length} drivers.');
 
     Set<Marker> updatedMarkers = {};
+    bool foundFocusDriver = false;
 
     for (var driverData in driverLocations) {
       final String driverId = driverData['driver_id'].toString();
       final LatLng position = driverData['position'];
       final String driverName = driverData['full_name'] ?? 'N/A';
       final String vehicleId = driverData['vehicle_id']?.toString() ?? 'N/A';
+      
+      // Check if this is the driver we want to focus on
+      bool isTargetDriver = widget.driverToFocus != null && 
+                           driverId == widget.driverToFocus.toString();
+      
+      // Store the position of the driver to focus on
+      if (isTargetDriver) {
+        _driverLocation = position;
+        foundFocusDriver = true;
+        debugPrint('[MapsScreenState] Found target driver $driverId at position: $position');
+        
+        // Focus on this driver's location if this is the first update
+        if (widget.initialShowDriverInfo && mounted) {
+          // Use a delay to ensure the map is fully loaded
+          Future.delayed(Duration(milliseconds: 500), () {
+            if (mapController != null) {
+              // Zoom to the driver's location
+              mapController.animateCamera(
+                CameraUpdate.newLatLngZoom(position, 17.0),
+              );
+              
+              MarkerId markerId = MarkerId(driverId);
+              mapController.showMarkerInfoWindow(markerId);
+              debugPrint('[MapsScreenState] Showing info window for driver $driverId');
+            }
+          });
+        }
+      }
 
       updatedMarkers.add(
         Marker(
@@ -115,9 +159,10 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
             title: 'Driver: $driverName (ID: $driverId)',
             snippet: 'Vehicle ID: $vehicleId\nLocation: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
           ),
-          icon: BitmapDescriptor.defaultMarker, // Use default icon for now
-          // Optional: Use a custom icon for drivers
-          // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          // Highlight the target driver with a different color
+          icon: isTargetDriver
+              ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue) 
+              : BitmapDescriptor.defaultMarker,
         ),
       );
     }
@@ -127,6 +172,11 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
         _markers.clear();
         _markers.addAll(updatedMarkers);
         debugPrint('[MapsScreenState] setState called with ${updatedMarkers.length} markers.');
+        
+        // If we're looking for a specific driver but couldn't find them, log it
+        if (widget.driverToFocus != null && !foundFocusDriver) {
+          debugPrint('[MapsScreenState] Warning: Could not find driver ${widget.driverToFocus} in location data.');
+        }
       });
     }
   }
@@ -161,9 +211,10 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
           top: 16,
           right: 16,
           child: FloatingActionButton(
-            onPressed: () {            // Add functionality to center on user location
+            onPressed: () {
+              // Center on focused driver if available, otherwise use default center
               mapController.animateCamera(
-                CameraUpdate.newLatLng(_center),
+                CameraUpdate.newLatLng(_driverLocation ?? _center),
               );
             },
             child: Icon(Icons.center_focus_strong),

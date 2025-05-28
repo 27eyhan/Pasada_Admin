@@ -513,9 +513,9 @@ class _DriversState extends State<Drivers> {
               // Quick action buttons
               Row(
                 children: [
-                  _buildActionButton(Icons.phone, Colors.blue),
-                  _buildActionButton(Icons.message, Colors.orange),
-                  _buildActionButton(Icons.map_outlined, Colors.green),
+                  _buildActionButton(Icons.phone, Colors.blue, driver),
+                  _buildActionButton(Icons.message, Colors.orange, driver),
+                  _buildActionButton(Icons.map_outlined, Colors.green, driver),
                 ],
               ),
             ],
@@ -644,9 +644,9 @@ class _DriversState extends State<Drivers> {
                 bottom: 8,
                 child: Row(
                   children: [
-                    _buildActionButton(Icons.phone, Colors.blue),
-                    _buildActionButton(Icons.message, Colors.orange),
-                    _buildActionButton(Icons.map_outlined, Colors.green),
+                    _buildActionButton(Icons.phone, Colors.blue, driver),
+                    _buildActionButton(Icons.message, Colors.orange, driver),
+                    _buildActionButton(Icons.map_outlined, Colors.green, driver),
                   ],
                 ),
               ),
@@ -658,7 +658,7 @@ class _DriversState extends State<Drivers> {
   }
 
   // Helper widget for action buttons
-  Widget _buildActionButton(IconData icon, Color color) {
+  Widget _buildActionButton(IconData icon, Color color, Map<String, dynamic> driver) {
     return Container(
       margin: EdgeInsets.only(left: 4),
       decoration: BoxDecoration(
@@ -676,7 +676,20 @@ class _DriversState extends State<Drivers> {
       child: IconButton(
         icon: Icon(icon, size: 18, color: Colors.white),
         onPressed: () {
-          // Action button functionality would go here
+          // Action button functionality for map icon
+          if (icon == Icons.map_outlined) {
+            // Navigate to dashboard with the driver ID as an argument
+            Navigator.pushNamed(
+              context, 
+              '/dashboard',
+              arguments: {
+                'viewDriverLocation': true,
+                'driverId': driver['driver_id'],
+                'driverName': driver['full_name'],
+              }
+            );
+          }
+          // Other icon actions can be added here
         },
         constraints: BoxConstraints(minWidth: 36, minHeight: 36),
         padding: EdgeInsets.zero,

@@ -63,6 +63,17 @@ class MainApp extends StatelessWidget {
           '/settings': (context) => Settings(),
           '/data_tables': (context) => DataTables(),
           '/select_table': (context) => SelectTable(),
+        },
+        onGenerateRoute: (settings) {
+          if (settings.name == '/dashboard') {
+            final args = settings.arguments as Map<String, dynamic>?;
+            if (args != null) {
+              return MaterialPageRoute(
+                builder: (context) => Dashboard(driverLocationArgs: args),
+              );
+            }
+          }
+          return null;
         });
   }
 }
