@@ -25,7 +25,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
   final _vehicleIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _licenseNumberController = TextEditingController();
-  final _routeIdController = TextEditingController();
+  // final _routeIdController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -35,7 +35,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
     _vehicleIdController.dispose();
     _passwordController.dispose();
     _licenseNumberController.dispose();
-    _routeIdController.dispose();
+    // _routeIdController.dispose();
     super.dispose();
   }
 
@@ -101,37 +101,37 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         }
         
         // Validate that route_id exists in officialroute table
-        final routeIdText = _routeIdController.text.trim();
-        final int? routeId = int.tryParse(routeIdText);
+        // final routeIdText = _routeIdController.text.trim();
+        // final int? routeId = int.tryParse(routeIdText);
         
-        if (routeId != null) {
-          final routeCheckResponse = await widget.supabase
-              .from('officialrouteTable')
-              .select('officialroute_id')
-              .eq('officialroute_id', routeId)
-              .limit(1);
+        // if (routeId != null) {
+        //   final routeCheckResponse = await widget.supabase
+        //       .from('official_routes')
+        //       .select('officialroute_id')
+        //       .eq('officialroute_id', routeId)
+        //       .limit(1);
               
-          final List routeList = routeCheckResponse as List;
-          if (routeList.isEmpty) {
-            setState(() {
-              _isLoading = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: Route ID $routeId does not exist.'),
-              ),
-            );
-            return; // Stop execution if route ID is invalid
-          }
-        } else {
-          setState(() {
-            _isLoading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error: Invalid Route ID format.')),
-          );
-          return;
-        }
+        //   final List routeList = routeCheckResponse as List;
+        //   if (routeList.isEmpty) {
+        //     setState(() {
+        //       _isLoading = false;
+        //     });
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(
+        //         content: Text('Error: Route ID $routeId does not exist.'),
+        //       ),
+        //     );
+        //     return; // Stop execution if route ID is invalid
+        //   }
+        // } else {
+        //   setState(() {
+        //     _isLoading = false;
+        //   });
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     const SnackBar(content: Text('Error: Invalid Route ID format.')),
+        //   );
+        //   return;
+        // }
         
         // Check for license number duplication
         final licenseNumberCheck = await widget.supabase
@@ -181,7 +181,7 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
           'driver_license_number': _licenseNumberController.text.trim(),
           'driver_password': hashedPassword,
           'vehicle_id': vehicleId,
-          'route_id': int.tryParse(_routeIdController.text.trim()),
+          // 'currentroute_id': int.tryParse(_routeIdController.text.trim()),
           'created_at': createdAt,
           'driving_status': 'Offline',
           'last_online': null,
@@ -346,22 +346,22 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                         return null;
                       },
                     ),
-                    _buildFormField(
-                      controller: _routeIdController,
-                      label: 'Route ID',
-                      icon: Icons.route,
-                      keyboardType: TextInputType.number,
-                      hintText: 'Enter official route ID',
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter route ID';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
+                    // _buildFormField(
+                    //   controller: _routeIdController,
+                    //   label: 'Route ID',
+                    //   icon: Icons.route,
+                    //   keyboardType: TextInputType.number,
+                    //   hintText: 'Enter Route ID',
+                    //   validator: (value) {
+                    //     if (value == null || value.isEmpty) {
+                    //       return 'Please enter route ID';
+                    //     }
+                    //     if (int.tryParse(value) == null) {
+                    //       return 'Please enter a valid number';
+                    //     }
+                    //     return null;
+                    //   },
+                    // ),
                   ],
                 ),
               ),

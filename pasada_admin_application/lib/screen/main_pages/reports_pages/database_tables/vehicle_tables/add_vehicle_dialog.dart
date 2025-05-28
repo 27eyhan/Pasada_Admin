@@ -50,9 +50,9 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
         // 0. Validate route_id exists in driverRouteTable
         if (routeId != null) {
           final routeCheckResponse = await widget.supabase
-              .from('driverRouteTable') // Correct table name
-              .select('route_id')
-              .eq('route_id', routeId)
+              .from('official_routes') // Correct table name
+              .select('officialroute_id')
+              .eq('officialroute_id', routeId)
               .limit(1);
           
           final List routeList = routeCheckResponse as List;
