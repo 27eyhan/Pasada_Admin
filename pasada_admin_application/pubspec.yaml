@@ -54,7 +54,8 @@ flutter:
   assets:
     - assets/novadeci.png
     - assets/pasadaAppIcon.png
-  
+    - assets/PasadaLogoWithoutText.png
+
 fonts:
   - family: Inter
     fonts:
