@@ -9,11 +9,17 @@ class DriverLocationService {
   Future<List<Map<String, dynamic>>> fetchDriverLocations() async {
     debugPrint('[DriverLocationService] Fetching driver locations...');
     try {
-      // Select necessary fields including current_location
-      // Assuming current_location is stored in a format that includes latitude and longitude
+      // Select necessary fields including current_location and join with vehicleTable for additional details
       final response = await _supabase
           .from('driverTable')
-          .select('driver_id, full_name, vehicle_id, current_location, driving_status'); // Added driving_status
+          .select('''
+            driver_id, 
+            full_name, 
+            vehicle_id, 
+            current_location, 
+            driving_status,
+            vehicleTable(plate_number, route_id)
+          ''');
 
       debugPrint('[DriverLocationService] Supabase response: $response');
       debugPrint('[DriverLocationService] Type of response: ${response.runtimeType}');
@@ -29,6 +35,7 @@ class DriverLocationService {
         final driverId = data['driver_id'];
 
         debugPrint('[DriverLocationService] Processing driver $driverId: Status=$drivingStatus, LocationData=$locationData');
+        debugPrint('[DriverLocationService] Raw vehicleTable data for driver $driverId: ${data['vehicleTable']}');
 
         // Only process drivers who have location data (regardless of status)
         if (locationData != null) {
@@ -36,11 +43,36 @@ class DriverLocationService {
            debugPrint('[DriverLocationService] Parsed position for $driverId: $position');
 
            if (position != null) {
+               // Extract vehicle details from the joined table
+               final vehicleData = data['vehicleTable'];
+               String plateNumber = 'N/A';
+               String routeId = 'N/A';
+               
+               debugPrint('[DriverLocationService] VehicleData type: ${vehicleData.runtimeType}, Data: $vehicleData');
+               
+               if (vehicleData != null) {
+                 if (vehicleData is List && vehicleData.isNotEmpty) {
+                   final vehicleInfo = vehicleData.first as Map<String, dynamic>;
+                   plateNumber = vehicleInfo['plate_number']?.toString() ?? 'N/A';
+                   routeId = vehicleInfo['route_id']?.toString() ?? 'N/A';
+                   debugPrint('[DriverLocationService] Extracted from List - Plate: $plateNumber, Route: $routeId');
+                 } else if (vehicleData is Map<String, dynamic>) {
+                   plateNumber = vehicleData['plate_number']?.toString() ?? 'N/A';
+                   routeId = vehicleData['route_id']?.toString() ?? 'N/A';
+                   debugPrint('[DriverLocationService] Extracted from Map - Plate: $plateNumber, Route: $routeId');
+                 }
+               } else {
+                 debugPrint('[DriverLocationService] No vehicle data found for driver $driverId with vehicle_id: ${data['vehicle_id']}');
+               }
+               
                driverLocations.add({
                   'driver_id': data['driver_id'],
                   'full_name': data['full_name'],
                   'vehicle_id': data['vehicle_id'],
                   'position': position,
+                  'driving_status': drivingStatus, // Include driving status for custom pins
+                  'plate_number': plateNumber,
+                  'route_id': routeId,
                });
            } else {
                debugPrint('Could not parse location for driver_id: ${data['driver_id']}');

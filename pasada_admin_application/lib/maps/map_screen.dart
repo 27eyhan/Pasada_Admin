@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_admin_application/maps/maps_call_driver.dart'; // Import the service
+import 'package:pasada_admin_application/config/palette.dart'; // Import palette for consistent colors
 
 class Mapscreen extends StatefulWidget {
   // Add parameters to focus on a specific driver
@@ -21,7 +22,7 @@ class Mapscreen extends StatefulWidget {
 }
 
 class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixin {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   // ignore: unused_field
   GoogleMapController? _internalMapController;
   final LatLng _center =
@@ -33,6 +34,13 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
 
   final DriverLocationService _driverLocationService = DriverLocationService(); // Instantiate the service
   Timer? _locationUpdateTimer; // Timer for periodic updates
+  
+  // Custom pin icons cache
+  final Map<String, BitmapDescriptor> _customPinIcons = {};
+  
+  // Selected driver info for custom overlay
+  Map<String, dynamic>? _selectedDriverInfo;
+  bool _showDriverOverlay = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -41,6 +49,9 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
   void initState() {
     super.initState();
     debugPrint('[MapsScreenState] initState called.');
+    
+    // Load custom pin icons
+    _loadCustomPinIcons();
     
     // Log if we should focus on a specific driver
     if (widget.driverToFocus != null) {
@@ -68,9 +79,73 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     }
   }
 
+  // Load custom pin icons from assets
+  Future<void> _loadCustomPinIcons() async {
+    try {
+      debugPrint('[MapsScreenState] Loading custom pin icons...');
+      
+      _customPinIcons['idling'] = await BitmapDescriptor.asset(
+        ImageConfiguration(size: Size(48, 48)),
+        'assets/pinIdling.png',
+      );
+      
+      _customPinIcons['online'] = await BitmapDescriptor.asset(
+        ImageConfiguration(size: Size(48, 48)),
+        'assets/pinOnline.png',
+      );
+      
+      _customPinIcons['driving'] = await BitmapDescriptor.asset(
+        ImageConfiguration(size: Size(48, 48)),
+        'assets/pinOnline.png', // Use the same icon for driving as online
+      );
+      
+      _customPinIcons['offline'] = await BitmapDescriptor.asset(
+        ImageConfiguration(size: Size(48, 48)),
+        'assets/pinOffline.png',
+      );
+      
+      debugPrint('[MapsScreenState] Custom pin icons loaded successfully');
+    } catch (e) {
+      debugPrint('[MapsScreenState] Error loading custom pin icons: $e');
+      // Fallback to default markers if custom icons fail to load
+    }
+  }
+
+  // Get the appropriate pin icon based on driver status
+  BitmapDescriptor _getPinIcon(String? drivingStatus, bool isTargetDriver) {
+    if (isTargetDriver) {
+      // Highlight the target driver with a different color (blue default marker)
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+    }
+    
+    final status = drivingStatus?.toLowerCase() ?? 'offline';
+    
+    // Return custom icon if available, otherwise fallback to default
+    if (_customPinIcons.containsKey(status)) {
+      return _customPinIcons[status]!;
+    }
+    
+    // Fallback to default colored markers if custom icons aren't loaded
+    switch (status) {
+      case 'idling':
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+      case 'online':
+      case 'driving':
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+      case 'offline':
+      default:
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+    }
+  }
+
   @override
   void dispose() {
     debugPrint('[MapsScreenState] dispose starts.');
+    
+    // Hide overlay immediately to prevent rendering issues
+    _showDriverOverlay = false;
+    _selectedDriverInfo = null;
+    
     _locationUpdateTimer?.cancel();
     debugPrint('[MapsScreenState] Timer cancelled.');
 
@@ -120,8 +195,7 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     for (var driverData in driverLocations) {
       final String driverId = driverData['driver_id'].toString();
       final LatLng position = driverData['position'];
-      final String driverName = driverData['full_name'] ?? 'N/A';
-      final String vehicleId = driverData['vehicle_id']?.toString() ?? 'N/A';
+      final String? drivingStatus = driverData['driving_status'];
       
       // Check if this is the driver we want to focus on
       bool isTargetDriver = widget.driverToFocus != null && 
@@ -139,13 +213,16 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
           Future.delayed(Duration(milliseconds: 500), () {
             if (mapController != null) {
               // Zoom to the driver's location
-              mapController.animateCamera(
+              mapController?.animateCamera(
                 CameraUpdate.newLatLngZoom(position, 17.0),
               );
               
-              MarkerId markerId = MarkerId(driverId);
-              mapController.showMarkerInfoWindow(markerId);
-              debugPrint('[MapsScreenState] Showing info window for driver $driverId');
+              // Show custom overlay instead of info window
+              setState(() {
+                _selectedDriverInfo = driverData;
+                _showDriverOverlay = true;
+              });
+              debugPrint('[MapsScreenState] Showing custom overlay for driver $driverId');
             }
           });
         }
@@ -155,14 +232,19 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
         Marker(
           markerId: MarkerId(driverId),
           position: position,
-          infoWindow: InfoWindow(
-            title: 'Driver: $driverName (ID: $driverId)',
-            snippet: 'Vehicle ID: $vehicleId\nLocation: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}',
-          ),
-          // Highlight the target driver with a different color
-          icon: isTargetDriver
-              ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue) 
-              : BitmapDescriptor.defaultMarker,
+          onTap: () {
+            // Prevent rapid state changes that could cause assertion errors
+            if (mounted && _selectedDriverInfo?['driver_id'] != driverId) {
+              // Show custom driver info overlay
+              setState(() {
+                _selectedDriverInfo = driverData;
+                _showDriverOverlay = true;
+              });
+              debugPrint('[MapsScreenState] Marker tapped for driver: $driverId');
+            }
+          },
+          // Use custom pin based on driver status
+          icon: _getPinIcon(drivingStatus, isTargetDriver),
         ),
       );
     }
@@ -187,12 +269,15 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     debugPrint('[MapsScreenState] build called.');
 
     if (!_isMapReady && kIsWeb) {
-      return Center(
+      return Scaffold(
+        body: Center(
         child: CircularProgressIndicator(),
+        ),
       );
     }
 
-    return Stack(
+    return Scaffold(
+      body: Stack(
       children: [
         GoogleMap(
           onMapCreated: _onMapCreated,
@@ -213,14 +298,349 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
           child: FloatingActionButton(
             onPressed: () {
               // Center on focused driver if available, otherwise use default center
-              mapController.animateCamera(
+                mapController?.animateCamera(
                 CameraUpdate.newLatLng(_driverLocation ?? _center),
               );
             },
             child: Icon(Icons.center_focus_strong),
           ),
-        ),
-      ],
+          ),
+          if (mounted && _showDriverOverlay && _selectedDriverInfo != null)
+            _buildDriverInfoOverlay(),
+        ],
+      ),
     );
   }
+
+  // Custom driver info overlay widget
+  Widget _buildDriverInfoOverlay() {
+    // Comprehensive safety checks
+    if (!mounted || !_showDriverOverlay || _selectedDriverInfo == null) {
+      return SizedBox.shrink();
+    }
+
+    final driver = _selectedDriverInfo!;
+    
+    // Validate essential data
+    if (driver['driver_id'] == null || driver['position'] == null) {
+      debugPrint('[MapsScreenState] Invalid driver data, hiding overlay');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _showDriverOverlay = false;
+            _selectedDriverInfo = null;
+          });
+        }
+      });
+      return SizedBox.shrink();
+    }
+
+    final String driverName = driver['full_name']?.toString() ?? 'N/A';
+    final String driverId = driver['driver_id']?.toString() ?? 'N/A';
+    final String vehicleId = driver['vehicle_id']?.toString() ?? 'N/A';
+    final String plateNumber = driver['plate_number']?.toString() ?? 'N/A';
+    final String routeId = driver['route_id']?.toString() ?? 'N/A';
+    final String? drivingStatus = driver['driving_status']?.toString();
+    final LatLng? position = driver['position'];
+    
+    if (position == null) {
+      return SizedBox.shrink();
+    }
+
+    Color statusColor = _getStatusColor(drivingStatus);
+    
+    final screenSize = MediaQuery.of(context).size;
+    final overlayWidth = screenSize.width * 0.2;
+    final maxOverlayHeight = screenSize.height * 1;
+
+    return Positioned(
+      top: 60,
+      left: (screenSize.width - overlayWidth) / 2,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: overlayWidth,
+          maxHeight: maxOverlayHeight,
+        ),
+        child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              Positioned(
+                bottom: -8,
+                left: overlayWidth / 2 - 8,
+                child: CustomPaint(
+                  size: Size(16, 8),
+                  painter: ArrowPainter(color: Palette.whiteColor),
+                ),
+              ),
+              // Main card
+              Material(
+                borderRadius: BorderRadius.circular(12.0),
+                elevation: 6.0,
+                child: Container(
+                  width: overlayWidth,
+                  decoration: BoxDecoration(
+                    color: Palette.whiteColor,
+                    borderRadius: BorderRadius.circular(12.0),
+                    border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Palette.blackColor.withOpacity(0.08),
+                        spreadRadius: 0,
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Compact header
+                      Row(
+                        children: [
+                          // Status indicator
+                          Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              driverName,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Palette.blackColor,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _showDriverOverlay = false;
+                                _selectedDriverInfo = null;
+                              });
+                            },
+                            child: Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: Palette.blackColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      SizedBox(height: 12),
+                      
+                      // Compact info in 2 rows
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildCompactInfoItem("ID: $driverId", Icons.badge, statusColor),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: _buildCompactInfoItem("Vehicle: $vehicleId", Icons.directions_car, Palette.orangeColor),
+                          ),
+                        ],
+                      ),
+                      
+                      SizedBox(height: 10),
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildCompactInfoItem("Plate: $plateNumber", Icons.credit_card, Palette.yellowColor),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: _buildCompactInfoItem("Route: $routeId", Icons.route, Palette.redColor),
+                          ),
+                        ],
+                      ),
+                      
+                      SizedBox(height: 10),
+                      
+                      // Status row
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: statusColor.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(_getStatusIcon(drivingStatus), size: 16, color: statusColor),
+                            SizedBox(width: 6),
+                            Text(
+                              _capitalizeFirstLetter(drivingStatus ?? 'N/A'),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: statusColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      SizedBox(height: 12),
+                      
+                      // Compact action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                mapController?.animateCamera(
+                                  CameraUpdate.newLatLngZoom(position, 18.0),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Palette.greenColor,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                minimumSize: Size(0, 40),
+                              ),
+                              child: Text("Center", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                debugPrint('Call driver $driverId');
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Palette.greenColor,
+                                side: BorderSide(color: Palette.greenColor, width: 2),
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                minimumSize: Size(0, 40),
+                              ),
+                              child: Text("Call", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Simplified compact info item widget
+  Widget _buildCompactInfoItem(String text, IconData icon, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Palette.blackColor,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods for status
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'online':
+      case 'driving':
+        return Palette.greenColor;
+      case 'idling':
+        return Palette.orangeColor;
+      case 'offline':
+      default:
+        return Palette.redColor;
+    }
+  }
+
+  IconData _getStatusIcon(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'online':
+        return Icons.wifi;
+      case 'driving':
+        return Icons.directions_car;
+      case 'idling':
+        return Icons.hourglass_bottom;
+      case 'offline':
+      default:
+        return Icons.wifi_off;
+    }
+  }
+
+  String _capitalizeFirstLetter(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+}
+
+// Custom painter for the arrow pointer
+class ArrowPainter extends CustomPainter {
+  final Color color;
+  
+  ArrowPainter({required this.color});
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    
+    final path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width / 2, size.height);
+    path.lineTo(size.width, 0);
+    path.close();
+    
+    canvas.drawPath(path, paint);
+  }
+  
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
