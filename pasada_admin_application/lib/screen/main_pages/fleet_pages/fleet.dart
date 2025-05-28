@@ -472,27 +472,28 @@ class _FleetState extends State<Fleet> {
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Colors.grey.shade700, Colors.black],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 15),
-                          blurRadius: 3,
-                          spreadRadius: 0,
-                          offset: Offset(0, 1),
+                                              gradient: LinearGradient(
+                          colors: [Color(0xFF38CE7C), Color(0xFFDDCC34)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                                              boxShadow: [
+                          BoxShadow(
+                            color: Color(0xFF38CE7C).withValues(alpha: 51),
+                            blurRadius: 3,
+                            spreadRadius: 0,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
                     ),
                     child: CircleAvatar(
                       radius: 28,
                       backgroundColor: Colors.transparent,
-                      child: Icon(
-                        Icons.directions_bus,
-                        color: Palette.whiteColor,
-                        size: 28,
+                      child: Image.asset(
+                        'assets/PasadaLogoWithoutText.png',
+                        width: 48,
+                        height: 52,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
@@ -580,14 +581,14 @@ class _FleetState extends State<Fleet> {
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Colors.grey.shade700, Colors.black],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                                              gradient: LinearGradient(
+                          colors: [Color(0xFF38CE7C), Color(0xFFDDCC34)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 15),
+                          color: Color(0xFF38CE7C).withValues(alpha: 51),
                           blurRadius: 3,
                           spreadRadius: 0,
                           offset: Offset(0, 1),
@@ -597,10 +598,11 @@ class _FleetState extends State<Fleet> {
                     child: CircleAvatar(
                       radius: 24,
                       backgroundColor: Colors.transparent,
-                      child: Icon(
-                        Icons.directions_bus,
-                        color: Palette.whiteColor,
-                        size: 24,
+                      child: Image.asset(
+                        'assets/PasadaLogoWithoutText.png',
+                        width: 24,
+                        height: 24,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
