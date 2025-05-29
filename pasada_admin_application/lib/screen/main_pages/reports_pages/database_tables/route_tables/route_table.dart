@@ -315,7 +315,7 @@ class _DriverRouteTableScreenState extends State<DriverRouteTableScreen> {
                                 statusBorderColor = Colors.green[400]!;
                               } else if (status.toLowerCase() == "processing") {
                                 statusColor = Palette.yellowColor.withValues(alpha: 60);
-                                statusTextColor = const Color.fromARGB(255, 226, 123, 38)!;
+                                statusTextColor = const Color.fromARGB(255, 226, 123, 38);
                                 statusBorderColor = Palette.orangeColor.withValues(alpha: 50);
                               } else {
                                 statusColor = Colors.red[100]!;
