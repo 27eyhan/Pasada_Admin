@@ -381,10 +381,10 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                   decoration: BoxDecoration(
                     color: Palette.whiteColor,
                     borderRadius: BorderRadius.circular(12.0),
-                    border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
+                    border: Border.all(color: statusColor.withAlpha(100), width: 1.5),
                     boxShadow: [
                       BoxShadow(
-                        color: Palette.blackColor.withOpacity(0.08),
+                        color: Palette.blackColor.withAlpha(100),
                         spreadRadius: 0,
                         blurRadius: 6,
                         offset: Offset(0, 2),
@@ -479,9 +479,9 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                         width: double.infinity,
                         padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withAlpha(100),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: statusColor.withOpacity(0.3)),
+                          border: Border.all(color: statusColor.withAlpha(100)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -560,9 +560,9 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     return Container(
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withAlpha(100),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        border: Border.all(color: color.withAlpha(100), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
