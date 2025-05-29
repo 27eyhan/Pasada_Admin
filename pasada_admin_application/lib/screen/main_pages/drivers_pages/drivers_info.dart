@@ -23,6 +23,8 @@ class _DriverInfoState extends State<DriverInfo> {
   late DateTime _currentMonth = DateTime.now();
   late bool _isEditMode;
   late DriverActivityLogs _activityLogs;
+  double _averageRating = 0.0;
+  int _totalReviews = 0;
   
   // Text editing controllers
   late TextEditingController _fullNameController;
@@ -40,6 +42,7 @@ class _DriverInfoState extends State<DriverInfo> {
     );
     _generateHeatMapData();
     _initControllers();
+    _fetchDriverRating();
   }
   
   void _initControllers() {
@@ -212,7 +215,7 @@ class _DriverInfoState extends State<DriverInfo> {
       bool hasActivityData = false;
       
       if (activityLogs.isNotEmpty) {
-        print('Found ${activityLogs.length} activity logs for the current month');
+        debugPrint('Found ${activityLogs.length} activity logs for the current month');
         // Process activity logs
         for (var log in activityLogs) {
           try {
@@ -313,6 +316,48 @@ class _DriverInfoState extends State<DriverInfo> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _fetchDriverRating() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final driverId = widget.driver['driver_id'];
+      
+      // Fetch bookings data for this driver
+      final bookingsResponse = await supabase
+          .from('bookings')
+          .select('rating, review')
+          .eq('driver_id', driverId);
+
+      final List<dynamic> bookings = bookingsResponse as List<dynamic>;
+      
+      if (bookings.isNotEmpty) {
+        double totalRating = 0.0;
+        int ratingCount = 0;
+        int reviewCount = 0;
+        
+        for (var booking in bookings) {
+          if (booking['rating'] != null) {
+            totalRating += (booking['rating'] as num).toDouble();
+            ratingCount++;
+          }
+          
+          if (booking['review'] != null && booking['review'].toString().trim().isNotEmpty) {
+            reviewCount++;
+          }
+        }
+        
+        if (mounted) {
+          setState(() {
+            _averageRating = ratingCount > 0 ? totalRating / ratingCount : 0.0;
+            _totalReviews = reviewCount;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching driver rating: $e');
+      // If there's an error, keep the default values (0.0 rating, 0 reviews)
     }
   }
 
@@ -518,6 +563,28 @@ class _DriverInfoState extends State<DriverInfo> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12.0),
+                          
+                          // Average Rating with stars
+                          Row(
+                            children: [
+                              Container(
+                                width: 100,
+                                child: Text(
+                                  "Rating:",
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Palette.blackColor,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildStarRating(_averageRating),
                               ),
                             ],
                           ),
@@ -906,4 +973,43 @@ class _DriverInfoState extends State<DriverInfo> {
   }
   
   // Method to get month name from month number
+
+  Widget _buildStarRating(double rating) {
+    List<Widget> stars = [];
+    int fullStars = rating.floor();
+    double remainder = rating - fullStars;
+    
+    // Add full stars
+    for (int i = 0; i < fullStars; i++) {
+      stars.add(Icon(Icons.star, color: Colors.amber, size: 16));
+    }
+    
+    // Add half star if needed
+    if (remainder >= 0.5) {
+      stars.add(Icon(Icons.star_half, color: Colors.amber, size: 16));
+    } else if (remainder > 0) {
+      stars.add(Icon(Icons.star_border, color: Colors.amber, size: 16));
+    }
+    
+    // Add empty stars to make 5 total
+    while (stars.length < 5) {
+      stars.add(Icon(Icons.star_border, color: Colors.grey[300], size: 16));
+    }
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...stars,
+        SizedBox(width: 6),
+        Text(
+          rating > 0 ? '${rating.toStringAsFixed(1)} ($_totalReviews reviews)' : 'No ratings',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: rating > 0 ? Colors.amber[700] : Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
 }
