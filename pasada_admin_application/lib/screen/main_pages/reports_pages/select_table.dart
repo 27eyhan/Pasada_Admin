@@ -10,6 +10,7 @@ import 'package:pasada_admin_application/screen/main_pages/reports_pages/databas
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/route_tables/route_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/bookings_tables/ridehistory_table.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_tables/adminarch_table.dart';
+import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/reviews_table/driver_reviews_table.dart';
 
 class SelectTable extends StatefulWidget {
   @override
@@ -22,6 +23,7 @@ class _SelectTableState extends State<SelectTable> {
     'Admin',
     'Passenger',
     'Driver',
+    'Driver Reviews',
     'Vehicle',
     'Route',
     'Bookings',
@@ -75,6 +77,12 @@ class _SelectTableState extends State<SelectTable> {
           Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => PassengerTableScreen()),
+            );
+            break;
+          case 'Driver Reviews':
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => DriverReviewsTableScreen()),
             );
             break;
           case 'Vehicle':

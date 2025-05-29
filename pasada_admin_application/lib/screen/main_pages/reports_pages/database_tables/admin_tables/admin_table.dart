@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/admin_tables/edit_admin_dialog.dart';
 
 class AdminTableScreen extends StatefulWidget {
   const AdminTableScreen({Key? key}) : super(key: key);
@@ -61,31 +60,6 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
     }
   }
 
-  void _handleEditAdmin(Map<String, dynamic> selectedAdminData) async {
-    // Timer is already cancelled by the Continue button or PopupMenu
-
-    bool? updateSuccess = false; // Variable to store dialog result
-    try {
-      // Await the result from showDialog
-      updateSuccess = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false, 
-        builder: (BuildContext context) {
-          return EditAdminDialog(
-            supabase: supabase,
-            adminData: selectedAdminData,
-          );
-        },
-      );
-    } finally {
-      // Restart timer when the dialog is closed regardless of outcome
-      _startRefreshTimer(); 
-      // Fetch data only if update was successful (dialog returned true)
-      if (updateSuccess == true) {
-          fetchAdminData();
-      }
-    }
-  }
 
   void _startRefreshTimer() {
     _refreshTimer?.cancel(); 
@@ -145,7 +119,6 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                               DataColumn(label: Text('Created At', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
                             ],
                             rows: adminData.asMap().entries.map((entry) {
-                              final int index = entry.key;
                               final Map<String, dynamic> admin = entry.value;
                               // Determine if row selection should be active
                               // final bool allowSelection = _pendingAction == 'edit';
