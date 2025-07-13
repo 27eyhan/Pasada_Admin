@@ -38,15 +38,38 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
   void initState() {
     super.initState();
     // Pre-fill fields with existing route data
-    _originNameController.text = widget.routeData['origin_name']?.toString() ?? '';
-    _originLatController.text = widget.routeData['origin_lat']?.toString() ?? '';
-    _originLngController.text = widget.routeData['origin_lng']?.toString() ?? '';
-    _destinationNameController.text = widget.routeData['destination_name']?.toString() ?? '';
-    _destinationLatController.text = widget.routeData['destination_lat']?.toString() ?? '';
-    _destinationLngController.text = widget.routeData['destination_lng']?.toString() ?? '';
-    _routeNameController.text = widget.routeData['route_name']?.toString() ?? '';
-    _descriptionController.text = widget.routeData['description']?.toString() ?? '';
-    _status = widget.routeData['status']?.toString() ?? 'Active';
+    _originNameController.text =
+        widget.routeData['origin_name']?.toString() ?? '';
+    _originLatController.text =
+        widget.routeData['origin_lat']?.toString() ?? '';
+    _originLngController.text =
+        widget.routeData['origin_lng']?.toString() ?? '';
+    _destinationNameController.text =
+        widget.routeData['destination_name']?.toString() ?? '';
+    _destinationLatController.text =
+        widget.routeData['destination_lat']?.toString() ?? '';
+    _destinationLngController.text =
+        widget.routeData['destination_lng']?.toString() ?? '';
+    _routeNameController.text =
+        widget.routeData['route_name']?.toString() ?? '';
+    _descriptionController.text =
+        widget.routeData['description']?.toString() ?? '';
+    // Normalize status value to ensure it matches dropdown options
+    String statusFromData = widget.routeData['status']?.toString() ?? 'Active';
+    // Handle case sensitivity and ensure valid value
+    switch (statusFromData.toLowerCase()) {
+      case 'active':
+        _status = 'Active';
+        break;
+      case 'processing':
+        _status = 'Processing';
+        break;
+      case 'inactive':
+        _status = 'Inactive';
+        break;
+      default:
+        _status = 'Active'; // Default fallback
+    }
 
     // Handle intermediate coordinates (JSON)
     if (widget.routeData['intermediate_coordinates'] != null) {
@@ -56,7 +79,7 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
         _intermediateCoordinatesController.text = prettyJson;
       } catch (e) {
         // If it's already a string or there's an error, use the raw value
-        _intermediateCoordinatesController.text = 
+        _intermediateCoordinatesController.text =
             widget.routeData['intermediate_coordinates'].toString();
       }
     }
@@ -78,23 +101,30 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
 
   Future<void> _updateRoute() async {
     if (_formKey.currentState!.validate()) {
-      setState(() { _isLoading = true; });
+      setState(() {
+        _isLoading = true;
+      });
 
       try {
         // Parse intermediate coordinates JSON
         dynamic intermediateCoordinates;
         try {
           if (_intermediateCoordinatesController.text.isNotEmpty) {
-            intermediateCoordinates = json.decode(_intermediateCoordinatesController.text);
+            intermediateCoordinates =
+                json.decode(_intermediateCoordinatesController.text);
           } else {
             // Default empty array if no coordinates provided
             intermediateCoordinates = [];
           }
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Invalid JSON format for intermediate coordinates')),
+            SnackBar(
+                content:
+                    Text('Invalid JSON format for intermediate coordinates')),
           );
-          setState(() { _isLoading = false; });
+          setState(() {
+            _isLoading = false;
+          });
           return;
         }
 
@@ -122,12 +152,15 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
           SnackBar(content: Text('Route $routeId updated successfully!')),
         );
 
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         widget.onRouteActionComplete(); // Refresh the table
         Navigator.of(context).pop(); // Close the dialog
-
       } catch (e) {
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating route: ${e.toString()}')),
         );
@@ -138,7 +171,7 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double dialogWidth = screenWidth * 0.4; 
+    final double dialogWidth = screenWidth * 0.4;
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -147,230 +180,265 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
       ),
       backgroundColor: Palette.whiteColor,
       child: Container(
-         width: dialogWidth,
-         padding: const EdgeInsets.all(24.0),
-         child: SingleChildScrollView(
-            child: Column(
-               mainAxisSize: MainAxisSize.min,
-               crossAxisAlignment: CrossAxisAlignment.stretch,
-               children: <Widget>[
-                  // Icon and title
-                  Icon(Icons.edit_note, color: Palette.orangeColor, size: 48),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 20.0),
-                    child: Text(
-                      'Edit Route Information',
-                      style: TextStyle(
-                        fontSize: 22.0,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.bold,
-                        color: Palette.orangeColor,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+        width: dialogWidth,
+        padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // Icon and title
+              Icon(Icons.edit_note, color: Palette.orangeColor, size: 48),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20.0),
+                child: Text(
+                  'Edit Route Information',
+                  style: TextStyle(
+                    fontSize: 22.0,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.bold,
+                    color: Palette.orangeColor,
                   ),
-                  
-                  // Non-editable fields
-                  _buildInfoRow('Route ID:', widget.routeData['officialroute_id'].toString()),
-                  _buildInfoRow('Created At:', widget.routeData['created_at'].toString()),
-                  SizedBox(height: 16),
-                  
-                  // Form with improved styling
-                  Form(
-                    key: _formKey,
-                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _buildFormField(
-                          controller: _routeNameController,
-                          label: 'Route Name/Code',
-                          icon: Icons.label_outline,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+              // Non-editable fields
+              _buildInfoRow(
+                  'Route ID:', widget.routeData['officialroute_id'].toString()),
+              _buildInfoRow(
+                  'Created At:', widget.routeData['created_at'].toString()),
+              SizedBox(height: 16),
+
+              // Form with improved styling
+              Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _buildFormField(
+                      controller: _routeNameController,
+                      label: 'Route Name/Code',
+                      icon: Icons.label_outline,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
+                    ),
+                    _buildFormField(
+                      controller: _originNameController,
+                      label: 'Origin Place',
+                      icon: Icons.location_on_outlined,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildFormField(
+                            controller: _originLatController,
+                            label: 'Origin Latitude',
+                            icon: Icons.map_outlined,
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Required'
+                                : null,
+                          ),
                         ),
-                        _buildFormField(
-                          controller: _originNameController,
-                          label: 'Origin Place',
-                          icon: Icons.location_on_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildFormField(
-                                controller: _originLatController,
-                                label: 'Origin Latitude',
-                                icon: Icons.map_outlined,
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: _buildFormField(
-                                controller: _originLngController,
-                                label: 'Origin Longitude',
-                                icon: Icons.map_outlined,
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                        _buildFormField(
-                          controller: _destinationNameController,
-                          label: 'Destination Place',
-                          icon: Icons.location_on_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildFormField(
-                                controller: _destinationLatController,
-                                label: 'Destination Latitude',
-                                icon: Icons.map_outlined,
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: _buildFormField(
-                                controller: _destinationLngController,
-                                label: 'Destination Longitude',
-                                icon: Icons.map_outlined,
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                        _buildFormField(
-                          controller: _intermediateCoordinatesController,
-                          label: 'Intermediate Coordinates (JSON)',
-                          icon: Icons.route_outlined,
-                          maxLines: 5,
-                          hintText: '[{"lat": 14.123, "lng": 121.456, "name": "Stop 1"}, ...]',
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return null; // Optional field
-                            }
-                            try {
-                              json.decode(value);
-                              return null;
-                            } catch (e) {
-                              return 'Invalid JSON format';
-                            }
-                          },
-                        ),
-                        _buildFormField(
-                          controller: _descriptionController,
-                          label: 'Description',
-                          icon: Icons.description_outlined,
-                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                          maxLines: 2,
-                        ),
-                        // Status dropdown
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              labelText: 'Status',
-                              prefixIcon: Icon(Icons.toggle_on_outlined, color: Palette.orangeColor),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                                borderSide: BorderSide(color: Colors.grey),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                                borderSide: BorderSide(color: Palette.orangeColor, width: 2.0),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[50],
-                              contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                            ),
-                            value: _status,
-                            items: ['Active', 'Inactive'].map((String status) {
-                              return DropdownMenuItem<String>(
-                                value: status,
-                                child: Text(status),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              if (newValue != null) {
-                                setState(() {
-                                  _status = newValue;
-                                });
-                              }
-                            },
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: _buildFormField(
+                            controller: _originLngController,
+                            label: 'Origin Longitude',
+                            icon: Icons.map_outlined,
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Required'
+                                : null,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  
-                  const SizedBox(height: 16.0),
-                  
-                  // Action buttons with enhanced styling
-                  Row(
-                     mainAxisAlignment: MainAxisAlignment.center,
-                     children: <Widget>[
-                        ElevatedButton(
-                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[200],
-                              foregroundColor: Colors.black,
-                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-                              elevation: 3,
-                              minimumSize: Size(140, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                                side: BorderSide(color: Colors.grey[400]!),
-                              ),
-                           ),
-                           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                           child: Row(
-                             mainAxisSize: MainAxisSize.min,
-                             children: [
-                               Icon(Icons.cancel, size: 20),
-                               SizedBox(width: 8),
-                               Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                             ],
-                           ),
+                    _buildFormField(
+                      controller: _destinationNameController,
+                      label: 'Destination Place',
+                      icon: Icons.location_on_outlined,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildFormField(
+                            controller: _destinationLatController,
+                            label: 'Destination Latitude',
+                            icon: Icons.map_outlined,
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Required'
+                                : null,
+                          ),
                         ),
-                        const SizedBox(width: 15.0),
-                        ElevatedButton(
-                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Palette.orangeColor,
-                              foregroundColor: Palette.whiteColor,
-                              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-                              elevation: 3,
-                              minimumSize: Size(140, 50),
-                              shadowColor: Palette.orangeColor.withAlpha(128),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                           ),
-                           onPressed: _isLoading ? null : _updateRoute,
-                           child: _isLoading
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Palette.whiteColor))
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.save, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                                  ],
-                                ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: _buildFormField(
+                            controller: _destinationLngController,
+                            label: 'Destination Longitude',
+                            icon: Icons.map_outlined,
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Required'
+                                : null,
+                          ),
                         ),
-                     ],
+                      ],
+                    ),
+                    _buildFormField(
+                      controller: _intermediateCoordinatesController,
+                      label: 'Intermediate Coordinates (JSON)',
+                      icon: Icons.route_outlined,
+                      maxLines: 5,
+                      hintText:
+                          '[{"lat": 14.123, "lng": 121.456, "name": "Stop 1"}, ...]',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return null; // Optional field
+                        }
+                        try {
+                          json.decode(value);
+                          return null;
+                        } catch (e) {
+                          return 'Invalid JSON format';
+                        }
+                      },
+                    ),
+                    _buildFormField(
+                      controller: _descriptionController,
+                      label: 'Description',
+                      icon: Icons.description_outlined,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
+                      maxLines: 2,
+                    ),
+                    // Status dropdown
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Status',
+                          prefixIcon: Icon(Icons.toggle_on_outlined,
+                              color: Palette.orangeColor),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                            borderSide: BorderSide(color: Colors.grey),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                            borderSide: BorderSide(
+                                color: Palette.orangeColor, width: 2.0),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: 12.0, horizontal: 16.0),
+                        ),
+                        value: _status,
+                        items: ['Active', 'Processing', 'Inactive']
+                            .map((String status) {
+                          return DropdownMenuItem<String>(
+                            value: status,
+                            child: Text(status),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _status = newValue;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16.0),
+
+              // Action buttons with enhanced styling
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[200],
+                      foregroundColor: Colors.black,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                      elevation: 3,
+                      minimumSize: Size(140, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        side: BorderSide(color: Colors.grey[400]!),
+                      ),
+                    ),
+                    onPressed:
+                        _isLoading ? null : () => Navigator.of(context).pop(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.cancel, size: 20),
+                        SizedBox(width: 8),
+                        Text('Cancel',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 16)),
+                      ],
+                    ),
                   ),
-               ],
-            ),
-         ),
+                  const SizedBox(width: 15.0),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Palette.orangeColor,
+                      foregroundColor: Palette.whiteColor,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                      elevation: 3,
+                      minimumSize: Size(140, 50),
+                      shadowColor: Palette.orangeColor.withAlpha(128),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    onPressed: _isLoading ? null : _updateRoute,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2.5, color: Palette.whiteColor))
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.save, size: 20),
+                              SizedBox(width: 8),
+                              Text('Save Changes',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16)),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-  
+
   // Helper method to build read-only info rows
   Widget _buildInfoRow(String label, String value) {
     return Padding(
@@ -395,7 +463,7 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
       ),
     );
   }
-  
+
   // Helper method to build form fields
   Widget _buildFormField({
     required TextEditingController controller,
@@ -425,7 +493,8 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
           ),
           filled: true,
           fillColor: Colors.grey[50],
-          contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+          contentPadding:
+              EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
         ),
         keyboardType: keyboardType,
         obscureText: obscureText,
@@ -434,4 +503,4 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
       ),
     );
   }
-} 
+}

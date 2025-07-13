@@ -363,7 +363,7 @@ class _DriverInfoState extends State<DriverInfo> {
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width * 0.45; // Increased width ratio
+    final double screenWidth = MediaQuery.of(context).size.width * 0.55; // Increased width ratio
     final double dialogWidth = screenWidth;
     // Make dialog wider than it is tall
     final double dialogHeight = screenWidth * 0.7; // Reduced height ratio
