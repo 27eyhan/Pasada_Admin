@@ -13,9 +13,8 @@ class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
   final Size preferredSize;
   final FilterCallback? onFilterPressed;
 
-  AppBarSearch({Key? key, this.onFilterPressed})
-      : preferredSize = const Size.fromHeight(70.0),
-        super(key: key);
+  const AppBarSearch({super.key, this.onFilterPressed})
+      : preferredSize = const Size.fromHeight(70.0);
 
   @override
   _AppBarSearchState createState() => _AppBarSearchState();
@@ -45,7 +44,6 @@ class _AppBarSearchState extends State<AppBarSearch> {
     });
   }
 
-
   Widget _buildMergedNotificationsAndMessages() {
     return Container(
       decoration: BoxDecoration(
@@ -57,7 +55,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.notifications, size: 30.0, color: Palette.blackColor),
+            icon: const Icon(Icons.notifications,
+                size: 30.0, color: Palette.blackColor),
             onPressed: () {
               // Add your notifications action here.
             },
@@ -70,7 +69,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
             color: Palette.blackColor,
           ),
           IconButton(
-            icon: const Icon(Icons.message, size: 30.0, color: Palette.blackColor),
+            icon: const Icon(Icons.message,
+                size: 30.0, color: Palette.blackColor),
             onPressed: () {
               // Add your messages action here.
             },
@@ -88,7 +88,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
       preferredSize: widget.preferredSize,
       child: Container(
         color: Palette.whiteColor,
-        padding: const EdgeInsets.only(top: 16.0, left: 8.0, bottom: 8.0, right: 8.0),
+        padding: const EdgeInsets.only(
+            top: 16.0, left: 8.0, bottom: 8.0, right: 8.0),
         child: Row(
           children: [
             Container(
@@ -107,7 +108,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
             ),
             const SizedBox(width: 8.0),
             Flexible(
-              child: Container(
+              child: SizedBox(
                 width: MediaQuery.of(context).size.width * 0.55,
                 child: TextField(
                   controller: _searchController,
@@ -134,7 +135,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
                     ),
                     suffixIcon: _showClearButton
                         ? IconButton(
-                            icon: Icon(Icons.clear, color: Palette.blackColor.withAlpha(128)),
+                            icon: Icon(Icons.clear,
+                                color: Palette.blackColor.withAlpha(128)),
                             onPressed: () {
                               _searchController.clear();
                             },
@@ -148,7 +150,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
             const SizedBox(width: 10.0),
             TextButton(
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                 backgroundColor: Palette.blackColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0),
@@ -174,7 +177,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
                 border: Border.all(color: Palette.blackColor, width: 1.0),
               ),
               child: IconButton(
-                icon: Icon(Icons.filter_list, size: 30.0, color: Palette.blackColor),
+                icon: Icon(Icons.filter_list,
+                    size: 30.0, color: Palette.blackColor),
                 onPressed: widget.onFilterPressed,
                 padding: const EdgeInsets.all(8.0),
                 splashRadius: 20.0,
@@ -191,7 +195,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Palette.blackColor, width: 1.0),
                 ),
-                child: Icon(Icons.account_circle, size: 30.0, color: Palette.blackColor),
+                child: Icon(Icons.account_circle,
+                    size: 30.0, color: Palette.blackColor),
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
@@ -210,8 +215,13 @@ class _AppBarSearchState extends State<AppBarSearch> {
                         } else {
                           return AlertDialog(
                             title: Text("Error"),
-                            content: Text("Could not load profile. Admin ID missing."),
-                            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("OK"))],
+                            content: Text(
+                                "Could not load profile. Admin ID missing."),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text("OK"))
+                            ],
                           );
                         }
                       },
@@ -245,7 +255,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
                     await AuthService().clearAdminID();
                     Navigator.pushNamedAndRemoveUntil(
                       context,
-                      '/login', 
+                      '/login',
                       (Route<dynamic> route) => false,
                     );
                     break;
@@ -294,7 +304,8 @@ class _AppBarSearchState extends State<AppBarSearch> {
                 ),
                 const PopupMenuItem<String>(
                   value: 'logout',
-                  child: Text('Logout', style: TextStyle(color: Palette.redColor)),
+                  child:
+                      Text('Logout', style: TextStyle(color: Palette.redColor)),
                 ),
               ],
             ),

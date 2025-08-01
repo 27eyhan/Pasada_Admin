@@ -9,6 +9,8 @@ import 'fleet_data.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
 
 class Fleet extends StatefulWidget {
+  const Fleet({super.key});
+
   @override
   _FleetState createState() => _FleetState();
 }
@@ -24,11 +26,11 @@ class _FleetState extends State<Fleet> {
   int _drivingVehicles = 0;
   int _offlineVehicles = 0;
   Timer? _refreshTimer;
-  
+
   // Filter state
   Set<String> selectedStatuses = {};
   String? selectedRouteId;
-  
+
   // View mode: grid or list
   bool isGridView = true;
 
@@ -64,9 +66,10 @@ class _FleetState extends State<Fleet> {
           }
         }
 
-        bool statusMatch = selectedStatuses.isEmpty || selectedStatuses.contains(vehicleStatus);
-        
-        bool routeMatch = selectedRouteId == null || 
+        bool statusMatch = selectedStatuses.isEmpty ||
+            selectedStatuses.contains(vehicleStatus);
+
+        bool routeMatch = selectedRouteId == null ||
             vehicle['route_id']?.toString() == selectedRouteId;
 
         return statusMatch && routeMatch;
@@ -121,10 +124,10 @@ class _FleetState extends State<Fleet> {
 
         switch (status) {
           case 'online':
-            onlineCount++; 
+            onlineCount++;
             break;
           case 'driving':
-            drivingCount++; 
+            drivingCount++;
             break;
           case 'idling':
             idlingCount++;
@@ -139,7 +142,7 @@ class _FleetState extends State<Fleet> {
       if (mounted) {
         setState(() {
           vehicleData = listData.cast<Map<String, dynamic>>();
-          
+
           // Sort vehicleData by vehicle_id
           vehicleData.sort((a, b) {
             var aId = a['vehicle_id'];
@@ -156,14 +159,14 @@ class _FleetState extends State<Fleet> {
             // Fall back to string comparison
             return aId.toString().compareTo(bId.toString());
           });
-          
+
           _onlineVehicles = onlineCount;
           _idlingVehicles = idlingCount;
           _drivingVehicles = drivingCount;
           _offlineVehicles = offlineCount;
-          totalVehicles = totalCount; 
+          totalVehicles = totalCount;
           isLoading = false;
-          
+
           // Apply any existing filters
           _applyFilters();
         });
@@ -182,7 +185,6 @@ class _FleetState extends State<Fleet> {
         });
       }
     } catch (e) {
-
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -210,7 +212,8 @@ class _FleetState extends State<Fleet> {
             context: context,
             builder: (context) => AddVehicleDialog(
               supabase: supabase,
-              onVehicleActionComplete: fetchVehicleData, // Refresh the vehicle list when a new vehicle is added
+              onVehicleActionComplete:
+                  fetchVehicleData, // Refresh the vehicle list when a new vehicle is added
             ),
           );
         },
@@ -226,14 +229,17 @@ class _FleetState extends State<Fleet> {
                   children: [
                     // Enhanced status summary cards with gradients and icons
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 16.0, horizontal: 8.0),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [Colors.white, Colors.grey.shade100],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+                        border: Border.all(
+                            color: Palette.greyColor.withValues(alpha: 77),
+                            width: 1.0),
                         borderRadius: BorderRadius.circular(15.0),
                         boxShadow: [
                           BoxShadow(
@@ -247,20 +253,25 @@ class _FleetState extends State<Fleet> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildVehicleStatus("Online", _onlineVehicles, Palette.greenColor, Icons.wifi),
+                          _buildVehicleStatus("Online", _onlineVehicles,
+                              Palette.greenColor, Icons.wifi),
                           _buildVerticalDivider(),
-                          _buildVehicleStatus("Idling", _idlingVehicles, Palette.orangeColor, Icons.hourglass_bottom),
+                          _buildVehicleStatus("Idling", _idlingVehicles,
+                              Palette.orangeColor, Icons.hourglass_bottom),
                           _buildVerticalDivider(),
-                          _buildVehicleStatus("Driving", _drivingVehicles, Palette.greenColor, Icons.directions_car),
+                          _buildVehicleStatus("Driving", _drivingVehicles,
+                              Palette.greenColor, Icons.directions_car),
                           _buildVerticalDivider(),
-                          _buildVehicleStatus("Offline", _offlineVehicles, Palette.redColor, Icons.wifi_off),
+                          _buildVehicleStatus("Offline", _offlineVehicles,
+                              Palette.redColor, Icons.wifi_off),
                           _buildVerticalDivider(),
-                          _buildVehicleStatus("Total", totalVehicles, Palette.blackColor, Icons.directions_bus),
+                          _buildVehicleStatus("Total", totalVehicles,
+                              Palette.blackColor, Icons.directions_bus),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24.0),
-                    
+
                     // View toggle buttons (Grid/List)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -274,8 +285,10 @@ class _FleetState extends State<Fleet> {
                             children: [
                               IconButton(
                                 icon: Icon(
-                                  Icons.grid_view, 
-                                  color: isGridView ? Palette.blackColor : Palette.greyColor,
+                                  Icons.grid_view,
+                                  color: isGridView
+                                      ? Palette.blackColor
+                                      : Palette.greyColor,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -285,8 +298,10 @@ class _FleetState extends State<Fleet> {
                               ),
                               IconButton(
                                 icon: Icon(
-                                  Icons.view_list, 
-                                  color: !isGridView ? Palette.blackColor : Palette.greyColor,
+                                  Icons.view_list,
+                                  color: !isGridView
+                                      ? Palette.blackColor
+                                      : Palette.greyColor,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -299,9 +314,9 @@ class _FleetState extends State<Fleet> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 16.0),
-                    
+
                     // Vehicle list with conditional rendering based on view mode
                     isGridView ? _buildGridView() : _buildListView(),
                   ],
@@ -341,7 +356,7 @@ class _FleetState extends State<Fleet> {
       },
     );
   }
-  
+
   // List view implementation
   Widget _buildListView() {
     return ListView.builder(
@@ -370,12 +385,12 @@ class _FleetState extends State<Fleet> {
     }
     return vehicleStatus;
   }
-  
+
   // Check if vehicle is active based on status
   bool _isVehicleActive(String status) {
     return status == 'Online' || status == 'Driving' || status == 'Idling';
   }
-  
+
   // Get status color based on vehicle status
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -389,7 +404,7 @@ class _FleetState extends State<Fleet> {
         return Palette.redColor;
     }
   }
-  
+
   // Get status icon based on vehicle status
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
@@ -403,14 +418,14 @@ class _FleetState extends State<Fleet> {
         return Icons.wifi_off;
     }
   }
-  
+
   // Vehicle card for grid view
   Widget _buildVehicleCard(Map<String, dynamic> vehicle) {
     final status = _getVehicleStatus(vehicle);
     _isVehicleActive(status);
     final statusColor = _getStatusColor(status);
     final statusIcon = _getStatusIcon(status);
-    
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
@@ -430,7 +445,8 @@ class _FleetState extends State<Fleet> {
         child: Container(
           decoration: BoxDecoration(
             color: Palette.whiteColor,
-            border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+            border: Border.all(
+                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
             borderRadius: BorderRadius.circular(15.0),
             boxShadow: [
               BoxShadow(
@@ -465,26 +481,26 @@ class _FleetState extends State<Fleet> {
                   ),
                 ),
               ),
-              
+
               Row(
                 children: [
                   // Enhanced avatar with gradient background
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                                              gradient: LinearGradient(
-                          colors: [Color(0xFF38CE7C), Color(0xFFDDCC34)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF38CE7C), Color(0xFFDDCC34)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFF38CE7C).withValues(alpha: 51),
+                          blurRadius: 3,
+                          spreadRadius: 0,
+                          offset: Offset(0, 1),
                         ),
-                                              boxShadow: [
-                          BoxShadow(
-                            color: Color(0xFF38CE7C).withValues(alpha: 51),
-                            blurRadius: 3,
-                            spreadRadius: 0,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
+                      ],
                     ),
                     child: CircleAvatar(
                       radius: 28,
@@ -514,9 +530,12 @@ class _FleetState extends State<Fleet> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8.0),
-                        _buildVehicleInfoRow(Icons.tag, "ID: ${vehicle['vehicle_id'] ?? 'N/A'}"),
-                        _buildVehicleInfoRow(Icons.group, "Capacity: ${vehicle['passenger_capacity'] ?? 'N/A'}"),
-                        _buildVehicleInfoRow(Icons.route, "Route ID: ${vehicle['route_id'] ?? 'N/A'}"),
+                        _buildVehicleInfoRow(
+                            Icons.tag, "ID: ${vehicle['vehicle_id'] ?? 'N/A'}"),
+                        _buildVehicleInfoRow(Icons.group,
+                            "Capacity: ${vehicle['passenger_capacity'] ?? 'N/A'}"),
+                        _buildVehicleInfoRow(Icons.route,
+                            "Route ID: ${vehicle['route_id'] ?? 'N/A'}"),
                         _buildVehicleInfoRow(
                           statusIcon,
                           "Status: ${_capitalizeFirstLetter(status)}",
@@ -533,14 +552,14 @@ class _FleetState extends State<Fleet> {
       ),
     );
   }
-  
+
   // List item for the list view
   Widget _buildVehicleListItem(Map<String, dynamic> vehicle) {
     final status = _getVehicleStatus(vehicle);
     _isVehicleActive(status);
     final statusColor = _getStatusColor(status);
     final statusIcon = _getStatusIcon(status);
-    
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
@@ -560,7 +579,8 @@ class _FleetState extends State<Fleet> {
         child: Container(
           decoration: BoxDecoration(
             color: Palette.whiteColor,
-            border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+            border: Border.all(
+                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
             borderRadius: BorderRadius.circular(12.0),
             boxShadow: [
               BoxShadow(
@@ -581,11 +601,11 @@ class _FleetState extends State<Fleet> {
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                                              gradient: LinearGradient(
-                          colors: [Color(0xFF38CE7C), Color(0xFFDDCC34)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF38CE7C), Color(0xFFDDCC34)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Color(0xFF38CE7C).withValues(alpha: 51),
@@ -606,7 +626,7 @@ class _FleetState extends State<Fleet> {
                       ),
                     ),
                   ),
-                  
+
                   // Status indicator
                   Positioned(
                     bottom: 0,
@@ -631,9 +651,9 @@ class _FleetState extends State<Fleet> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(width: 16.0),
-              
+
               // Vehicle info
               Expanded(
                 child: Row(
@@ -666,29 +686,31 @@ class _FleetState extends State<Fleet> {
                         ],
                       ),
                     ),
-                    
+
                     // Capacity
                     Expanded(
                       flex: 2,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildVehicleInfoRow(Icons.group, "${vehicle['passenger_capacity'] ?? 'N/A'} seats"),
+                          _buildVehicleInfoRow(Icons.group,
+                              "${vehicle['passenger_capacity'] ?? 'N/A'} seats"),
                         ],
                       ),
                     ),
-                    
+
                     // Route
                     Expanded(
                       flex: 2,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildVehicleInfoRow(Icons.route, "Route ${vehicle['route_id'] ?? 'N/A'}"),
+                          _buildVehicleInfoRow(Icons.route,
+                              "Route ${vehicle['route_id'] ?? 'N/A'}"),
                         ],
                       ),
                     ),
-                    
+
                     // Status
                     Expanded(
                       flex: 2,
@@ -742,7 +764,8 @@ class _FleetState extends State<Fleet> {
   }
 
   // Enhanced status display with icons
-  Widget _buildVehicleStatus(String title, int count, Color countColor, IconData icon) {
+  Widget _buildVehicleStatus(
+      String title, int count, Color countColor, IconData icon) {
     return Expanded(
       child: SizedBox(
         height: 100.0,
@@ -791,7 +814,7 @@ class _FleetState extends State<Fleet> {
       margin: const EdgeInsets.symmetric(horizontal: 2.0),
     );
   }
-  
+
   // Helper method to capitalize first letter
   String _capitalizeFirstLetter(String text) {
     if (text.isEmpty) return text;

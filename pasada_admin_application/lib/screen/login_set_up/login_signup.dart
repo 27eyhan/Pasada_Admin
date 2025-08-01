@@ -6,6 +6,8 @@ import './login_password_util.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 
 class LoginSignup extends StatefulWidget {
+  const LoginSignup({super.key});
+
   @override
   _LoginSignupState createState() => _LoginSignupState();
 }
@@ -62,11 +64,11 @@ class _LoginSignupState extends State<LoginSignup> {
     }
 
     try {
-
       final response = await supabase
           .from('adminTable')
           .select('admin_id, admin_username, admin_password')
-          .ilike('admin_username', enteredUsername) // Find potential match ignoring case
+          .ilike('admin_username',
+              enteredUsername) // Find potential match ignoring case
           .limit(1)
           .maybeSingle();
 
@@ -74,13 +76,13 @@ class _LoginSignupState extends State<LoginSignup> {
         // Username not found even case-insensitively
         _showErrorSnackBar('Username not found.');
       } else {
-
         final String dbUsername = response['admin_username'];
         final String dbHashedPassword = response['admin_password'];
         final int adminID = response['admin_id'];
 
-        if (enteredUsername == dbUsername && 
-            LoginPasswordUtil().checkPassword(enteredPassword, dbHashedPassword)) {
+        if (enteredUsername == dbUsername &&
+            LoginPasswordUtil()
+                .checkPassword(enteredPassword, dbHashedPassword)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Successfully logged in.'),
@@ -110,12 +112,12 @@ class _LoginSignupState extends State<LoginSignup> {
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(
-         content: Text(message),
-         backgroundColor: Colors.red,
-         duration: Duration(seconds: 3),
-       ),
-     );
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -130,12 +132,15 @@ class _LoginSignupState extends State<LoginSignup> {
         focusNode: FocusNode(), // Needs a focus node to receive events
         onKeyEvent: (FocusNode node, KeyEvent event) {
           if (event is KeyDownEvent &&
-              HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.enter)) {
-            if (!_isLoading) { // Check if not already loading
+              HardwareKeyboard.instance
+                  .isLogicalKeyPressed(LogicalKeyboardKey.enter)) {
+            if (!_isLoading) {
+              // Check if not already loading
               _login();
             }
           }
-          return KeyEventResult.ignored; // Or KeyEventResult.handled if you want to stop event propagation
+          return KeyEventResult
+              .ignored; // Or KeyEventResult.handled if you want to stop event propagation
         },
         child: Stack(
           children: [
@@ -165,14 +170,16 @@ class _LoginSignupState extends State<LoginSignup> {
                     children: [
                       Row(
                         children: [
-                          Image.asset('assets/novadeci.png', width: 58, height: 58),
+                          Image.asset('assets/novadeci.png',
+                              width: 58, height: 58),
                           SizedBox(width: 10),
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(right: 16),
                               child: Text(
                                 "Novadeci Transport Cooperative",
-                                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    fontSize: 26, fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                                 softWrap: false,
@@ -224,15 +231,21 @@ class _LoginSignupState extends State<LoginSignup> {
                                         backgroundColor: Palette.blackColor,
                                         foregroundColor: Palette.whiteColor,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(5),
+                                          borderRadius:
+                                              BorderRadius.circular(5),
                                         ),
                                         minimumSize: Size(170, 50),
                                         elevation: 5,
                                         shadowColor: Palette.blackColor,
                                       ),
-                                      child: _isLoading 
-                                             ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Palette.whiteColor, strokeWidth: 2)) 
-                                             : Text("Log-in"),
+                                      child: _isLoading
+                                          ? SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                  color: Palette.whiteColor,
+                                                  strokeWidth: 2))
+                                          : Text("Log-in"),
                                     ),
                                   ),
                                 ],
@@ -274,7 +287,8 @@ class _LoginSignupState extends State<LoginSignup> {
     );
   }
 
-  TextField _buildTextField(String hintText, TextEditingController controller, FocusNode focusNode) {
+  TextField _buildTextField(
+      String hintText, TextEditingController controller, FocusNode focusNode) {
     return TextField(
       controller: controller,
       focusNode: focusNode,
@@ -287,7 +301,8 @@ class _LoginSignupState extends State<LoginSignup> {
     );
   }
 
-  TextField _buildPasswordField(TextEditingController controller, FocusNode focusNode) {
+  TextField _buildPasswordField(
+      TextEditingController controller, FocusNode focusNode) {
     return TextField(
       controller: controller,
       focusNode: focusNode,

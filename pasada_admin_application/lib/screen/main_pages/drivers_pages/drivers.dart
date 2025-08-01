@@ -9,6 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
 
 class Drivers extends StatefulWidget {
+  const Drivers({super.key});
+
   @override
   _DriversState createState() => _DriversState();
 }
@@ -24,12 +26,12 @@ class _DriversState extends State<Drivers> {
   int totalDrivers = 0;
 
   Timer? _refreshTimer;
-  
+
   // Filter state
   Set<String> selectedStatuses = {};
   String? selectedVehicleId;
   String sortOption = 'numeric'; // Default sorting
-  
+
   // View mode: grid or list
   bool isGridView = true;
 
@@ -47,7 +49,7 @@ class _DriversState extends State<Drivers> {
     _refreshTimer?.cancel();
     super.dispose();
   }
-  
+
   void _showFilterDialog() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -69,7 +71,7 @@ class _DriversState extends State<Drivers> {
       });
     }
   }
-  
+
   void _applyFilters() {
     setState(() {
       if (selectedStatuses.isEmpty && selectedVehicleId == null) {
@@ -81,14 +83,14 @@ class _DriversState extends State<Drivers> {
           bool statusMatch = true;
           if (selectedStatuses.isNotEmpty) {
             final status = driver["driving_status"]?.toString() ?? "Offline";
-            
+
             if (selectedStatuses.contains('Online')) {
               // For Online, match any of these statuses
-              bool isActive = status.toLowerCase() == "driving" || 
-                              status.toLowerCase() == "online" || 
-                              status.toLowerCase() == "idling" || 
-                              status.toLowerCase() == "active";
-              
+              bool isActive = status.toLowerCase() == "driving" ||
+                  status.toLowerCase() == "online" ||
+                  status.toLowerCase() == "idling" ||
+                  status.toLowerCase() == "active";
+
               if (selectedStatuses.contains('Offline')) {
                 // If both Online and Offline are selected, show all
                 statusMatch = true;
@@ -99,19 +101,19 @@ class _DriversState extends State<Drivers> {
             } else if (selectedStatuses.contains('Offline')) {
               // Only Offline is selected
               bool isOffline = status.toLowerCase() == "offline" ||
-                               status.toLowerCase() == "";
+                  status.toLowerCase() == "";
               statusMatch = isOffline;
             }
           }
-          
+
           // Filter by vehicle ID
-          bool vehicleMatch = selectedVehicleId == null || 
+          bool vehicleMatch = selectedVehicleId == null ||
               driver['vehicle_id']?.toString() == selectedVehicleId;
 
           return statusMatch && vehicleMatch;
         }).toList();
       }
-      
+
       // Apply sorting
       if (sortOption == 'alphabetical') {
         filteredDriverData.sort((a, b) {
@@ -119,7 +121,8 @@ class _DriversState extends State<Drivers> {
           final nameB = b['full_name']?.toString() ?? '';
           return nameA.compareTo(nameB);
         });
-      } else { // numeric sorting is default
+      } else {
+        // numeric sorting is default
         filteredDriverData.sort((a, b) {
           final numA = int.tryParse(a['driver_id']?.toString() ?? '0') ?? 0;
           final numB = int.tryParse(b['driver_id']?.toString() ?? '0') ?? 0;
@@ -144,19 +147,20 @@ class _DriversState extends State<Drivers> {
           return numA.compareTo(numB);
         });
         totalDrivers = driverData.length;
-        
+
         // Count active drivers based on multiple status values
         activeDrivers = driverData.where((driver) {
-          final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
-          return status == "driving" || 
-                 status == "online" || 
-                 status == "idling" || 
-                 status == "active";
+          final status =
+              driver["driving_status"]?.toString().toLowerCase() ?? "";
+          return status == "driving" ||
+              status == "online" ||
+              status == "idling" ||
+              status == "active";
         }).length;
-        
+
         offlineDrivers = totalDrivers - activeDrivers;
         isLoading = false;
-        
+
         // Apply any existing filters
         _applyFilters();
       });
@@ -200,14 +204,17 @@ class _DriversState extends State<Drivers> {
                   children: [
                     // Enhanced status summary cards with gradients and icons
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 16.0, horizontal: 8.0),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [Colors.white, Colors.grey.shade100],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+                        border: Border.all(
+                            color: Palette.greyColor.withValues(alpha: 77),
+                            width: 1.0),
                         borderRadius: BorderRadius.circular(15.0),
                         boxShadow: [
                           BoxShadow(
@@ -221,22 +228,22 @@ class _DriversState extends State<Drivers> {
                       child: Row(
                         children: [
                           _buildDriverStatus(
-                            "Drivers Online", 
-                            activeDrivers, 
+                            "Drivers Online",
+                            activeDrivers,
                             Palette.greenColor,
                             Icons.directions_car_filled,
                           ),
                           _buildVerticalDivider(),
                           _buildDriverStatus(
-                            "Drivers Offline", 
-                            offlineDrivers, 
+                            "Drivers Offline",
+                            offlineDrivers,
                             Palette.redColor,
                             Icons.pause_circle_outline,
                           ),
                           _buildVerticalDivider(),
                           _buildDriverStatus(
-                            "Total Drivers", 
-                            totalDrivers, 
+                            "Total Drivers",
+                            totalDrivers,
                             Palette.blackColor,
                             Icons.group,
                           ),
@@ -244,7 +251,7 @@ class _DriversState extends State<Drivers> {
                       ),
                     ),
                     const SizedBox(height: 24.0),
-                    
+
                     // View toggle buttons (Grid/List)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -258,8 +265,10 @@ class _DriversState extends State<Drivers> {
                             children: [
                               IconButton(
                                 icon: Icon(
-                                  Icons.grid_view, 
-                                  color: isGridView ? Palette.blackColor : Palette.greyColor,
+                                  Icons.grid_view,
+                                  color: isGridView
+                                      ? Palette.blackColor
+                                      : Palette.greyColor,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -269,8 +278,10 @@ class _DriversState extends State<Drivers> {
                               ),
                               IconButton(
                                 icon: Icon(
-                                  Icons.view_list, 
-                                  color: !isGridView ? Palette.blackColor : Palette.greyColor,
+                                  Icons.view_list,
+                                  color: !isGridView
+                                      ? Palette.blackColor
+                                      : Palette.greyColor,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -283,9 +294,9 @@ class _DriversState extends State<Drivers> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 16.0),
-                    
+
                     // Driver list with conditional rendering based on view mode
                     isGridView ? _buildGridView() : _buildListView(),
                   ],
@@ -294,7 +305,7 @@ class _DriversState extends State<Drivers> {
             ),
     );
   }
-  
+
   // Grid view implementation
   Widget _buildGridView() {
     return LayoutBuilder(
@@ -316,17 +327,20 @@ class _DriversState extends State<Drivers> {
           childAspectRatio: 2.2,
           children: List.generate(filteredDriverData.length, (index) {
             final driver = filteredDriverData[index];
-            final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
-            final isActive = status == "driving" || status == "online" || 
-                            status == "idling" || status == "active";
-            
+            final status =
+                driver["driving_status"]?.toString().toLowerCase() ?? "";
+            final isActive = status == "driving" ||
+                status == "online" ||
+                status == "idling" ||
+                status == "active";
+
             return _buildDriverCard(driver, isActive);
           }),
         );
       },
     );
   }
-  
+
   // List view implementation
   Widget _buildListView() {
     return ListView.builder(
@@ -336,9 +350,11 @@ class _DriversState extends State<Drivers> {
       itemBuilder: (context, index) {
         final driver = filteredDriverData[index];
         final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
-        final isActive = status == "driving" || status == "online" || 
-                        status == "idling" || status == "active";
-        
+        final isActive = status == "driving" ||
+            status == "online" ||
+            status == "idling" ||
+            status == "active";
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
           child: _buildDriverListItem(driver, isActive),
@@ -346,7 +362,7 @@ class _DriversState extends State<Drivers> {
       },
     );
   }
-  
+
   // List item for the list view
   Widget _buildDriverListItem(Map<String, dynamic> driver, bool isActive) {
     return MouseRegion(
@@ -364,7 +380,8 @@ class _DriversState extends State<Drivers> {
         child: Container(
           decoration: BoxDecoration(
             color: Palette.whiteColor,
-            border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+            border: Border.all(
+                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
             borderRadius: BorderRadius.circular(12.0),
             boxShadow: [
               BoxShadow(
@@ -409,7 +426,7 @@ class _DriversState extends State<Drivers> {
                       ),
                     ),
                   ),
-                  
+
                   // Status indicator
                   Positioned(
                     bottom: 0,
@@ -423,7 +440,9 @@ class _DriversState extends State<Drivers> {
                         border: Border.all(color: Colors.white, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: isActive ? Colors.green.withValues(alpha: 20) : Colors.red.withValues(alpha: 20),
+                            color: isActive
+                                ? Colors.green.withValues(alpha: 20)
+                                : Colors.red.withValues(alpha: 20),
                             spreadRadius: 0,
                             blurRadius: 2,
                             offset: Offset(0, 1),
@@ -434,9 +453,9 @@ class _DriversState extends State<Drivers> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(width: 16.0),
-              
+
               // Driver info
               Expanded(
                 child: Row(
@@ -469,29 +488,31 @@ class _DriversState extends State<Drivers> {
                         ],
                       ),
                     ),
-                    
+
                     // Contact number
                     Expanded(
                       flex: 3,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDriverInfoRow(Icons.phone_android, "${driver['driver_number']}"),
+                          _buildDriverInfoRow(Icons.phone_android,
+                              "${driver['driver_number']}"),
                         ],
                       ),
                     ),
-                    
+
                     // Vehicle
                     Expanded(
                       flex: 2,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDriverInfoRow(Icons.directions_car_outlined, "${driver['vehicle_id']}"),
+                          _buildDriverInfoRow(Icons.directions_car_outlined,
+                              "${driver['vehicle_id']}"),
                         ],
                       ),
                     ),
-                    
+
                     // Status
                     Expanded(
                       flex: 2,
@@ -499,7 +520,9 @@ class _DriversState extends State<Drivers> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDriverInfoRow(
-                            isActive ? Icons.play_circle_outline : Icons.pause_circle_outline,
+                            isActive
+                                ? Icons.play_circle_outline
+                                : Icons.pause_circle_outline,
                             "Status: ${_capitalizeFirstLetter(driver['driving_status'] ?? 'Offline')}",
                             textColor: isActive ? Colors.green : Colors.red,
                           ),
@@ -509,7 +532,7 @@ class _DriversState extends State<Drivers> {
                   ],
                 ),
               ),
-              
+
               // Quick action buttons
               Row(
                 children: [
@@ -541,7 +564,8 @@ class _DriversState extends State<Drivers> {
         child: Container(
           decoration: BoxDecoration(
             color: Palette.whiteColor,
-            border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+            border: Border.all(
+                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
             borderRadius: BorderRadius.circular(15.0),
             boxShadow: [
               BoxShadow(
@@ -567,7 +591,9 @@ class _DriversState extends State<Drivers> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: isActive ? Colors.green.withValues(alpha: 20) : Colors.red.withValues(alpha: 20),
+                        color: isActive
+                            ? Colors.green.withValues(alpha: 20)
+                            : Colors.red.withValues(alpha: 20),
                         spreadRadius: 0,
                         blurRadius: 2,
                         offset: Offset(0, 1),
@@ -576,7 +602,7 @@ class _DriversState extends State<Drivers> {
                   ),
                 ),
               ),
-              
+
               Row(
                 children: [
                   // Enhanced avatar with gradient background
@@ -624,11 +650,16 @@ class _DriversState extends State<Drivers> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8.0),
-                        _buildDriverInfoRow(Icons.badge_outlined, "ID: ${driver['driver_id']}"),
-                        _buildDriverInfoRow(Icons.phone_android, "${driver['driver_number']}"),
-                        _buildDriverInfoRow(Icons.directions_car_outlined, "Vehicle: ${driver['vehicle_id']}"),
                         _buildDriverInfoRow(
-                          isActive ? Icons.play_circle_outline : Icons.pause_circle_outline,
+                            Icons.badge_outlined, "ID: ${driver['driver_id']}"),
+                        _buildDriverInfoRow(
+                            Icons.phone_android, "${driver['driver_number']}"),
+                        _buildDriverInfoRow(Icons.directions_car_outlined,
+                            "Vehicle: ${driver['vehicle_id']}"),
+                        _buildDriverInfoRow(
+                          isActive
+                              ? Icons.play_circle_outline
+                              : Icons.pause_circle_outline,
                           "Status: ${_capitalizeFirstLetter(driver['driving_status'] ?? 'Offline')}",
                           textColor: isActive ? Colors.green : Colors.red,
                         ),
@@ -637,7 +668,7 @@ class _DriversState extends State<Drivers> {
                   ),
                 ],
               ),
-              
+
               // Quick action buttons
               Positioned(
                 right: 4,
@@ -646,7 +677,8 @@ class _DriversState extends State<Drivers> {
                   children: [
                     _buildActionButton(Icons.phone, Colors.blue, driver),
                     _buildActionButton(Icons.message, Colors.orange, driver),
-                    _buildActionButton(Icons.map_outlined, Colors.green, driver),
+                    _buildActionButton(
+                        Icons.map_outlined, Colors.green, driver),
                   ],
                 ),
               ),
@@ -658,7 +690,8 @@ class _DriversState extends State<Drivers> {
   }
 
   // Helper widget for action buttons
-  Widget _buildActionButton(IconData icon, Color color, Map<String, dynamic> driver) {
+  Widget _buildActionButton(
+      IconData icon, Color color, Map<String, dynamic> driver) {
     return Container(
       margin: EdgeInsets.only(left: 4),
       decoration: BoxDecoration(
@@ -679,15 +712,11 @@ class _DriversState extends State<Drivers> {
           // Action button functionality for map icon
           if (icon == Icons.map_outlined) {
             // Navigate to dashboard with the driver ID as an argument
-            Navigator.pushNamed(
-              context, 
-              '/dashboard',
-              arguments: {
-                'viewDriverLocation': true,
-                'driverId': driver['driver_id'],
-                'driverName': driver['full_name'],
-              }
-            );
+            Navigator.pushNamed(context, '/dashboard', arguments: {
+              'viewDriverLocation': true,
+              'driverId': driver['driver_id'],
+              'driverName': driver['full_name'],
+            });
           }
           // Other icon actions can be added here
         },
@@ -726,7 +755,8 @@ class _DriversState extends State<Drivers> {
     );
   }
 
-  Widget _buildDriverStatus(String title, int count, Color countColor, IconData icon) {
+  Widget _buildDriverStatus(
+      String title, int count, Color countColor, IconData icon) {
     return Expanded(
       child: SizedBox(
         height: 100.0,
@@ -774,7 +804,7 @@ class _DriversState extends State<Drivers> {
       color: Palette.blackColor.withValues(alpha: 40),
     );
   }
-  
+
   // Helper method to capitalize first letter
   String _capitalizeFirstLetter(String text) {
     if (text.isEmpty) return text;

@@ -6,7 +6,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class AdminTableScreen extends StatefulWidget {
-  const AdminTableScreen({Key? key}) : super(key: key);
+  const AdminTableScreen({super.key});
 
   @override
   _AdminTableScreenState createState() => _AdminTableScreenState();
@@ -26,7 +26,7 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
     super.initState();
     fetchAdminData();
     // Use helper to start timer initially
-    _startRefreshTimer(); 
+    _startRefreshTimer();
   }
 
   @override
@@ -60,11 +60,10 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
     }
   }
 
-
   void _startRefreshTimer() {
-    _refreshTimer?.cancel(); 
+    _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
-       if (mounted) fetchAdminData();
+      if (mounted) fetchAdminData();
     });
   }
 
@@ -112,11 +111,36 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                             dataRowMaxHeight: 60.0, // Set maximum row height
                             showCheckboxColumn: false, // Remove checkbox column
                             columns: const [
-                              DataColumn(label: Text('Admin ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Name', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Mobile', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Username', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Created At', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                              DataColumn(
+                                  label: Text('Admin ID',
+                                      style: TextStyle(
+                                          fontSize: 14.0,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.bold))),
+                              DataColumn(
+                                  label: Text('Name',
+                                      style: TextStyle(
+                                          fontSize: 14.0,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.bold))),
+                              DataColumn(
+                                  label: Text('Mobile',
+                                      style: TextStyle(
+                                          fontSize: 14.0,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.bold))),
+                              DataColumn(
+                                  label: Text('Username',
+                                      style: TextStyle(
+                                          fontSize: 14.0,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.bold))),
+                              DataColumn(
+                                  label: Text('Created At',
+                                      style: TextStyle(
+                                          fontSize: 14.0,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.bold))),
                             ],
                             rows: adminData.asMap().entries.map((entry) {
                               final Map<String, dynamic> admin = entry.value;
@@ -157,14 +181,26 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
                                     //        },
                                     //      ),
                                     //    SizedBox(width: 8),
-                                        Text(admin['admin_id'].toString(), style: TextStyle(fontSize: 14.0)),
+                                    Text(admin['admin_id'].toString(),
+                                        style: TextStyle(fontSize: 14.0)),
                                     //  ],
                                     // )
                                   ),
-                                  DataCell(Text('${admin['first_name'] ?? ''} ${admin['last_name'] ?? ''}', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(admin['admin_mobile_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(admin['admin_username']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(admin['created_at']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(
+                                      '${admin['first_name'] ?? ''} ${admin['last_name'] ?? ''}',
+                                      style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(
+                                      admin['admin_mobile_number']
+                                              ?.toString() ??
+                                          'N/A',
+                                      style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(
+                                      admin['admin_username']?.toString() ??
+                                          'N/A',
+                                      style: TextStyle(fontSize: 14.0))),
+                                  DataCell(Text(
+                                      admin['created_at']?.toString() ?? 'N/A',
+                                      style: TextStyle(fontSize: 14.0))),
                                 ],
                               );
                             }).toList(),

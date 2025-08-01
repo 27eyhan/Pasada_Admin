@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 
 class MyDrawer extends StatefulWidget {
-  const MyDrawer({Key? key}) : super(key: key);
+  const MyDrawer({super.key});
 
   @override
   _MyDrawerState createState() => _MyDrawerState();
@@ -134,7 +134,8 @@ class _MyDrawerState extends State<MyDrawer> {
                 margin:
                     const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                 decoration: BoxDecoration(
-                  color: reportsSelected ? Palette.greyColor : Colors.transparent,
+                  color:
+                      reportsSelected ? Palette.greyColor : Colors.transparent,
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: ListTile(
@@ -150,9 +151,8 @@ class _MyDrawerState extends State<MyDrawer> {
                     style: TextStyle(
                       fontSize: 16,
                       color: Palette.blackColor,
-                      fontWeight: reportsSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          reportsSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   trailing: Icon(
@@ -173,7 +173,8 @@ class _MyDrawerState extends State<MyDrawer> {
                       text: 'Quota',
                       routeName: '/reports',
                       currentRoute: currentRoute,
-                      customPadding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      customPadding:
+                          const EdgeInsets.symmetric(horizontal: 24.0),
                     ),
                     _createDrawerItem(
                       context: context,
@@ -181,7 +182,8 @@ class _MyDrawerState extends State<MyDrawer> {
                       text: 'Tables',
                       routeName: '/select_table',
                       currentRoute: currentRoute,
-                      customPadding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      customPadding:
+                          const EdgeInsets.symmetric(horizontal: 24.0),
                     ),
                   ],
                 ),

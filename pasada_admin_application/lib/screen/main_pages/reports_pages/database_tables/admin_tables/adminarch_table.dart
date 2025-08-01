@@ -6,7 +6,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class AdminArchTableScreen extends StatefulWidget {
-  const AdminArchTableScreen({Key? key}) : super(key: key);
+  const AdminArchTableScreen({super.key});
 
   @override
   _AdminArchTableScreenState createState() => _AdminArchTableScreenState();
@@ -40,23 +40,25 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
   Future<void> fetchArchiveData() async {
     // Reset selection state on fetch
     setState(() {
-        _selectedRowIndex = null;
-        _pendingAction = null; // Also reset pending action on refresh
-        isLoading = true;
-      });
+      _selectedRowIndex = null;
+      _pendingAction = null; // Also reset pending action on refresh
+      isLoading = true;
+    });
     try {
       // Fetch all columns from the 'adminArchives' table.
       final data = await supabase.from('adminArchives').select('*');
       // Debug: verify data retrieval
       final List listData = data as List;
-      if (mounted) { // Check if the widget is still mounted
+      if (mounted) {
+        // Check if the widget is still mounted
         setState(() {
           archiveData = listData.cast<Map<String, dynamic>>();
           isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) { // Check if the widget is still mounted
+      if (mounted) {
+        // Check if the widget is still mounted
         setState(() {
           isLoading = false;
         });
@@ -65,13 +67,14 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
   }
 
   // --- Action Handlers (Placeholders) ---
-   void _handleRestoreAdmin(Map<String, dynamic> selectedArchiveData) {
+  void _handleRestoreAdmin(Map<String, dynamic> selectedArchiveData) {
     _showInfoSnackBar('Restore Admin functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after restoration
   }
 
   void _handleDeleteAdminPermanent(Map<String, dynamic> selectedArchiveData) {
-    _showInfoSnackBar('Permanent Delete Admin functionality not yet implemented.');
+    _showInfoSnackBar(
+        'Permanent Delete Admin functionality not yet implemented.');
     // Possibly call fetchArchiveData() again after deletion
   }
 
@@ -87,7 +90,7 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
 
   @override
   Widget build(BuildContext context) {
-     // Determine if Continue button should be enabled
+    // Determine if Continue button should be enabled
     final bool isRowSelected = _selectedRowIndex != null;
 
     return Scaffold(
@@ -97,7 +100,8 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
       body: Stack(
         children: [
           // Main content: show a progress indicator, "No data found", or the DataTable.
-          Center( // Center the table content
+          Center(
+            // Center the table content
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : archiveData.isEmpty
@@ -124,41 +128,55 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
                               DataColumn(label: Text('Admin Password')),
                               DataColumn(label: Text('Archived At')),
                             ],
-                            rows: archiveData.asMap().entries.map((entry) { // Use asMap().entries
+                            rows: archiveData.asMap().entries.map((entry) {
+                              // Use asMap().entries
                               final int index = entry.key;
                               final Map<String, dynamic> archive = entry.value;
-                              final bool allowSelection = _pendingAction != null;
+                              final bool allowSelection =
+                                  _pendingAction != null;
 
                               return DataRow(
-                                selected: allowSelection && (_selectedRowIndex == index),
+                                selected: allowSelection &&
+                                    (_selectedRowIndex == index),
                                 onSelectChanged: allowSelection
-                                  ? (bool? selected) {
-                                    setState(() {
-                                      if (selected ?? false) {
-                                        _selectedRowIndex = index;
-                                      } else {
-                                        if (_selectedRowIndex == index) {
-                                          _selectedRowIndex = null;
-                                        }
+                                    ? (bool? selected) {
+                                        setState(() {
+                                          if (selected ?? false) {
+                                            _selectedRowIndex = index;
+                                          } else {
+                                            if (_selectedRowIndex == index) {
+                                              _selectedRowIndex = null;
+                                            }
+                                          }
+                                        });
                                       }
-                                    });
-                                  }
-                                  : null,
+                                    : null,
                                 cells: [
-                                  DataCell(Text(archive['archive_id'].toString())),
-                                  DataCell(Text(archive['admin_id'].toString())),
-                                  DataCell(Text(archive['first_name']?.toString() ?? 'N/A')),
-                                  DataCell(Text(archive['last_name']?.toString() ?? 'N/A')),
-                                  DataCell(Text(archive['admin_mobile_number']?.toString() ?? 'N/A')),
-                                  DataCell(Text(archive['admin_password']?.toString() ?? 'N/A')), // Careful with passwords
-                                  DataCell(Text(archive['archived_at'].toString())),
+                                  DataCell(
+                                      Text(archive['archive_id'].toString())),
+                                  DataCell(
+                                      Text(archive['admin_id'].toString())),
+                                  DataCell(Text(
+                                      archive['first_name']?.toString() ??
+                                          'N/A')),
+                                  DataCell(Text(
+                                      archive['last_name']?.toString() ??
+                                          'N/A')),
+                                  DataCell(Text(archive['admin_mobile_number']
+                                          ?.toString() ??
+                                      'N/A')),
+                                  DataCell(Text(
+                                      archive['admin_password']?.toString() ??
+                                          'N/A')), // Careful with passwords
+                                  DataCell(
+                                      Text(archive['archived_at'].toString())),
                                 ],
                               );
                             }).toList(),
                           ),
                         ),
                       ),
-                    ),
+          ),
           // Positioned back button in the top-left corner.
           Positioned(
             top: 26.0,
@@ -191,7 +209,9 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
                   color: Palette.whiteColor,
                 ),
                 child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Palette.blackColor), // Using different icon for archives
+                  icon: const Icon(Icons.more_vert,
+                      color: Palette
+                          .blackColor), // Using different icon for archives
                   tooltip: 'Actions',
                   color: Palette.whiteColor,
                   elevation: 8.0,
@@ -206,22 +226,23 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
                       _pendingAction = value;
                     });
                   },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
                     const PopupMenuItem<String>(
                       value: 'restore',
                       child: Text('Restore Selected'),
                     ),
                     const PopupMenuItem<String>(
                       value: 'delete_permanent',
-                      child: Text('Delete Permanently'),
-                      textStyle: TextStyle(color: Colors.red), // Make delete stand out
+                      child: Text('Delete Permanently',
+                          style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-           // Confirmation Buttons (Bottom Center)
+          // Confirmation Buttons (Bottom Center)
           Positioned(
             bottom: 16.0,
             left: 0,
@@ -230,17 +251,23 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
               child: Visibility(
                 visible: _pendingAction != null,
                 child: Container(
-                   padding: const EdgeInsets.all(8.0),
-                   decoration: BoxDecoration(
-                      color: Palette.whiteColor,
-                      borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [ BoxShadow(color: Colors.grey.withValues(alpha: 128), spreadRadius: 2, blurRadius: 5) ],
-                   ),
-                   child: Row(
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: Palette.whiteColor,
+                    borderRadius: BorderRadius.circular(10.0),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.grey.withValues(alpha: 128),
+                          spreadRadius: 2,
+                          blurRadius: 5)
+                    ],
+                  ),
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TextButton(
-                        child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                        child: const Text('Cancel',
+                            style: TextStyle(color: Colors.red)),
                         onPressed: () {
                           setState(() {
                             _pendingAction = null;
@@ -251,7 +278,11 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
                       const SizedBox(width: 8.0),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isRowSelected ? (_pendingAction == 'delete_permanent' ? Colors.red : Colors.green) : Colors.grey,
+                          backgroundColor: isRowSelected
+                              ? (_pendingAction == 'delete_permanent'
+                                  ? Colors.red
+                                  : Colors.green)
+                              : Colors.grey,
                           foregroundColor: Palette.whiteColor,
                           disabledBackgroundColor: Colors.grey[400],
                           disabledForegroundColor: Colors.white70,
@@ -261,10 +292,12 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
                         ),
                         onPressed: isRowSelected
                             ? () {
-                                final selectedData = archiveData[_selectedRowIndex!];
+                                final selectedData =
+                                    archiveData[_selectedRowIndex!];
                                 if (_pendingAction == 'restore') {
                                   _handleRestoreAdmin(selectedData);
-                                } else if (_pendingAction == 'delete_permanent') {
+                                } else if (_pendingAction ==
+                                    'delete_permanent') {
                                   _handleDeleteAdminPermanent(selectedData);
                                 }
                                 setState(() {
@@ -273,7 +306,8 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
                                 });
                               }
                             : null,
-                        child: Text('Continue ${_pendingAction == 'restore' ? 'Restore' : (_pendingAction == 'delete_permanent' ? 'Permanent Delete' : _pendingAction ?? '')}'),
+                        child: Text(
+                            'Continue ${_pendingAction == 'restore' ? 'Restore' : (_pendingAction == 'delete_permanent' ? 'Permanent Delete' : _pendingAction ?? '')}'),
                       ),
                     ],
                   ),
