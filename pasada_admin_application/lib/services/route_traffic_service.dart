@@ -5,8 +5,7 @@ import 'dart:convert';
 class RouteTrafficService {
   final String _apiUrl = dotenv.env['API_URL'] ?? '';
 
-  Future<String> getRouteTraffic(
-      String originName, String destinationName) async {
+  Future<String> getRouteTraffic(int routeId) async {
     if (_apiUrl.isEmpty) {
       return 'Error: API_URL not configured.';
     }
@@ -15,8 +14,7 @@ class RouteTrafficService {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(
-            {'originName': originName, 'destinationName': destinationName}),
+        body: json.encode({'routeId': routeId}),
       );
       if (response.statusCode != 200) {
         return 'Error from server: ${response.statusCode} ${response.body}';
@@ -24,7 +22,7 @@ class RouteTrafficService {
       final data = json.decode(response.body);
       final duration = data['duration'];
       final durationInTraffic = data['durationInTraffic'];
-      return 'Traffic from $originName to $destinationName: current duration $durationInTraffic (normal: $duration).';
+      return 'Traffic for route #$routeId: current duration $durationInTraffic (normal: $duration).';
     } catch (e) {
       return 'Error retrieving traffic data: $e';
     }

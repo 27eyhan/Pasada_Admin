@@ -303,26 +303,23 @@ Please use this data to provide informed suggestions.
   void _handleSubmitted(String text) {
     _messageController.clear();
     if (text.trim().startsWith('/routetraffic')) {
-      final parts = text.substring('/routetraffic'.length).trim().split(',');
-      if (parts.length != 2) {
+      final idStr = text.substring('/routetraffic'.length).trim();
+      final routeId = int.tryParse(idStr);
+      if (routeId == null) {
         setState(() {
           _isTyping = false;
           _messages.add(ChatMessage(
-            text: 'Usage: /routetraffic <origin, destination>',
+            text: 'Usage: /routetraffic <routeId>',
             isUser: false,
           ));
         });
         return;
       }
-      final origin = parts[0].trim();
-      final destination = parts[1].trim();
       setState(() {
         _messages.add(ChatMessage(text: text, isUser: true));
         _isTyping = true;
       });
-      _routeTrafficService
-          .getRouteTraffic(origin, destination)
-          .then((trafficInfo) {
+      _routeTrafficService.getRouteTraffic(routeId).then((trafficInfo) {
         setState(() {
           _isTyping = false;
           _messages.add(ChatMessage(text: trafficInfo, isUser: false));
