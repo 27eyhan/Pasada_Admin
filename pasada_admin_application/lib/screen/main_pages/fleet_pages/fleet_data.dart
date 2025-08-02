@@ -9,11 +9,11 @@ class FleetData extends StatefulWidget {
   final VoidCallback onVehicleActionComplete;
 
   const FleetData({
-    Key? key,
+    super.key,
     required this.vehicle,
     required this.supabase,
     required this.onVehicleActionComplete,
-  }) : super(key: key);
+  });
 
   @override
   _FleetDataState createState() => _FleetDataState();
@@ -24,7 +24,8 @@ class _FleetDataState extends State<FleetData> {
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double dialogWidth = screenWidth * 0.35;
-    final double dialogHeight = screenWidth * 0.38; // Reduced height from 0.45 to 0.38
+    final double dialogHeight =
+        screenWidth * 0.38; // Reduced height from 0.45 to 0.38
     final vehicle = widget.vehicle;
 
     return Dialog(
@@ -48,7 +49,8 @@ class _FleetDataState extends State<FleetData> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.directions_bus, color: Palette.greenColor, size: 28),
+                    Icon(Icons.directions_bus,
+                        color: Palette.greenColor, size: 28),
                     SizedBox(width: 12.0),
                     Text(
                       "Fleet Details",
@@ -85,7 +87,7 @@ class _FleetDataState extends State<FleetData> {
             const SizedBox(height: 16.0),
             Divider(color: Palette.greenColor.withAlpha(50), thickness: 1.5),
             const SizedBox(height: 16.0),
-            
+
             // Vehicle ID badge - wrap in alignment to prevent stretching
             Align(
               alignment: Alignment.centerLeft,
@@ -108,7 +110,7 @@ class _FleetDataState extends State<FleetData> {
                 ),
               ),
             ),
-            
+
             // Improved detail rows
             Expanded(
               child: SingleChildScrollView(
@@ -116,35 +118,31 @@ class _FleetDataState extends State<FleetData> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildEnhancedDetailRow(
-                      "Plate Number:", 
-                      vehicle['plate_number'] ?? 'N/A',
-                      Icons.credit_card_outlined
-                    ),
+                        "Plate Number:",
+                        vehicle['plate_number'] ?? 'N/A',
+                        Icons.credit_card_outlined),
                     _buildEnhancedDetailRow(
-                      "Passenger Capacity:", 
-                      vehicle['passenger_capacity']?.toString() ?? 'N/A',
-                      Icons.people_outline
-                    ),
+                        "Passenger Capacity:",
+                        vehicle['passenger_capacity']?.toString() ?? 'N/A',
+                        Icons.people_outline),
                     _buildEnhancedDetailRow(
-                      "Route ID:", 
-                      vehicle['route_id']?.toString() ?? 'N/A',
-                      Icons.map_outlined
-                    ),
+                        "Route ID:",
+                        vehicle['route_id']?.toString() ?? 'N/A',
+                        Icons.map_outlined),
                     _buildEnhancedDetailRow(
-                      "Vehicle Location:", 
-                      vehicle['vehicle_location'] ?? 'N/A',
-                      Icons.location_on_outlined
-                    ),
+                        "Vehicle Location:",
+                        vehicle['vehicle_location'] ?? 'N/A',
+                        Icons.location_on_outlined),
                     // Display driver info if available
-                    if (vehicle['driverTable'] != null && 
-                        vehicle['driverTable'] is List && 
+                    if (vehicle['driverTable'] != null &&
+                        vehicle['driverTable'] is List &&
                         vehicle['driverTable'].isNotEmpty)
                       ..._buildDriverInfo(vehicle['driverTable'].first),
                   ],
                 ),
               ),
             ),
-            
+
             Align(
               alignment: Alignment.center,
               child: ElevatedButton(
@@ -157,7 +155,8 @@ class _FleetDataState extends State<FleetData> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
                 ),
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -239,7 +238,7 @@ class _FleetDataState extends State<FleetData> {
       ),
     );
   }
-  
+
   // Helper to build driver info section if available
   List<Widget> _buildDriverInfo(Map<String, dynamic> driverData) {
     return [
@@ -265,21 +264,14 @@ class _FleetDataState extends State<FleetData> {
           ],
         ),
       ),
+      _buildEnhancedDetailRow("Driver ID:",
+          driverData['driver_id']?.toString() ?? 'N/A', Icons.badge_outlined),
+      _buildEnhancedDetailRow("Full Name:",
+          driverData['full_name']?.toString() ?? 'N/A', Icons.person_outlined),
       _buildEnhancedDetailRow(
-        "Driver ID:", 
-        driverData['driver_id']?.toString() ?? 'N/A',
-        Icons.badge_outlined
-      ),
-      _buildEnhancedDetailRow(
-        "Full Name:", 
-        driverData['full_name']?.toString() ?? 'N/A',
-        Icons.person_outlined
-      ),
-      _buildEnhancedDetailRow(
-        "Status:", 
-        _capitalizeFirstLetter(driverData['driving_status'] ?? 'N/A'),
-        Icons.local_taxi_outlined
-      ),
+          "Status:",
+          _capitalizeFirstLetter(driverData['driving_status'] ?? 'N/A'),
+          Icons.local_taxi_outlined),
     ];
   }
 

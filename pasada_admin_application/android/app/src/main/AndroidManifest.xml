@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- allow all HTTP requests -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="pasada_admin_application"
         android:name="${applicationName}"

@@ -10,9 +10,9 @@ class Mapscreen extends StatefulWidget {
   // Add parameters to focus on a specific driver
   final dynamic driverToFocus;
   final bool initialShowDriverInfo;
-  
+
   const Mapscreen({
-    super.key, 
+    super.key,
     this.driverToFocus,
     this.initialShowDriverInfo = false,
   });
@@ -21,7 +21,8 @@ class Mapscreen extends StatefulWidget {
   State<Mapscreen> createState() => MapsScreenState();
 }
 
-class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixin {
+class MapsScreenState extends State<Mapscreen>
+    with AutomaticKeepAliveClientMixin {
   GoogleMapController? mapController;
   // ignore: unused_field
   GoogleMapController? _internalMapController;
@@ -32,12 +33,13 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
   bool _isMapReady = false;
   LatLng? _driverLocation;
 
-  final DriverLocationService _driverLocationService = DriverLocationService(); // Instantiate the service
+  final DriverLocationService _driverLocationService =
+      DriverLocationService(); // Instantiate the service
   Timer? _locationUpdateTimer; // Timer for periodic updates
-  
+
   // Custom pin icons cache
   final Map<String, BitmapDescriptor> _customPinIcons = {};
-  
+
   // Selected driver info for custom overlay
   Map<String, dynamic>? _selectedDriverInfo;
   bool _showDriverOverlay = false;
@@ -49,15 +51,16 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
   void initState() {
     super.initState();
     debugPrint('[MapsScreenState] initState called.');
-    
+
     // Load custom pin icons
     _loadCustomPinIcons();
-    
+
     // Log if we should focus on a specific driver
     if (widget.driverToFocus != null) {
-      debugPrint('[MapsScreenState] Should focus on driver: ${widget.driverToFocus}');
+      debugPrint(
+          '[MapsScreenState] Should focus on driver: ${widget.driverToFocus}');
     }
-    
+
     // For web platform, we need to ensure the Google Maps API is loaded
     if (kIsWeb) {
       // Check if API key is set
@@ -83,27 +86,27 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
   Future<void> _loadCustomPinIcons() async {
     try {
       debugPrint('[MapsScreenState] Loading custom pin icons...');
-      
+
       _customPinIcons['idling'] = await BitmapDescriptor.asset(
         ImageConfiguration(size: Size(48, 48)),
         'assets/pinIdling.png',
       );
-      
+
       _customPinIcons['online'] = await BitmapDescriptor.asset(
         ImageConfiguration(size: Size(48, 48)),
         'assets/pinOnline.png',
       );
-      
+
       _customPinIcons['driving'] = await BitmapDescriptor.asset(
         ImageConfiguration(size: Size(48, 48)),
         'assets/pinOnline.png', // Use the same icon for driving as online
       );
-      
+
       _customPinIcons['offline'] = await BitmapDescriptor.asset(
         ImageConfiguration(size: Size(48, 48)),
         'assets/pinOffline.png',
       );
-      
+
       debugPrint('[MapsScreenState] Custom pin icons loaded successfully');
     } catch (e) {
       debugPrint('[MapsScreenState] Error loading custom pin icons: $e');
@@ -117,18 +120,19 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
       // Highlight the target driver with a different color (blue default marker)
       return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     }
-    
+
     final status = drivingStatus?.toLowerCase() ?? 'offline';
-    
+
     // Return custom icon if available, otherwise fallback to default
     if (_customPinIcons.containsKey(status)) {
       return _customPinIcons[status]!;
     }
-    
+
     // Fallback to default colored markers if custom icons aren't loaded
     switch (status) {
       case 'idling':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+        return BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueOrange);
       case 'online':
       case 'driving':
         return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
@@ -141,20 +145,20 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
   @override
   void dispose() {
     debugPrint('[MapsScreenState] dispose starts.');
-    
+
     // Hide overlay immediately to prevent rendering issues
     _showDriverOverlay = false;
     _selectedDriverInfo = null;
-    
+
     _locationUpdateTimer?.cancel();
     debugPrint('[MapsScreenState] Timer cancelled.');
 
     // The GoogleMap widget itself handles the disposal of its controller and JS resources
     // when it's removed from the widget tree. Explicitly meddling here is often not necessary
     // and can cause issues if not done correctly in sync with the plugin's internal logic.
-    
+
     // Ensure super.dispose() is called synchronously.
-    super.dispose(); 
+    super.dispose();
     debugPrint('[MapsScreenState] dispose finished (super.dispose() called).');
   }
 
@@ -164,30 +168,34 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     debugPrint('[MapsScreenState] _onMapCreated called.');
 
     if (_locationUpdateTimer == null || !_locationUpdateTimer!.isActive) {
-        debugPrint('[MapsScreenState] Map controller ready, starting location updates.');
-        _startLocationUpdates();
+      debugPrint(
+          '[MapsScreenState] Map controller ready, starting location updates.');
+      _startLocationUpdates();
     }
   }
 
   void _startLocationUpdates() {
-     // Fetch immediately first time
+    // Fetch immediately first time
     _updateDriverMarkers();
     debugPrint('[MapsScreenState] Initial marker update requested.');
 
     // Start periodic updates (e.g., every 15 seconds)
     _locationUpdateTimer?.cancel(); // Cancel existing timer just in case
     _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
-       debugPrint('[MapsScreenState] Timer fired. Requesting marker update.');
-       if (mounted) { // Check if the widget is still mounted
+      debugPrint('[MapsScreenState] Timer fired. Requesting marker update.');
+      if (mounted) {
+        // Check if the widget is still mounted
         _updateDriverMarkers();
-       }
+      }
     });
   }
 
   Future<void> _updateDriverMarkers() async {
     debugPrint('[MapsScreenState] _updateDriverMarkers called.');
-    List<Map<String, dynamic>> driverLocations = await _driverLocationService.fetchDriverLocations();
-    debugPrint('[MapsScreenState] Received driver locations: ${driverLocations.length} drivers.');
+    List<Map<String, dynamic>> driverLocations =
+        await _driverLocationService.fetchDriverLocations();
+    debugPrint(
+        '[MapsScreenState] Received driver locations: ${driverLocations.length} drivers.');
 
     Set<Marker> updatedMarkers = {};
     bool foundFocusDriver = false;
@@ -196,17 +204,18 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
       final String driverId = driverData['driver_id'].toString();
       final LatLng position = driverData['position'];
       final String? drivingStatus = driverData['driving_status'];
-      
+
       // Check if this is the driver we want to focus on
-      bool isTargetDriver = widget.driverToFocus != null && 
-                           driverId == widget.driverToFocus.toString();
-      
+      bool isTargetDriver = widget.driverToFocus != null &&
+          driverId == widget.driverToFocus.toString();
+
       // Store the position of the driver to focus on
       if (isTargetDriver) {
         _driverLocation = position;
         foundFocusDriver = true;
-        debugPrint('[MapsScreenState] Found target driver $driverId at position: $position');
-        
+        debugPrint(
+            '[MapsScreenState] Found target driver $driverId at position: $position');
+
         // Focus on this driver's location if this is the first update
         if (widget.initialShowDriverInfo && mounted) {
           // Use a delay to ensure the map is fully loaded
@@ -216,13 +225,14 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
               mapController?.animateCamera(
                 CameraUpdate.newLatLngZoom(position, 17.0),
               );
-              
+
               // Show custom overlay instead of info window
               setState(() {
                 _selectedDriverInfo = driverData;
                 _showDriverOverlay = true;
               });
-              debugPrint('[MapsScreenState] Showing custom overlay for driver $driverId');
+              debugPrint(
+                  '[MapsScreenState] Showing custom overlay for driver $driverId');
             }
           });
         }
@@ -240,7 +250,8 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                 _selectedDriverInfo = driverData;
                 _showDriverOverlay = true;
               });
-              debugPrint('[MapsScreenState] Marker tapped for driver: $driverId');
+              debugPrint(
+                  '[MapsScreenState] Marker tapped for driver: $driverId');
             }
           },
           // Use custom pin based on driver status
@@ -253,11 +264,13 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
       setState(() {
         _markers.clear();
         _markers.addAll(updatedMarkers);
-        debugPrint('[MapsScreenState] setState called with ${updatedMarkers.length} markers.');
-        
+        debugPrint(
+            '[MapsScreenState] setState called with ${updatedMarkers.length} markers.');
+
         // If we're looking for a specific driver but couldn't find them, log it
         if (widget.driverToFocus != null && !foundFocusDriver) {
-          debugPrint('[MapsScreenState] Warning: Could not find driver ${widget.driverToFocus} in location data.');
+          debugPrint(
+              '[MapsScreenState] Warning: Could not find driver ${widget.driverToFocus} in location data.');
         }
       });
     }
@@ -271,39 +284,39 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     if (!_isMapReady && kIsWeb) {
       return Scaffold(
         body: Center(
-        child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(),
         ),
       );
     }
 
     return Scaffold(
       body: Stack(
-      children: [
-        GoogleMap(
-          onMapCreated: _onMapCreated,
-          initialCameraPosition: CameraPosition(
-            target: _center,
-            zoom: 15.0,
+        children: [
+          GoogleMap(
+            onMapCreated: _onMapCreated,
+            initialCameraPosition: CameraPosition(
+              target: _center,
+              zoom: 15.0,
+            ),
+            markers: _markers,
+            polylines: _polylines,
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            mapType: MapType.normal,
           ),
-          markers: _markers,
-          polylines: _polylines,
-          myLocationEnabled: false,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: false,
-          mapType: MapType.normal,
-        ),
-        Positioned(
-          top: 16,
-          right: 16,
-          child: FloatingActionButton(
-            onPressed: () {
-              // Center on focused driver if available, otherwise use default center
+          Positioned(
+            top: 16,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                // Center on focused driver if available, otherwise use default center
                 mapController?.animateCamera(
-                CameraUpdate.newLatLng(_driverLocation ?? _center),
-              );
-            },
-            child: Icon(Icons.center_focus_strong),
-          ),
+                  CameraUpdate.newLatLng(_driverLocation ?? _center),
+                );
+              },
+              child: Icon(Icons.center_focus_strong),
+            ),
           ),
           if (mounted && _showDriverOverlay && _selectedDriverInfo != null)
             _buildDriverInfoOverlay(),
@@ -320,7 +333,7 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     }
 
     final driver = _selectedDriverInfo!;
-    
+
     // Validate essential data
     if (driver['driver_id'] == null || driver['position'] == null) {
       debugPrint('[MapsScreenState] Invalid driver data, hiding overlay');
@@ -342,13 +355,13 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
     final String routeId = driver['route_id']?.toString() ?? 'N/A';
     final String? drivingStatus = driver['driving_status']?.toString();
     final LatLng? position = driver['position'];
-    
+
     if (position == null) {
       return SizedBox.shrink();
     }
 
     Color statusColor = _getStatusColor(drivingStatus);
-    
+
     final screenSize = MediaQuery.of(context).size;
     final overlayWidth = screenSize.width * 0.2;
     final maxOverlayHeight = screenSize.height * 1;
@@ -381,7 +394,8 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                   decoration: BoxDecoration(
                     color: Palette.whiteColor,
                     borderRadius: BorderRadius.circular(12.0),
-                    border: Border.all(color: statusColor.withAlpha(100), width: 1.5),
+                    border: Border.all(
+                        color: statusColor.withAlpha(100), width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: Palette.blackColor.withAlpha(100),
@@ -442,42 +456,47 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                           ),
                         ],
                       ),
-                      
+
                       SizedBox(height: 12),
-                      
+
                       // Compact info in 2 rows
                       Row(
                         children: [
                           Expanded(
-                            child: _buildCompactInfoItem("ID: $driverId", Icons.badge, statusColor),
+                            child: _buildCompactInfoItem(
+                                "ID: $driverId", Icons.badge, statusColor),
                           ),
                           SizedBox(width: 10),
                           Expanded(
-                            child: _buildCompactInfoItem("Vehicle: $vehicleId", Icons.directions_car, Palette.orangeColor),
+                            child: _buildCompactInfoItem("Vehicle: $vehicleId",
+                                Icons.directions_car, Palette.orangeColor),
                           ),
                         ],
                       ),
-                      
+
                       SizedBox(height: 10),
-                      
+
                       Row(
                         children: [
                           Expanded(
-                            child: _buildCompactInfoItem("Plate: $plateNumber", Icons.credit_card, Palette.yellowColor),
+                            child: _buildCompactInfoItem("Plate: $plateNumber",
+                                Icons.credit_card, Palette.yellowColor),
                           ),
                           SizedBox(width: 10),
                           Expanded(
-                            child: _buildCompactInfoItem("Route: $routeId", Icons.route, Palette.redColor),
+                            child: _buildCompactInfoItem("Route: $routeId",
+                                Icons.route, Palette.redColor),
                           ),
                         ],
                       ),
-                      
+
                       SizedBox(height: 10),
-                      
+
                       // Status row
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                         decoration: BoxDecoration(
                           color: statusColor.withAlpha(100),
                           borderRadius: BorderRadius.circular(8),
@@ -486,7 +505,8 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(_getStatusIcon(drivingStatus), size: 16, color: statusColor),
+                            Icon(_getStatusIcon(drivingStatus),
+                                size: 16, color: statusColor),
                             SizedBox(width: 6),
                             Text(
                               _capitalizeFirstLetter(drivingStatus ?? 'N/A'),
@@ -499,9 +519,9 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                           ],
                         ),
                       ),
-                      
+
                       SizedBox(height: 12),
-                      
+
                       // Compact action buttons
                       Row(
                         children: [
@@ -521,7 +541,10 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                                 ),
                                 minimumSize: Size(0, 40),
                               ),
-                              child: Text("Center", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              child: Text("Center",
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                           SizedBox(width: 10),
@@ -532,14 +555,18 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
                               },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Palette.greenColor,
-                                side: BorderSide(color: Palette.greenColor, width: 2),
+                                side: BorderSide(
+                                    color: Palette.greenColor, width: 2),
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 minimumSize: Size(0, 40),
                               ),
-                              child: Text("Call", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              child: Text("Call",
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -623,24 +650,24 @@ class MapsScreenState extends State<Mapscreen> with AutomaticKeepAliveClientMixi
 // Custom painter for the arrow pointer
 class ArrowPainter extends CustomPainter {
   final Color color;
-  
+
   ArrowPainter({required this.color});
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    
+
     final path = Path();
     path.moveTo(0, 0);
     path.lineTo(size.width / 2, size.height);
     path.lineTo(size.width, 0);
     path.close();
-    
+
     canvas.drawPath(path, paint);
   }
-  
+
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

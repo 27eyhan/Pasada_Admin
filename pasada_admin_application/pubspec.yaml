@@ -52,12 +52,15 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - .env
     - assets/novadeci.png
     - assets/pasadaAppIcon.png
     - assets/PasadaLogoWithoutText.png
     - assets/pinIdling.png
     - assets/pinOnline.png
     - assets/pinOffline.png
+    - assets/web/map.html
+    - assets/web/map.js
 
 fonts:
   - family: Inter

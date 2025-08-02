@@ -9,10 +9,10 @@ class AddDriverDialog extends StatefulWidget {
   final VoidCallback onDriverAdded; // Callback to refresh the table
 
   const AddDriverDialog({
-    Key? key,
+    super.key,
     required this.supabase,
     required this.onDriverAdded,
-  }) : super(key: key);
+  });
 
   @override
   _AddDriverDialogState createState() => _AddDriverDialogState();
@@ -69,14 +69,14 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
             );
             return; // Stop execution if vehicle ID is invalid
           }
-          
+
           // Check if vehicle ID is already assigned to another driver
           final driverVehicleCheck = await widget.supabase
               .from('driverTable')
               .select('driver_id, full_name')
               .eq('vehicle_id', vehicleId)
               .limit(1);
-              
+
           final List existingDriversWithVehicle = driverVehicleCheck as List;
           if (existingDriversWithVehicle.isNotEmpty) {
             setState(() {
@@ -84,7 +84,8 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('There\'s already a driver in Vehicle ID: $vehicleId. Please choose a different vehicle.'),
+                content: Text(
+                    'There\'s already a driver in Vehicle ID: $vehicleId. Please choose a different vehicle.'),
               ),
             );
             return; // Stop execution if vehicle ID is already assigned
@@ -99,18 +100,18 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
           );
           return;
         }
-        
+
         // Validate that route_id exists in officialroute table
         // final routeIdText = _routeIdController.text.trim();
         // final int? routeId = int.tryParse(routeIdText);
-        
+
         // if (routeId != null) {
         //   final routeCheckResponse = await widget.supabase
         //       .from('official_routes')
         //       .select('officialroute_id')
         //       .eq('officialroute_id', routeId)
         //       .limit(1);
-              
+
         //   final List routeList = routeCheckResponse as List;
         //   if (routeList.isEmpty) {
         //     setState(() {
@@ -132,14 +133,14 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
         //   );
         //   return;
         // }
-        
+
         // Check for license number duplication
         final licenseNumberCheck = await widget.supabase
             .from('driverTable')
             .select('driver_id')
             .eq('driver_license_number', _licenseNumberController.text.trim())
             .limit(1);
-            
+
         final List existingLicenseNumbers = licenseNumberCheck as List;
         if (existingLicenseNumbers.isNotEmpty) {
           setState(() {
@@ -147,7 +148,8 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Duplication of Driver\'s License Number is not allowed.'),
+              content: Text(
+                  'Duplication of Driver\'s License Number is not allowed.'),
             ),
           );
           return; // Stop execution if license number is already used
@@ -312,13 +314,13 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter driver number';
                         }
-                        
+
                         // Check for proper Philippines phone format
                         RegExp phoneFormat = RegExp(r'^\+63\d{10}$');
                         if (!phoneFormat.hasMatch(value)) {
                           return 'Format should be +63 followed by 10 digits';
                         }
-                        
+
                         return null;
                       },
                     ),
@@ -548,25 +550,25 @@ class PhoneNumberFormatter extends TextInputFormatter {
     }
 
     String newText = newValue.text;
-    
+
     // If the text doesn't start with +63, add it
     if (!newText.startsWith('+63') && newText.isNotEmpty) {
       if (newText.startsWith('+')) {
         if (newText.length > 1 && newText[1] != '6') {
-          newText = '+6' + newText.substring(1);
+          newText = '+6${newText.substring(1)}';
         }
         if (newText.length > 2 && newText[2] != '3') {
-          newText = '+63' + newText.substring(2);
+          newText = '+63${newText.substring(2)}';
         }
       } else {
-        newText = '+63' + newText;
+        newText = '+63$newText';
       }
     }
-    
+
     // Ensure only digits after +63
     final buffer = StringBuffer();
     buffer.write('+63');
-    
+
     // Only add digits after +63, up to 10 digits
     int digitCount = 0;
     for (int i = 3; i < newText.length && digitCount < 10; i++) {

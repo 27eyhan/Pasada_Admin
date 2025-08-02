@@ -7,10 +7,13 @@ import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:pasada_admin_application/services/database_summary_service.dart';
 import 'package:pasada_admin_application/services/chat_history_service.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/services/route_traffic_service.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';  // Add this import for Clipboard
+import 'package:flutter/services.dart'; // Add this import for Clipboard
 
 class AiChat extends StatefulWidget {
+  const AiChat({super.key});
+
   @override
   _AiChatState createState() => _AiChatState();
 }
@@ -22,18 +25,20 @@ class _AiChatState extends State<AiChat> {
   bool _isTyping = false;
   bool _isHistoryOpen = false; // Track if history drawer is open
   late Gemini gemini;
-  
+
   // Services
   final DatabaseSummaryService _databaseService = DatabaseSummaryService();
   final ChatHistoryService _chatService = ChatHistoryService();
   final AuthService _authService = AuthService();
-  
+  final RouteTrafficService _routeTrafficService = RouteTrafficService();
+
   // Chat history for tracking the conversation
   final List<Content> _chatHistory = [];
   List<Map<String, dynamic>> _savedChats = [];
-  
+
   // System instruction to guide AI responses
-  String systemInstruction = """You are Manong, a helpful AI assistant for Pasada, a modern jeepney transportation system in the Philippines. Our team is composed of Calvin John Crehencia, Adrian De Guzman, Ethan Andrei Humarang and Fyke Simon Tonel, we are called CAFE Tech. Don't use emoji.
+  String systemInstruction =
+      """You are Manong, a helpful AI assistant for Pasada, a modern jeepney transportation system in the Philippines. Our team is composed of Calvin John Crehencia, Adrian De Guzman, Ethan Andrei Humarang and Fyke Simon Tonel, we are called CAFE Tech. Don't use emoji.
 
 You are focused in Fleet Management System, Modern Jeepney Transportation System in the Philippines, Ride-Hailing, and Traffic Advisory in the Malinta to Novaliches route in the Philippines. You're implemented in the admin website of Pasada: An AI-Powered Ride-Hailing and Fleet Management Platform for Modernized Jeepneys Services with Mobile Integration and RealTime Analytics.
 
@@ -46,14 +51,15 @@ You're role is to be an advisor, providing suggestions based on the data inside 
     _loadChatHistory();
     // Initialize Gemini with the API key
     final apiKey = dotenv.env['GEMINI_API'] ?? '';
-    
+
     if (apiKey.isEmpty) {
       print('Warning: GEMINI_API key is not set in .env file');
       // Still add the welcome message but inform about missing API key
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {
           _messages.add(ChatMessage(
-            text: "Hello! I'm Manong, your AI assistant. However, I need an API key to function properly. Please configure the GEMINI_API in your .env file.",
+            text:
+                "Hello! I'm Manong, your AI assistant. However, I need an API key to function properly. Please configure the GEMINI_API in your .env file.",
             isUser: false,
           ));
         });
@@ -62,17 +68,19 @@ You're role is to be an advisor, providing suggestions based on the data inside 
       // First initialize Gemini, then access instance
       Gemini.init(apiKey: apiKey);
       gemini = Gemini.instance;
-      
+
       // Initialize chat history with system instruction if provided
       if (systemInstruction.isNotEmpty) {
-        _chatHistory.add(Content(role: 'system', parts: [Part.text(systemInstruction)]));
+        _chatHistory.add(
+            Content(role: 'system', parts: [Part.text(systemInstruction)]));
       }
-      
+
       // Add the welcome message when the widget initializes
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {
           _messages.add(ChatMessage(
-            text: "Hello! I'm Manong, your AI assistant. How can I help you today?",
+            text:
+                "Hello! I'm Manong, your AI assistant. How can I help you today?",
             isUser: false,
           ));
         });
@@ -84,7 +92,8 @@ You're role is to be an advisor, providing suggestions based on the data inside 
   Future<void> _loadAuthentication() async {
     await _authService.loadAdminID();
     if (_authService.currentAdminID == null) {
-      print('Warning: No admin ID found. AI Chat history functionality may be limited.');
+      print(
+          'Warning: No admin ID found. AI Chat history functionality may be limited.');
     } else {
       print('Admin ID loaded: ${_authService.currentAdminID}');
     }
@@ -105,11 +114,11 @@ You're role is to be an advisor, providing suggestions based on the data inside 
   // Save current chat session
   Future<void> _saveChatSession() async {
     if (_messages.isEmpty) return;
-    
+
     try {
       // Generate a title from first message for display purposes
-      final title = _messages.first.text.split(' ').take(5).join(' ') + '...';
-      
+      final title = '${_messages.first.text.split(' ').take(5).join(' ')}...';
+
       // Separate user messages and AI responses
       final userMessages = _messages
           .where((msg) => msg.isUser)
@@ -118,7 +127,7 @@ You're role is to be an advisor, providing suggestions based on the data inside 
                 'timestamp': DateTime.now().toIso8601String(),
               })
           .toList();
-      
+
       final aiMessages = _messages
           .where((msg) => !msg.isUser)
           .map((msg) => {
@@ -126,7 +135,7 @@ You're role is to be an advisor, providing suggestions based on the data inside 
                 'timestamp': DateTime.now().toIso8601String(),
               })
           .toList();
-      
+
       // Ensure admin ID is loaded before saving
       if (_authService.currentAdminID == null) {
         await _authService.loadAdminID();
@@ -140,11 +149,11 @@ You're role is to be an advisor, providing suggestions based on the data inside 
           return;
         }
       }
-      
+
       // Pass separate arrays to the service
       await _chatService.saveChatSession(title, userMessages, aiMessages);
       await _loadChatHistory(); // Reload the chat history
-      
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -171,12 +180,13 @@ You're role is to be an advisor, providing suggestions based on the data inside 
       if (chat != null) {
         setState(() {
           _messages.clear();
-          
+
           // Create a temporary list to hold all messages with timestamps
           final List<Map<String, dynamic>> tempMessages = [];
-          
+
           // Load user messages
-          if (chat['messages'] is List && (chat['messages'] as List).isNotEmpty) {
+          if (chat['messages'] is List &&
+              (chat['messages'] as List).isNotEmpty) {
             List<dynamic> userMessages = chat['messages'];
             for (var msg in userMessages) {
               tempMessages.add({
@@ -186,9 +196,10 @@ You're role is to be an advisor, providing suggestions based on the data inside 
               });
             }
           }
-          
+
           // Load AI messages
-          if (chat['ai_message'] is List && (chat['ai_message'] as List).isNotEmpty) {
+          if (chat['ai_message'] is List &&
+              (chat['ai_message'] as List).isNotEmpty) {
             List<dynamic> aiMessages = chat['ai_message'];
             for (var msg in aiMessages) {
               tempMessages.add({
@@ -198,10 +209,10 @@ You're role is to be an advisor, providing suggestions based on the data inside 
               });
             }
           }
-          
+
           // Sort messages by timestamp
           tempMessages.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
-          
+
           // Add sorted messages to the UI
           for (var msg in tempMessages) {
             _messages.add(ChatMessage(
@@ -230,25 +241,26 @@ You're role is to be an advisor, providing suggestions based on the data inside 
   void setSystemInstruction(String instruction) {
     setState(() {
       systemInstruction = instruction;
-      
+
       // Reset chat history and add system instruction
       _chatHistory.clear();
       if (systemInstruction.isNotEmpty) {
-        _chatHistory.add(Content(role: 'system', parts: [Part.text(systemInstruction)]));
+        _chatHistory.add(
+            Content(role: 'system', parts: [Part.text(systemInstruction)]));
       }
     });
   }
-  
+
   Future<String> _getGeminiResponse(String message) async {
     try {
       final apiKey = dotenv.env['GEMINI_API'] ?? '';
       if (apiKey.isEmpty) {
         return "I'm sorry, but I can't respond without an API key. Please configure the GEMINI_API in your .env file.";
       }
-      
+
       // Get database context from our service
       String databaseContext = await _databaseService.getFullDatabaseContext();
-      
+
       // Combine system instruction with database context
       String enhancedInstruction = """$systemInstruction
       
@@ -257,17 +269,18 @@ $databaseContext
 
 Please use this data to provide informed suggestions.
 """;
-      
+
       // Use a simpler approach: text-only input with enhanced instruction
       try {
-        final response = await gemini.text("$enhancedInstruction\n\nUser: $message");
-        
+        final response =
+            await gemini.text("$enhancedInstruction\n\nUser: $message");
+
         if (response != null && response.output != null) {
           return response.output?.trim() ?? "No response";
         }
       } catch (innerError) {
         print('First attempt failed: $innerError');
-        
+
         // Fall back to simplest possible request
         try {
           final response = await gemini.text(message.trim());
@@ -279,7 +292,7 @@ Please use this data to provide informed suggestions.
           return "Sorry, I couldn't generate a response at the moment. Technical error: $fallbackError";
         }
       }
-      
+
       return "Sorry, I couldn't generate a response at the moment.";
     } catch (e) {
       print('Exception: $e');
@@ -289,6 +302,31 @@ Please use this data to provide informed suggestions.
 
   void _handleSubmitted(String text) {
     _messageController.clear();
+    if (text.trim().startsWith('/routetraffic')) {
+      final idStr = text.substring('/routetraffic'.length).trim();
+      final routeId = int.tryParse(idStr);
+      if (routeId == null) {
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(
+            text: 'Usage: /routetraffic <routeId>',
+            isUser: false,
+          ));
+        });
+        return;
+      }
+      setState(() {
+        _messages.add(ChatMessage(text: text, isUser: true));
+        _isTyping = true;
+      });
+      _routeTrafficService.getRouteTraffic(routeId).then((trafficInfo) {
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(text: trafficInfo, isUser: false));
+        });
+      });
+      return;
+    }
     if (text.trim().isEmpty) return;
 
     setState(() {
@@ -374,7 +412,7 @@ Please use this data to provide informed suggestions.
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final padding = mediaQuery.padding;
-    
+
     return Scaffold(
       backgroundColor: Palette.whiteColor,
       appBar: AppBarSearch(),
@@ -386,67 +424,73 @@ Please use this data to provide informed suggestions.
             AnimatedContainer(
               duration: Duration(milliseconds: 300),
               width: _isHistoryOpen ? 300 : 0,
-              child: _isHistoryOpen ? Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(color: Palette.greyColor, width: 1),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(16),
+              child: _isHistoryOpen
+                  ? Container(
                       decoration: BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(color: Palette.greyColor),
+                          right: BorderSide(color: Palette.greyColor, width: 1),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
                         children: [
-                          Text(
-                            'Chat History',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: Palette.greyColor),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Chat History',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.close),
+                                  onPressed: () =>
+                                      setState(() => _isHistoryOpen = false),
+                                ),
+                              ],
                             ),
                           ),
-                          IconButton(
-                            icon: Icon(Icons.close),
-                            onPressed: () => setState(() => _isHistoryOpen = false),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _savedChats.length,
+                              itemBuilder: (context, index) {
+                                final chat = _savedChats[index];
+                                return ListTile(
+                                  title: Text(
+                                    chat['title'] ?? 'Untitled Chat',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    DateTime.parse(chat['created_at'])
+                                        .toString(),
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.delete_outline),
+                                    onPressed: () =>
+                                        _deleteChatSession(chat['history_id']),
+                                  ),
+                                  onTap: () =>
+                                      _loadChatSession(chat['history_id']),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _savedChats.length,
-                        itemBuilder: (context, index) {
-                          final chat = _savedChats[index];
-                          return ListTile(
-                            title: Text(
-                              chat['title'] ?? 'Untitled Chat',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              DateTime.parse(chat['created_at']).toString(),
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(Icons.delete_outline),
-                              onPressed: () => _deleteChatSession(chat['history_id']),
-                            ),
-                            onTap: () => _loadChatSession(chat['history_id']),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ) : null,
+                    )
+                  : null,
             ),
-            
+
             // Main Chat Area
             Expanded(
               child: Column(
@@ -459,7 +503,8 @@ Please use this data to provide informed suggestions.
                       children: [
                         IconButton(
                           icon: Icon(Icons.history),
-                          onPressed: () => setState(() => _isHistoryOpen = !_isHistoryOpen),
+                          onPressed: () =>
+                              setState(() => _isHistoryOpen = !_isHistoryOpen),
                           tooltip: 'Chat History',
                         ),
                         SizedBox(width: 8),
@@ -471,14 +516,16 @@ Please use this data to provide informed suggestions.
                       ],
                     ),
                   ),
-                  
+
                   // Main chat container
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.symmetric(horizontal: 212, vertical: 8),
+                      margin:
+                          EdgeInsets.symmetric(horizontal: 212, vertical: 8),
                       padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Palette.greyColor, width: 1.5),
+                        border:
+                            Border.all(color: Palette.greyColor, width: 1.5),
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
@@ -493,13 +540,15 @@ Please use this data to provide informed suggestions.
                         children: [
                           // AI Assistant header
                           Container(
-                            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            padding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
                             color: Palette.whiteColor.withValues(alpha: 128),
                             child: Row(
                               children: [
                                 CircleAvatar(
                                   backgroundColor: Palette.blackColor,
-                                  child: Icon(Icons.smart_toy, color: Colors.white),
+                                  child: Icon(Icons.smart_toy,
+                                      color: Colors.white),
                                 ),
                                 SizedBox(width: 12),
                                 Column(
@@ -517,7 +566,7 @@ Please use this data to provide informed suggestions.
                               ],
                             ),
                           ),
-                          
+
                           // Chat messages area
                           Expanded(
                             child: Container(
@@ -531,11 +580,12 @@ Please use this data to provide informed suggestions.
                               ),
                             ),
                           ),
-                          
+
                           // AI typing indicator
                           if (_isTyping)
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 'Manong is typing...',
@@ -545,7 +595,7 @@ Please use this data to provide informed suggestions.
                                 ),
                               ),
                             ),
-                          
+
                           // Input area
                           Container(
                             padding: EdgeInsets.only(
@@ -574,7 +624,8 @@ Please use this data to provide informed suggestions.
                                 ),
                                 Expanded(
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16),
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 16),
                                     decoration: BoxDecoration(
                                       color: Palette.greyColor,
                                       borderRadius: BorderRadius.circular(24),
@@ -591,7 +642,7 @@ Please use this data to provide informed suggestions.
                                     ),
                                   ),
                                 ),
-                                
+
                                 // Send button
                                 SizedBox(width: 8),
                                 Container(
@@ -601,7 +652,8 @@ Please use this data to provide informed suggestions.
                                   ),
                                   child: IconButton(
                                     icon: Icon(Icons.send, color: Colors.white),
-                                    onPressed: () => _handleSubmitted(_messageController.text),
+                                    onPressed: () => _handleSubmitted(
+                                        _messageController.text),
                                   ),
                                 ),
                               ],
@@ -626,7 +678,8 @@ class ChatMessage extends StatelessWidget {
   final bool isUser;
   final VoidCallback? onRefresh;
 
-  ChatMessage({
+  const ChatMessage({
+    super.key,
     required this.text,
     required this.isUser,
     this.onRefresh,
@@ -647,12 +700,13 @@ class ChatMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
-    
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 8),
       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
@@ -662,10 +716,10 @@ class ChatMessage extends StatelessWidget {
             ),
             SizedBox(width: 8),
           ],
-          
           Flexible(
             child: Column(
-              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -683,7 +737,7 @@ class ChatMessage extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 // Action buttons for AI messages
                 if (!isUser) ...[
                   SizedBox(height: 4),
@@ -701,23 +755,23 @@ class ChatMessage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 4),
-                      if (onRefresh != null) IconButton(
-                        icon: Icon(Icons.refresh_outlined, size: 16),
-                        onPressed: onRefresh,
-                        tooltip: 'Regenerate response',
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
+                      if (onRefresh != null)
+                        IconButton(
+                          icon: Icon(Icons.refresh_outlined, size: 16),
+                          onPressed: onRefresh,
+                          tooltip: 'Regenerate response',
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ],
               ],
             ),
           ),
-          
           if (isUser) ...[
             SizedBox(width: 8),
             CircleAvatar(

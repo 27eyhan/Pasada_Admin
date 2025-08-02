@@ -12,7 +12,7 @@ class GoogleMapsApiInitializer {
       debugPrint('Warning: GOOGLE_MAPS_API_KEY is not set in .env file');
       return;
     }
-    
+
     // Call the JavaScript function to load the Google Maps API
     js.context.callMethod('loadGoogleMapsApi', [apiKey]);
   }

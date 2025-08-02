@@ -4,12 +4,12 @@ import 'package:pasada_admin_application/config/palette.dart';
 class FilterDialog extends StatefulWidget {
   final Set<String> selectedStatuses;
   final String? selectedRouteId;
-  
+
   const FilterDialog({
-    Key? key,
+    super.key,
     required this.selectedStatuses,
     this.selectedRouteId,
-  }) : super(key: key);
+  });
 
   @override
   _FilterDialogState createState() => _FilterDialogState();
@@ -18,14 +18,15 @@ class FilterDialog extends StatefulWidget {
 class _FilterDialogState extends State<FilterDialog> {
   late Set<String> _selectedStatuses;
   late TextEditingController _routeIdController;
-  
+
   @override
   void initState() {
     super.initState();
     _selectedStatuses = Set.from(widget.selectedStatuses);
-    _routeIdController = TextEditingController(text: widget.selectedRouteId ?? '');
+    _routeIdController =
+        TextEditingController(text: widget.selectedRouteId ?? '');
   }
-  
+
   @override
   void dispose() {
     _routeIdController.dispose();
@@ -63,7 +64,7 @@ class _FilterDialogState extends State<FilterDialog> {
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width * 0.6;
     final double dialogWidth = screenWidth * 0.5;
-    
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
@@ -83,7 +84,8 @@ class _FilterDialogState extends State<FilterDialog> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.filter_list, color: Palette.blackColor, size: 28),
+                    Icon(Icons.filter_list,
+                        color: Palette.blackColor, size: 28),
                     SizedBox(width: 12.0),
                     Text(
                       "Filter Options",
@@ -120,7 +122,7 @@ class _FilterDialogState extends State<FilterDialog> {
             const SizedBox(height: 16.0),
             Divider(color: Palette.blackColor.withAlpha(50), thickness: 1.5),
             const SizedBox(height: 24.0),
-            
+
             // Status section
             Text(
               'Status',
@@ -148,7 +150,7 @@ class _FilterDialogState extends State<FilterDialog> {
                 ],
               ),
             ),
-            
+
             // Route ID section
             Text(
               'Route ID',
@@ -190,7 +192,7 @@ class _FilterDialogState extends State<FilterDialog> {
               ),
             ),
             const SizedBox(height: 32.0),
-            
+
             // Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -202,7 +204,8 @@ class _FilterDialogState extends State<FilterDialog> {
                       _routeIdController.clear();
                     });
                   },
-                  icon: Icon(Icons.clear_all, color: Palette.redColor, size: 20),
+                  icon:
+                      Icon(Icons.clear_all, color: Palette.redColor, size: 20),
                   label: Text(
                     'Clear All',
                     style: TextStyle(
@@ -213,7 +216,8 @@ class _FilterDialogState extends State<FilterDialog> {
                     ),
                   ),
                   style: TextButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                   ),
                 ),
                 Row(
@@ -221,7 +225,8 @@ class _FilterDialogState extends State<FilterDialog> {
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       style: TextButton.styleFrom(
-                        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 12.0),
                       ),
                       child: Text(
                         'Cancel',
@@ -243,14 +248,15 @@ class _FilterDialogState extends State<FilterDialog> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.0),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 12.0),
                       ),
                       onPressed: () {
-                        String? routeId = _routeIdController.text.isNotEmpty 
-                            ? _routeIdController.text 
+                        String? routeId = _routeIdController.text.isNotEmpty
+                            ? _routeIdController.text
                             : null;
                         Navigator.pop(
-                          context, 
+                          context,
                           {
                             'selectedStatuses': _selectedStatuses,
                             'selectedRouteId': routeId,
@@ -277,4 +283,4 @@ class _FilterDialogState extends State<FilterDialog> {
       ),
     );
   }
-} 
+}

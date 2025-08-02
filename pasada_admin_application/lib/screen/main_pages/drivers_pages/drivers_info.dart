@@ -7,12 +7,12 @@ import 'drivers_actlogs.dart';
 class DriverInfo extends StatefulWidget {
   final Map<String, dynamic> driver;
   final bool initialEditMode;
-  
+
   const DriverInfo({
-    Key? key, 
+    super.key,
     required this.driver,
     this.initialEditMode = false,
-  }) : super(key: key);
+  });
 
   @override
   _DriverInfoState createState() => _DriverInfoState();
@@ -25,13 +25,13 @@ class _DriverInfoState extends State<DriverInfo> {
   late DriverActivityLogs _activityLogs;
   double _averageRating = 0.0;
   int _totalReviews = 0;
-  
+
   // Text editing controllers
   late TextEditingController _fullNameController;
   late TextEditingController _driverNumberController;
   late TextEditingController _vehicleIdController;
   late TextEditingController _driverLicenseController;
-  
+
   @override
   void initState() {
     super.initState();
@@ -44,14 +44,18 @@ class _DriverInfoState extends State<DriverInfo> {
     _initControllers();
     _fetchDriverRating();
   }
-  
+
   void _initControllers() {
-    _fullNameController = TextEditingController(text: widget.driver['full_name'] ?? '');
-    _driverNumberController = TextEditingController(text: widget.driver['driver_number'] ?? '');
-    _vehicleIdController = TextEditingController(text: widget.driver['vehicle_id']?.toString() ?? '');
-    _driverLicenseController = TextEditingController(text: widget.driver['driver_license_number'] ?? '');
+    _fullNameController =
+        TextEditingController(text: widget.driver['full_name'] ?? '');
+    _driverNumberController =
+        TextEditingController(text: widget.driver['driver_number'] ?? '');
+    _vehicleIdController = TextEditingController(
+        text: widget.driver['vehicle_id']?.toString() ?? '');
+    _driverLicenseController = TextEditingController(
+        text: widget.driver['driver_license_number'] ?? '');
   }
-  
+
   @override
   void dispose() {
     // Dispose controllers
@@ -61,26 +65,27 @@ class _DriverInfoState extends State<DriverInfo> {
     _driverLicenseController.dispose();
     super.dispose();
   }
-  
+
   // Toggle edit mode
   void _toggleEditMode() {
     setState(() {
       _isEditMode = !_isEditMode;
-      
+
       // If exiting edit mode, attempt to save changes
       if (!_isEditMode) {
         _saveChanges();
       }
     });
   }
-  
+
   // Save changes to database
   void _saveChanges() async {
     // First check if any data has changed
     if (_fullNameController.text == widget.driver['full_name'] &&
         _driverNumberController.text == widget.driver['driver_number'] &&
         _vehicleIdController.text == widget.driver['vehicle_id']?.toString() &&
-        _driverLicenseController.text == widget.driver['driver_license_number']) {
+        _driverLicenseController.text ==
+            widget.driver['driver_license_number']) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No changes were made'),
@@ -102,15 +107,15 @@ class _DriverInfoState extends State<DriverInfo> {
     try {
       if (_vehicleIdController.text.isNotEmpty) {
         final duplicateVehicleId = await _checkForDuplicateData(
-          'vehicle_id', 
+          'vehicle_id',
           _vehicleIdController.text,
           widget.driver['driver_id'].toString(),
         );
-        
+
         if (duplicateVehicleId) {
           // Close loading dialog
           Navigator.pop(context);
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Vehicle ID is already assigned to another driver'),
@@ -128,26 +133,27 @@ class _DriverInfoState extends State<DriverInfo> {
         'vehicle_id': _vehicleIdController.text,
         'driver_license_number': _driverLicenseController.text,
       };
-      
+
       // Implement the actual database update
       final supabase = Supabase.instance.client;
       await supabase
           .from('driverTable')
           .update(updatedDriver)
           .eq('driver_id', widget.driver['driver_id']);
-      
+
       // Explicitly force an activity log to be created with current status
       String? currentStatus = widget.driver['driving_status'];
       if (currentStatus != null) {
         await _activityLogs.logDriverActivity(currentStatus, DateTime.now());
-        print('_saveChanges: Explicitly logged activity for status $currentStatus');
+        print(
+            '_saveChanges: Explicitly logged activity for status $currentStatus');
       } else {
         print('_saveChanges: No status available to log activity');
       }
-      
+
       // Close loading dialog
       Navigator.pop(context);
-      
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -158,11 +164,10 @@ class _DriverInfoState extends State<DriverInfo> {
 
       // Force refresh of heatmap data
       _generateHeatMapData();
-      
     } catch (e) {
       // Close loading dialog
       Navigator.pop(context);
-      
+
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -174,9 +179,10 @@ class _DriverInfoState extends State<DriverInfo> {
   }
 
   // Check if data already exists for another driver
-  Future<bool> _checkForDuplicateData(String field, String value, String currentDriverId) async {
+  Future<bool> _checkForDuplicateData(
+      String field, String value, String currentDriverId) async {
     if (value.isEmpty) return false;
-    
+
     try {
       // Using Supabase
       final supabase = Supabase.instance.client;
@@ -186,64 +192,79 @@ class _DriverInfoState extends State<DriverInfo> {
           .eq(field, value)
           .neq('driver_id', currentDriverId)
           .maybeSingle();
-      
+
       return response != null;
     } catch (e) {
       return false;
     }
   }
-  
+
   void _generateHeatMapData() {
     // Clear existing data
     _heatMapData = {};
-    
+
     // Get the start and end dates for the current month
-    final DateTime firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final int daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    final DateTime lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, daysInMonth);
-    
+    final DateTime firstDayOfMonth =
+        DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final int daysInMonth =
+        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final DateTime lastDayOfMonth =
+        DateTime(_currentMonth.year, _currentMonth.month, daysInMonth);
+
     // Initialize all days to 0 (inactive) first
     for (int i = 0; i < daysInMonth; i++) {
-      final DateTime date = DateTime(firstDayOfMonth.year, firstDayOfMonth.month, i + 1);
+      final DateTime date =
+          DateTime(firstDayOfMonth.year, firstDayOfMonth.month, i + 1);
       _heatMapData[date] = 0;
     }
-    
-    print('Fetching driver activity logs for driver ${widget.driver['driver_id']} from $firstDayOfMonth to $lastDayOfMonth');
-    
+
+    print(
+        'Fetching driver activity logs for driver ${widget.driver['driver_id']} from $firstDayOfMonth to $lastDayOfMonth');
+
     // Fetch driver activity logs for the current month
-    _activityLogs.fetchDriverActivityLogs(firstDayOfMonth, lastDayOfMonth).then((activityLogs) {
+    _activityLogs
+        .fetchDriverActivityLogs(firstDayOfMonth, lastDayOfMonth)
+        .then((activityLogs) {
       bool hasActivityData = false;
-      
+
       if (activityLogs.isNotEmpty) {
-        debugPrint('Found ${activityLogs.length} activity logs for the current month');
+        debugPrint(
+            'Found ${activityLogs.length} activity logs for the current month');
         // Process activity logs
         for (var log in activityLogs) {
           try {
-            final DateTime loginDate = DateTime.parse(log['login_timestamp']).toLocal();
-            final DateTime logDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
-            
+            final DateTime loginDate =
+                DateTime.parse(log['login_timestamp']).toLocal();
+            final DateTime logDate =
+                DateTime(loginDate.year, loginDate.month, loginDate.day);
+
             // Set the activity level based on session duration
             if (log['session_duration'] != null) {
               int sessionDuration = log['session_duration'];
               int activityLevel = 1; // Default to level 1 (active)
-              
+
               // Assign activity levels based on session duration
-              if (sessionDuration > 4 * 60 * 60) { // > 4 hours
+              if (sessionDuration > 4 * 60 * 60) {
+                // > 4 hours
                 activityLevel = 4; // High activity
-              } else if (sessionDuration > 2 * 60 * 60) { // > 2 hours
+              } else if (sessionDuration > 2 * 60 * 60) {
+                // > 2 hours
                 activityLevel = 3; // Medium-high activity
-              } else if (sessionDuration > 1 * 60 * 60) { // > 1 hour
+              } else if (sessionDuration > 1 * 60 * 60) {
+                // > 1 hour
                 activityLevel = 2; // Medium activity
               }
-              
+
               _heatMapData[logDate] = activityLevel;
               hasActivityData = true;
-              print('Added activity level $activityLevel for date $logDate (session duration: ${sessionDuration/3600} hours)');
+              print(
+                  'Added activity level $activityLevel for date $logDate (session duration: ${sessionDuration / 3600} hours)');
             } else {
               // If no session duration, just mark as active
               _heatMapData[logDate] = 1;
               hasActivityData = true;
-              print('Added activity level 1 for date $logDate (no session duration)');
+              print(
+                  'Added activity level 1 for date $logDate (no session duration)');
             }
           } catch (e) {
             print('Error processing activity log: $e');
@@ -254,33 +275,42 @@ class _DriverInfoState extends State<DriverInfo> {
       } else {
         print('No activity logs found for the current month');
       }
-      
+
       // Only use last_online as fallback if we couldn't find ANY activity data
       if (!hasActivityData && widget.driver['last_online'] != null) {
         try {
           print('No activity data found, using last_online as fallback');
-          final DateTime lastOnline = DateTime.parse(widget.driver['last_online'].toString());
-          if (lastOnline.month == _currentMonth.month && lastOnline.year == _currentMonth.year) {
-            _heatMapData[DateTime(lastOnline.year, lastOnline.month, lastOnline.day)] = 1;
-            print('Added last_online data for ${lastOnline.toString()} with level 1');
+          final DateTime lastOnline =
+              DateTime.parse(widget.driver['last_online'].toString());
+          if (lastOnline.month == _currentMonth.month &&
+              lastOnline.year == _currentMonth.year) {
+            _heatMapData[DateTime(
+                lastOnline.year, lastOnline.month, lastOnline.day)] = 1;
+            print(
+                'Added last_online data for ${lastOnline.toString()} with level 1');
           }
         } catch (e) {
           print('Error parsing last_online date: $e');
         }
       }
-      
+
       setState(() {});
     }).catchError((error) {
       print('Error fetching activity logs: $error');
-      
+
       // Only use last_online if we couldn't fetch activity logs at all
       if (widget.driver['last_online'] != null) {
         try {
           print('Using last_online as fallback due to error fetching logs');
-          final DateTime lastOnline = DateTime.parse(widget.driver['last_online'].toString());
-          if (lastOnline.month == _currentMonth.month && lastOnline.year == _currentMonth.year) {
-            _heatMapData[DateTime(lastOnline.year, lastOnline.month, lastOnline.day)] = 1; // Changed from 4 to 1 for consistency
-            print('Added last_online data for ${lastOnline.toString()} with level 1');
+          final DateTime lastOnline =
+              DateTime.parse(widget.driver['last_online'].toString());
+          if (lastOnline.month == _currentMonth.month &&
+              lastOnline.year == _currentMonth.year) {
+            _heatMapData[DateTime(
+                    lastOnline.year, lastOnline.month, lastOnline.day)] =
+                1; // Changed from 4 to 1 for consistency
+            print(
+                'Added last_online data for ${lastOnline.toString()} with level 1');
           }
         } catch (e) {
           print('Error parsing last_online date: $e');
@@ -289,25 +319,24 @@ class _DriverInfoState extends State<DriverInfo> {
       setState(() {});
     });
   }
-  
+
   // Add this explicit method to be called when we want to update driver status
   Future<void> updateDriverStatus(String newStatus) async {
     try {
       final supabase = Supabase.instance.client;
       final now = DateTime.now();
-      
+
       // Update driver status in driver table
-      await supabase
-          .from('driverTable')
-          .update({'driving_status': newStatus, 'last_online': now.toIso8601String()})
-          .eq('driver_id', widget.driver['driver_id']);
-      
+      await supabase.from('driverTable').update({
+        'driving_status': newStatus,
+        'last_online': now.toIso8601String()
+      }).eq('driver_id', widget.driver['driver_id']);
+
       // Log this activity
       await _activityLogs.logDriverActivity(newStatus, now);
-      
+
       // Refresh UI
       setState(() {});
-      
     } catch (e) {
       print('Error updating driver status: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -323,7 +352,7 @@ class _DriverInfoState extends State<DriverInfo> {
     try {
       final supabase = Supabase.instance.client;
       final driverId = widget.driver['driver_id'];
-      
+
       // Fetch bookings data for this driver
       final bookingsResponse = await supabase
           .from('bookings')
@@ -331,23 +360,24 @@ class _DriverInfoState extends State<DriverInfo> {
           .eq('driver_id', driverId);
 
       final List<dynamic> bookings = bookingsResponse as List<dynamic>;
-      
+
       if (bookings.isNotEmpty) {
         double totalRating = 0.0;
         int ratingCount = 0;
         int reviewCount = 0;
-        
+
         for (var booking in bookings) {
           if (booking['rating'] != null) {
             totalRating += (booking['rating'] as num).toDouble();
             ratingCount++;
           }
-          
-          if (booking['review'] != null && booking['review'].toString().trim().isNotEmpty) {
+
+          if (booking['review'] != null &&
+              booking['review'].toString().trim().isNotEmpty) {
             reviewCount++;
           }
         }
-        
+
         if (mounted) {
           setState(() {
             _averageRating = ratingCount > 0 ? totalRating / ratingCount : 0.0;
@@ -363,7 +393,8 @@ class _DriverInfoState extends State<DriverInfo> {
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width * 0.55; // Increased width ratio
+    final double screenWidth =
+        MediaQuery.of(context).size.width * 0.55; // Increased width ratio
     final double dialogWidth = screenWidth;
     // Make dialog wider than it is tall
     final double dialogHeight = screenWidth * 0.7; // Reduced height ratio
@@ -427,7 +458,7 @@ class _DriverInfoState extends State<DriverInfo> {
             const SizedBox(height: 12.0),
             Divider(color: Palette.greenColor.withAlpha(50), thickness: 1.5),
             const SizedBox(height: 12.0),
-            
+
             // Main content with two columns
             Expanded(
               child: Row(
@@ -442,11 +473,13 @@ class _DriverInfoState extends State<DriverInfo> {
                         children: [
                           // Driver ID with badge-like styling
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Palette.greenColor.withAlpha(40),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Palette.greenColor.withAlpha(100)),
+                              border: Border.all(
+                                  color: Palette.greenColor.withAlpha(100)),
                             ),
                             child: Text(
                               "Driver ID: ${driver['driver_id']?.toString() ?? 'N/A'}",
@@ -459,7 +492,7 @@ class _DriverInfoState extends State<DriverInfo> {
                             ),
                           ),
                           const SizedBox(height: 20.0),
-                          
+
                           // Editable fields with better styling
                           _buildEditableField(
                             label: "Name:",
@@ -489,39 +522,47 @@ class _DriverInfoState extends State<DriverInfo> {
                               ),
                               Expanded(
                                 child: _isEditMode
-                                  ? TextFormField(
-                                    controller: _driverNumberController,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.grey[50],
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: Colors.grey[400]!),
+                                    ? TextFormField(
+                                        controller: _driverNumberController,
+                                        decoration: InputDecoration(
+                                          filled: true,
+                                          fillColor: Colors.grey[50],
+                                          contentPadding: EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 10),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            borderSide: BorderSide(
+                                                color: Colors.grey[400]!),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            borderSide: BorderSide(
+                                                color: Palette.greenColor,
+                                                width: 2),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            borderSide: BorderSide(
+                                                color: Colors.grey[400]!),
+                                          ),
+                                        ),
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 16,
+                                          color: Palette.blackColor,
+                                        ),
+                                      )
+                                    : Text(
+                                        driver['driver_number'] ?? 'N/A',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 16,
+                                          color: Palette.blackColor,
+                                        ),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: Palette.greenColor, width: 2),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: Colors.grey[400]!),
-                                      ),
-                                    ),
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 16,
-                                      color: Palette.blackColor,
-                                    ),
-                                  )
-                                  : Text(
-                                    driver['driver_number'] ?? 'N/A',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 16,
-                                      color: Palette.blackColor,
-                                    ),
-                                  ),
                               ),
                             ],
                           ),
@@ -532,7 +573,7 @@ class _DriverInfoState extends State<DriverInfo> {
                             controller: _vehicleIdController,
                           ),
                           const SizedBox(height: 12.0),
-                          
+
                           // Status indicator with color coding
                           Row(
                             children: [
@@ -549,13 +590,16 @@ class _DriverInfoState extends State<DriverInfo> {
                                 ),
                               ),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(driver['driving_status']),
+                                  color:
+                                      _getStatusColor(driver['driving_status']),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  "${_capitalizeFirstLetter(driver['driving_status'] ?? 'N/A')}",
+                                  _capitalizeFirstLetter(
+                                      driver['driving_status'] ?? 'N/A'),
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 15,
@@ -567,7 +611,7 @@ class _DriverInfoState extends State<DriverInfo> {
                             ],
                           ),
                           const SizedBox(height: 12.0),
-                          
+
                           // Average Rating with stars
                           Row(
                             children: [
@@ -589,7 +633,7 @@ class _DriverInfoState extends State<DriverInfo> {
                             ],
                           ),
                           const SizedBox(height: 12.0),
-                          
+
                           // Last online with icon
                           Row(
                             children: [
@@ -605,7 +649,8 @@ class _DriverInfoState extends State<DriverInfo> {
                                   ),
                                 ),
                               ),
-                              Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                              Icon(Icons.access_time,
+                                  size: 16, color: Colors.grey[600]),
                               SizedBox(width: 6),
                               Text(
                                 _formatLastOnline(driver['last_online']),
@@ -621,9 +666,9 @@ class _DriverInfoState extends State<DriverInfo> {
                       ),
                     ),
                   ),
-                  
+
                   SizedBox(width: 20), // Spacing between columns
-                  
+
                   // RIGHT COLUMN - Driver Activity (switched from left)
                   Expanded(
                     flex: 5,
@@ -637,7 +682,8 @@ class _DriverInfoState extends State<DriverInfo> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12.0),
-                              border: Border.all(color: Palette.greenColor.withAlpha(30)),
+                              border: Border.all(
+                                  color: Palette.greenColor.withAlpha(30)),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.grey.withAlpha(20),
@@ -654,7 +700,8 @@ class _DriverInfoState extends State<DriverInfo> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.calendar_today, color: Palette.greenColor, size: 20),
+                                    Icon(Icons.calendar_today,
+                                        color: Palette.greenColor, size: 20),
                                     SizedBox(width: 8),
                                     Text(
                                       "Driver Activity",
@@ -671,7 +718,8 @@ class _DriverInfoState extends State<DriverInfo> {
                                 // Calendar with default navigation
                                 Expanded(
                                   child: SingleChildScrollView(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4.0),
                                     child: HeatMapCalendar(
                                       datasets: _heatMapData,
                                       colorMode: ColorMode.color,
@@ -688,7 +736,8 @@ class _DriverInfoState extends State<DriverInfo> {
                                       },
                                       monthFontSize: 14,
                                       weekFontSize: 10,
-                                      initDate: DateTime(_currentMonth.year, _currentMonth.month),
+                                      initDate: DateTime(_currentMonth.year,
+                                          _currentMonth.month),
                                       onMonthChange: (date) {
                                         setState(() {
                                           _currentMonth = date;
@@ -710,9 +759,12 @@ class _DriverInfoState extends State<DriverInfo> {
                           runSpacing: 8,
                           children: [
                             _buildLegendItem(Palette.greyColor, "Inactive"),
-                            _buildLegendItem(Palette.greenColor.withAlpha(100), "< 1 hour"),
-                            _buildLegendItem(Palette.greenColor.withAlpha(150), "1-2 hours"),
-                            _buildLegendItem(Palette.greenColor.withAlpha(200), "2-4 hours"),
+                            _buildLegendItem(
+                                Palette.greenColor.withAlpha(100), "< 1 hour"),
+                            _buildLegendItem(
+                                Palette.greenColor.withAlpha(150), "1-2 hours"),
+                            _buildLegendItem(
+                                Palette.greenColor.withAlpha(200), "2-4 hours"),
                             _buildLegendItem(Palette.greenColor, "4+ hours"),
                           ],
                         ),
@@ -722,9 +774,9 @@ class _DriverInfoState extends State<DriverInfo> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16.0),
-            
+
             // Enhanced buttons with consistent styling
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -732,29 +784,39 @@ class _DriverInfoState extends State<DriverInfo> {
                 // Contact Driver button (or Cancel in edit mode)
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isEditMode ? Colors.red.shade400 : Palette.whiteColor,
+                    backgroundColor:
+                        _isEditMode ? Colors.red.shade400 : Palette.whiteColor,
                     foregroundColor: Palette.blackColor,
                     elevation: 4.0,
                     shadowColor: Colors.grey.shade300,
-                    side: BorderSide(color: _isEditMode ? Colors.red.shade400 : Colors.grey.shade400, width: 1.0),
+                    side: BorderSide(
+                        color: _isEditMode
+                            ? Colors.red.shade400
+                            : Colors.grey.shade400,
+                        width: 1.0),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 12.0),
                   ),
                   onPressed: () {
                     if (_isEditMode) {
                       // Reset the text controllers to original values
-                      _fullNameController.text = widget.driver['full_name'] ?? '';
-                      _driverNumberController.text = widget.driver['driver_number'] ?? '';
-                      _vehicleIdController.text = widget.driver['vehicle_id']?.toString() ?? '';
-                      _driverLicenseController.text = widget.driver['driver_license_number'] ?? '';
-                      
+                      _fullNameController.text =
+                          widget.driver['full_name'] ?? '';
+                      _driverNumberController.text =
+                          widget.driver['driver_number'] ?? '';
+                      _vehicleIdController.text =
+                          widget.driver['vehicle_id']?.toString() ?? '';
+                      _driverLicenseController.text =
+                          widget.driver['driver_license_number'] ?? '';
+
                       // Exit edit mode
                       setState(() {
                         _isEditMode = false;
                       });
-                      
+
                       // If dialog was opened directly in edit mode, close it
                       if (widget.initialEditMode) {
                         Navigator.of(context).pop();
@@ -766,11 +828,10 @@ class _DriverInfoState extends State<DriverInfo> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        _isEditMode ? Icons.cancel : Icons.phone, 
-                        size: 20, 
-                        color: _isEditMode ? Colors.white : Palette.blackColor
-                      ),
+                      Icon(_isEditMode ? Icons.cancel : Icons.phone,
+                          size: 20,
+                          color:
+                              _isEditMode ? Colors.white : Palette.blackColor),
                       SizedBox(width: 8),
                       Text(
                         _isEditMode ? "Cancel" : "Contact Driver",
@@ -778,7 +839,8 @@ class _DriverInfoState extends State<DriverInfo> {
                           fontFamily: 'Inter',
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: _isEditMode ? Colors.white : Palette.blackColor,
+                          color:
+                              _isEditMode ? Colors.white : Palette.blackColor,
                         ),
                       ),
                     ],
@@ -787,25 +849,30 @@ class _DriverInfoState extends State<DriverInfo> {
                 const SizedBox(width: 16.0),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isEditMode ? Palette.greenColor : Palette.whiteColor,
+                    backgroundColor:
+                        _isEditMode ? Palette.greenColor : Palette.whiteColor,
                     foregroundColor: Palette.blackColor,
                     elevation: 4.0,
                     shadowColor: Colors.grey.shade300,
-                    side: BorderSide(color: _isEditMode ? Palette.greenColor : Colors.grey.shade400, width: 1.0),
+                    side: BorderSide(
+                        color: _isEditMode
+                            ? Palette.greenColor
+                            : Colors.grey.shade400,
+                        width: 1.0),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 12.0),
                   ),
                   onPressed: _toggleEditMode,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        _isEditMode ? Icons.save : Icons.edit, 
-                        size: 20, 
-                        color: _isEditMode ? Colors.white : Palette.blackColor
-                      ),
+                      Icon(_isEditMode ? Icons.save : Icons.edit,
+                          size: 20,
+                          color:
+                              _isEditMode ? Colors.white : Palette.blackColor),
                       SizedBox(width: 8),
                       Text(
                         _isEditMode ? "Save Changes" : "Manage Driver",
@@ -813,7 +880,8 @@ class _DriverInfoState extends State<DriverInfo> {
                           fontFamily: 'Inter',
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: _isEditMode ? Colors.white : Palette.blackColor,
+                          color:
+                              _isEditMode ? Colors.white : Palette.blackColor,
                         ),
                       ),
                     ],
@@ -856,8 +924,8 @@ class _DriverInfoState extends State<DriverInfo> {
   // Helper method to get status color
   Color _getStatusColor(String? status) {
     if (status == null) return Colors.grey;
-    
-    switch(status.toLowerCase()) {
+
+    switch (status.toLowerCase()) {
       case 'online':
       case 'active':
         return Palette.greenColor;
@@ -900,14 +968,16 @@ class _DriverInfoState extends State<DriverInfo> {
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.grey[50],
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey[400]!),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Palette.greenColor, width: 2),
+                      borderSide:
+                          BorderSide(color: Palette.greenColor, width: 2),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -941,18 +1011,18 @@ class _DriverInfoState extends State<DriverInfo> {
               Expanded(
                 child: Text(
                   value,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16,
-              color: Palette.blackColor,
-            ),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    color: Palette.blackColor,
+                  ),
                 ),
               ),
             ],
           );
   }
 
-  // Method that adjusts the last online timestamp to a more readable format. 
+  // Method that adjusts the last online timestamp to a more readable format.
   String _formatLastOnline(dynamic timestamp) {
     if (timestamp == null) return 'N/A';
     try {
@@ -965,44 +1035,46 @@ class _DriverInfoState extends State<DriverInfo> {
       return 'Invalid Date';
     }
   }
-  
+
   // Helper method to capitalize first letter
   String _capitalizeFirstLetter(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
   }
-  
+
   // Method to get month name from month number
 
   Widget _buildStarRating(double rating) {
     List<Widget> stars = [];
     int fullStars = rating.floor();
     double remainder = rating - fullStars;
-    
+
     // Add full stars
     for (int i = 0; i < fullStars; i++) {
       stars.add(Icon(Icons.star, color: Colors.amber, size: 16));
     }
-    
+
     // Add half star if needed
     if (remainder >= 0.5) {
       stars.add(Icon(Icons.star_half, color: Colors.amber, size: 16));
     } else if (remainder > 0) {
       stars.add(Icon(Icons.star_border, color: Colors.amber, size: 16));
     }
-    
+
     // Add empty stars to make 5 total
     while (stars.length < 5) {
       stars.add(Icon(Icons.star_border, color: Colors.grey[300], size: 16));
     }
-    
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         ...stars,
         SizedBox(width: 6),
         Text(
-          rating > 0 ? '${rating.toStringAsFixed(1)} ($_totalReviews reviews)' : 'No ratings',
+          rating > 0
+              ? '${rating.toStringAsFixed(1)} ($_totalReviews reviews)'
+              : 'No ratings',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
