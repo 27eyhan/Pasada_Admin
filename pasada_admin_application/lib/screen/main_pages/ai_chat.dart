@@ -7,6 +7,7 @@ import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:pasada_admin_application/services/database_summary_service.dart';
 import 'package:pasada_admin_application/services/chat_history_service.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/services/route_traffic_service.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart'; // Add this import for Clipboard
 
@@ -29,6 +30,7 @@ class _AiChatState extends State<AiChat> {
   final DatabaseSummaryService _databaseService = DatabaseSummaryService();
   final ChatHistoryService _chatService = ChatHistoryService();
   final AuthService _authService = AuthService();
+  final RouteTrafficService _routeTrafficService = RouteTrafficService();
 
   // Chat history for tracking the conversation
   final List<Content> _chatHistory = [];
@@ -300,6 +302,34 @@ Please use this data to provide informed suggestions.
 
   void _handleSubmitted(String text) {
     _messageController.clear();
+    if (text.trim().startsWith('/routetraffic')) {
+      final parts = text.substring('/routetraffic'.length).trim().split(',');
+      if (parts.length != 2) {
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(
+            text: 'Usage: /routetraffic <origin, destination>',
+            isUser: false,
+          ));
+        });
+        return;
+      }
+      final origin = parts[0].trim();
+      final destination = parts[1].trim();
+      setState(() {
+        _messages.add(ChatMessage(text: text, isUser: true));
+        _isTyping = true;
+      });
+      _routeTrafficService
+          .getRouteTraffic(origin, destination)
+          .then((trafficInfo) {
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(text: trafficInfo, isUser: false));
+        });
+      });
+      return;
+    }
     if (text.trim().isEmpty) return;
 
     setState(() {
