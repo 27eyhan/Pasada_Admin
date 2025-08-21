@@ -5,6 +5,8 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/reports_chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class Reports extends StatefulWidget {
   @override
@@ -176,94 +178,196 @@ class _ReportsState extends State<Reports> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final double screenWidth = MediaQuery.of(context)
+        .size
+        .width
+        .clamp(600.0, double.infinity)
+        .toDouble();
+    final double horizontalPadding = screenWidth * 0.1;
+
     return Scaffold(
-      backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(),
-      drawer: MyDrawer(),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24.0, 16.0, 16.0, 16.0),
-                child: Column(
+      backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          const double minBodyWidth = 900;
+          final double effectiveWidth = constraints.maxWidth < minBodyWidth
+              ? minBodyWidth
+              : constraints.maxWidth;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: minBodyWidth),
+              child: SizedBox(
+                width: effectiveWidth,
+                child: Row(
                   children: [
-                    // Enhanced summary metrics cards
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.white, Colors.grey.shade100],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
-                        borderRadius: BorderRadius.circular(15.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Palette.blackColor.withValues(alpha: 20),
-                            spreadRadius: 0,
-                            blurRadius: 4,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
+                      width: 280,
+                      child: MyDrawer(),
+                    ),
+                    Expanded(
+                      child: Column(
                         children: [
-                          _buildSummaryItem("Total Drivers", totalDrivers.toString(), Palette.blackColor, Icons.people),
-                          _buildVerticalDivider(),
-                          _buildSummaryItem("Total Earnings", "₱${totalEarnings.toStringAsFixed(2)}", Palette.greenColor, Icons.account_balance_wallet),
+                          AppBarSearch(),
+                          Expanded(
+                            child: isLoading
+                                ? Center(child: CircularProgressIndicator())
+                                : SingleChildScrollView(
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 24.0,
+                                        horizontal: horizontalPadding,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 20,
+                                                backgroundColor: isDark
+                                                    ? Palette.darkSurface
+                                                    : Palette.lightSurface,
+                                                child: Icon(
+                                                  Icons.bar_chart,
+                                                  color: isDark
+                                                      ? Palette.darkText
+                                                      : Palette.lightText,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12.0),
+                                              Text(
+                                                "Reports",
+                                                style: TextStyle(
+                                                  fontSize: 28.0,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: isDark
+                                                      ? Palette.darkText
+                                                      : Palette.lightText,
+                                                  fontFamily: 'Inter',
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 24.0),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 4.0, horizontal: 4.0),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: _buildCompactMetric(
+                                                    'Total Drivers',
+                                                    totalDrivers,
+                                                    isDark
+                                                        ? Palette.darkText
+                                                        : Palette.lightText,
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: _buildCompactMetric(
+                                                    'Total Earnings',
+                                                    totalEarnings.toInt(),
+                                                    isDark
+                                                        ? Palette.darkText
+                                                        : Palette.lightText,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24.0),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  color: isDark
+                                                      ? Palette.darkCard
+                                                      : Palette.lightCard,
+                                                  border: Border.all(
+                                                    color: isDark
+                                                        ? Palette.darkBorder
+                                                        : Palette.lightBorder,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: Icon(
+                                                        Icons.grid_view,
+                                                        size: 18,
+                                                        color: isGridView
+                                                            ? (isDark
+                                                                ? Palette
+                                                                    .darkText
+                                                                : Palette
+                                                                    .lightText)
+                                                            : (isDark
+                                                                ? Palette
+                                                                    .darkTextSecondary
+                                                                : Palette
+                                                                    .lightTextSecondary),
+                                                      ),
+                                                      onPressed: () {
+                                                        setState(() {
+                                                          isGridView = true;
+                                                        });
+                                                      },
+                                                    ),
+                                                    IconButton(
+                                                      icon: Icon(
+                                                        Icons.view_list,
+                                                        size: 18,
+                                                        color: !isGridView
+                                                            ? (isDark
+                                                                ? Palette
+                                                                    .darkText
+                                                                : Palette
+                                                                    .lightText)
+                                                            : (isDark
+                                                                ? Palette
+                                                                    .darkTextSecondary
+                                                                : Palette
+                                                                    .lightTextSecondary),
+                                                      ),
+                                                      onPressed: () {
+                                                        setState(() {
+                                                          isGridView = false;
+                                                        });
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16.0),
+                                          isGridView
+                                              ? _buildGridView()
+                                              : _buildListView(),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24.0),
-                    
-                    // View toggle buttons (Grid/List)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.grid_view, 
-                                  color: isGridView ? Palette.blackColor : Palette.greyColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    isGridView = true;
-                                  });
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.view_list, 
-                                  color: !isGridView ? Palette.blackColor : Palette.greyColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    isGridView = false;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 16.0),
-                    
-                    // Driver earnings with conditional rendering based on view mode
-                    isGridView ? _buildGridView() : _buildListView(),
                   ],
                 ),
               ),
             ),
+          );
+        },
+      ),
     );
   }
   
@@ -312,6 +416,8 @@ class _ReportsState extends State<Reports> {
   
   // Driver earnings card for grid view
   Widget _buildDriverEarningsCard(Map<String, dynamic> driver) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final status = driver['driving_status'] ?? 'Offline';
     final isActive = status.toLowerCase() == 'online' || 
                      status.toLowerCase() == 'driving' || 
@@ -326,17 +432,14 @@ class _ReportsState extends State<Reports> {
         borderRadius: BorderRadius.circular(15.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Palette.whiteColor,
-            border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+            color: isDark ? Palette.darkCard : Palette.lightCard,
+            border: Border.all(
+              color: isDark
+                  ? Palette.darkBorder.withValues(alpha: 77)
+                  : Palette.lightBorder.withValues(alpha: 77),
+              width: 1.0,
+            ),
             borderRadius: BorderRadius.circular(15.0),
-            boxShadow: [
-              BoxShadow(
-                color: Palette.blackColor.withValues(alpha: 20),
-                spreadRadius: 0,
-                blurRadius: 4,
-                offset: Offset(0, 1),
-              ),
-            ],
           ),
           padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
           child: Stack(
@@ -351,14 +454,6 @@ class _ReportsState extends State<Reports> {
                   decoration: BoxDecoration(
                     color: statusColor,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: statusColor.withValues(alpha: 20),
-                        spreadRadius: 0,
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -374,14 +469,6 @@ class _ReportsState extends State<Reports> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 15),
-                          blurRadius: 3,
-                          spreadRadius: 0,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: CircleAvatar(
                       radius: 28,
@@ -405,7 +492,7 @@ class _ReportsState extends State<Reports> {
                             fontFamily: 'Inter',
                             fontSize: 18.0,
                             fontWeight: FontWeight.bold,
-                            color: Palette.blackColor,
+                            color: isDark ? Palette.darkText : Palette.lightText,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -435,6 +522,8 @@ class _ReportsState extends State<Reports> {
   
   // Driver earnings list item for list view
   Widget _buildDriverEarningsListItem(Map<String, dynamic> driver) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final status = driver['driving_status'] ?? 'Offline';
     final isActive = status.toLowerCase() == 'online' || 
                      status.toLowerCase() == 'driving' || 
@@ -450,17 +539,14 @@ class _ReportsState extends State<Reports> {
         borderRadius: BorderRadius.circular(12.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Palette.whiteColor,
-            border: Border.all(color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+            color: isDark ? Palette.darkCard : Palette.lightCard,
+            border: Border.all(
+              color: isDark
+                  ? Palette.darkBorder.withValues(alpha: 77)
+                  : Palette.lightBorder.withValues(alpha: 77),
+              width: 1.0,
+            ),
             borderRadius: BorderRadius.circular(12.0),
-            boxShadow: [
-              BoxShadow(
-                color: Palette.blackColor.withValues(alpha: 20),
-                spreadRadius: 0,
-                blurRadius: 4,
-                offset: Offset(0, 1),
-              ),
-            ],
           ),
           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
           child: Row(
@@ -477,14 +563,6 @@ class _ReportsState extends State<Reports> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 15),
-                          blurRadius: 3,
-                          spreadRadius: 0,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: CircleAvatar(
                       radius: 24,
@@ -508,14 +586,6 @@ class _ReportsState extends State<Reports> {
                         color: statusColor,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: statusColor.withValues(alpha: 20),
-                            spreadRadius: 0,
-                            blurRadius: 2,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
                       ),
                     ),
                   ),
@@ -654,54 +724,35 @@ class _ReportsState extends State<Reports> {
       ),
     );
   }
-  
-  // Enhanced summary item with icons
-  Widget _buildSummaryItem(String title, String value, Color valueColor, IconData icon) {
-    return Expanded(
-      child: SizedBox(
-        height: 100.0,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: valueColor, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
-                    color: valueColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.0,
-                fontWeight: FontWeight.w500,
-                color: Palette.blackColor.withValues(alpha: 179),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  // Helper to create a vertical divider
-  Widget _buildVerticalDivider() {
-    return Container(
-      height: 70.0,
-      width: 1.0,
-      color: Palette.blackColor.withValues(alpha: 40),
+  // Compact metric item: uppercase label above value (Fleet-like)
+  Widget _buildCompactMetric(String label, int value, Color valueColor) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            letterSpacing: 0.6,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          ),
+        ),
+        const SizedBox(height: 8.0),
+        Text(
+          value.toString(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 22.0,
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 }
