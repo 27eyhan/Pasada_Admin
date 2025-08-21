@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/maps/map_screen.dart';
+import 'package:provider/provider.dart';
 
 class Dashboard extends StatefulWidget {
   final Map<String, dynamic>? driverLocationArgs;
@@ -35,6 +37,9 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     // Get route arguments if they weren't passed through constructor
     final Map<String, dynamic>? routeArgs = widget.driverLocationArgs ??
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -51,10 +56,29 @@ class _DashboardState extends State<Dashboard> {
     }
 
     return Scaffold(
-      backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(),
-      drawer: MyDrawer(),
-      body: _mapscreenInstance,
+      backgroundColor: isDark ? Palette.darkBackground : Palette.lightBackground,
+      body: Row(
+        children: [
+          // Fixed width sidebar drawer
+          Container(
+            width: 280, // Fixed width for the sidebar
+            child: MyDrawer(),
+          ),
+          // Main content area
+          Expanded(
+            child: Column(
+              children: [
+                // App bar in the main content area
+                AppBarSearch(),
+                // Map content
+                Expanded(
+                  child: _mapscreenInstance,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
