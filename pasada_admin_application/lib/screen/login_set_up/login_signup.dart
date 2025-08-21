@@ -122,8 +122,8 @@ class _LoginSignupState extends State<LoginSignup> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final containerWidth = (screenWidth * 0.5).clamp(400, 800);
+    final screenWidth = MediaQuery.of(context).size.width.clamp(800, double.infinity);
+    final containerWidth = (screenWidth * 0.4).clamp(700, 1100);
     final horizontalPadding = (screenWidth - containerWidth) / 2;
 
     return Scaffold(
