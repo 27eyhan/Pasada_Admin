@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+<<<<<<< HEAD
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:pasada_admin_application/services/database_summary_service.dart';
@@ -12,6 +13,12 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart'; // Add this import for Clipboard
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+=======
+import 'package:pasada_admin_application/services/gemini_ai_service.dart';
+import 'package:pasada_admin_application/services/chat_session_manager.dart';
+import 'package:pasada_admin_application/services/chat_message_controller.dart';
+import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
+>>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11
 
 class AiChat extends StatefulWidget {
   const AiChat({super.key});
@@ -21,207 +28,115 @@ class AiChat extends StatefulWidget {
 }
 
 class _AiChatState extends State<AiChat> {
-  final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessage> _messages = [];
+  // UI Controllers
+  final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  // UI State
+  final List<ChatMessage> _messages = [];
   bool _isTyping = false;
-  bool _isHistoryOpen = false; // Track if history drawer is open
-  late Gemini gemini;
+  bool _isHistoryOpen = false;
 
   // Services
-  final DatabaseSummaryService _databaseService = DatabaseSummaryService();
-  final ChatHistoryService _chatService = ChatHistoryService();
-  final AuthService _authService = AuthService();
-  final RouteTrafficService _routeTrafficService = RouteTrafficService();
-
-  // Chat history for tracking the conversation
-  final List<Content> _chatHistory = [];
-  List<Map<String, dynamic>> _savedChats = [];
-
-  // System instruction to guide AI responses
-  String systemInstruction =
-      """You are Manong, a helpful AI assistant for Pasada, a modern jeepney transportation system in the Philippines. Our team is composed of Calvin John Crehencia, Adrian De Guzman, Ethan Andrei Humarang and Fyke Simon Tonel, we are called CAFE Tech. Don't use emoji.
-
-You are focused in Fleet Management System, Modern Jeepney Transportation System in the Philippines, Ride-Hailing, and Traffic Advisory in the Malinta to Novaliches route in the Philippines. You're implemented in the admin website of Pasada: An AI-Powered Ride-Hailing and Fleet Management Platform for Modernized Jeepneys Services with Mobile Integration and RealTime Analytics.
-
-You're role is to be an advisor, providing suggestions based on the data inside the website. Limit your answer in 3 sentences and summarize if necessary. Don't answer other topics, only those mentioned above.""";
+  late GeminiAIService _aiService;
+  late ChatSessionManager _sessionManager;
+  late ChatMessageController _messageController;
 
   @override
   void initState() {
     super.initState();
-    _loadAuthentication();
-    _loadChatHistory();
-    // Initialize Gemini with the API key
-    final apiKey = dotenv.env['GEMINI_API'] ?? '';
-
-    if (apiKey.isEmpty) {
-      print('Warning: GEMINI_API key is not set in .env file');
-      // Still add the welcome message but inform about missing API key
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {
-          _messages.add(ChatMessage(
-            text:
-                "Hello! I'm Manong, your AI assistant. However, I need an API key to function properly. Please configure the GEMINI_API in your .env file.",
-            isUser: false,
-          ));
-        });
-      });
-    } else {
-      // First initialize Gemini, then access instance
-      Gemini.init(apiKey: apiKey);
-      gemini = Gemini.instance;
-
-      // Initialize chat history with system instruction if provided
-      if (systemInstruction.isNotEmpty) {
-        _chatHistory.add(
-            Content(role: 'system', parts: [Part.text(systemInstruction)]));
-      }
-
-      // Add the welcome message when the widget initializes
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {
-          _messages.add(ChatMessage(
-            text:
-                "Hello! I'm Manong, your AI assistant. How can I help you today?",
-            isUser: false,
-          ));
-        });
-      });
-    }
+    _initializeServices();
+    _loadInitialData();
   }
 
-  // Load admin authentication
-  Future<void> _loadAuthentication() async {
-    await _authService.loadAdminID();
-    if (_authService.currentAdminID == null) {
-      print(
-          'Warning: No admin ID found. AI Chat history functionality may be limited.');
-    } else {
-      print('Admin ID loaded: ${_authService.currentAdminID}');
-    }
+  // Initialize all services
+  void _initializeServices() {
+    _aiService = GeminiAIService();
+    _sessionManager = ChatSessionManager();
+    _messageController = ChatMessageController(
+      aiService: _aiService,
+      setTypingState: _setTypingState,
+      addMessage: _addMessage,
+      scrollToBottom: _scrollToBottom,
+    );
   }
 
-  // Load chat history from the database
-  Future<void> _loadChatHistory() async {
-    try {
-      final chats = await _chatService.getChatHistories();
+  // Load initial data and setup
+  Future<void> _loadInitialData() async {
+    // Initialize AI service and load authentication
+    _aiService.initialize();
+    await _sessionManager.loadAuthentication();
+    await _sessionManager.loadChatHistory();
+
+    // Add welcome message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
-        _savedChats = chats;
+        _messages.add(ChatMessage(
+          text: _aiService.getWelcomeMessage(),
+          isUser: false,
+        ));
       });
-    } catch (e) {
-      print('Error loading chat history: $e');
+    });
+  }
+
+  // UI State Management
+  void _setTypingState(bool isTyping) {
+    setState(() {
+      _isTyping = isTyping;
+    });
+  }
+
+  void _addMessage(ChatMessage message) {
+    setState(() {
+      _messages.add(message);
+    });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 
-  // Save current chat session
+  // Message handling
+  void _handleSubmitted(String text) {
+    _textController.clear();
+    _messageController.handleSubmittedMessage(text);
+  }
+
+  // Chat History Management
   Future<void> _saveChatSession() async {
     if (_messages.isEmpty) return;
 
     try {
-      // Generate a title from first message for display purposes
-      final title = '${_messages.first.text.split(' ').take(5).join(' ')}...';
-
-      // Separate user messages and AI responses
-      final userMessages = _messages
-          .where((msg) => msg.isUser)
-          .map((msg) => {
-                'text': msg.text,
-                'timestamp': DateTime.now().toIso8601String(),
-              })
-          .toList();
-
-      final aiMessages = _messages
-          .where((msg) => !msg.isUser)
-          .map((msg) => {
-                'text': msg.text,
-                'timestamp': DateTime.now().toIso8601String(),
-              })
-          .toList();
-
-      // Ensure admin ID is loaded before saving
-      if (_authService.currentAdminID == null) {
-        await _authService.loadAdminID();
-        if (_authService.currentAdminID == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Cannot save chat: You need to be logged in.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-      }
-
-      // Pass separate arrays to the service
-      await _chatService.saveChatSession(title, userMessages, aiMessages);
-      await _loadChatHistory(); // Reload the chat history
-
-      // Show success message
+      final result = await _sessionManager.saveChatSession(_messages);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Chat saved successfully'),
+          content: Text(result),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
-      print('Error saving chat session: $e');
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error saving chat: ${e.toString()}'),
+          content: Text(e.toString()),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  // Load a specific chat session
   Future<void> _loadChatSession(String chatId) async {
     try {
-      final chat = await _chatService.getChatSession(chatId);
-      if (chat != null) {
+      final messages = await _sessionManager.loadChatSession(chatId);
+      if (messages != null) {
         setState(() {
           _messages.clear();
-
-          // Create a temporary list to hold all messages with timestamps
-          final List<Map<String, dynamic>> tempMessages = [];
-
-          // Load user messages
-          if (chat['messages'] is List &&
-              (chat['messages'] as List).isNotEmpty) {
-            List<dynamic> userMessages = chat['messages'];
-            for (var msg in userMessages) {
-              tempMessages.add({
-                'text': msg['text'],
-                'isUser': true,
-                'timestamp': msg['timestamp'] ?? '',
-              });
-            }
-          }
-
-          // Load AI messages
-          if (chat['ai_message'] is List &&
-              (chat['ai_message'] as List).isNotEmpty) {
-            List<dynamic> aiMessages = chat['ai_message'];
-            for (var msg in aiMessages) {
-              tempMessages.add({
-                'text': msg['text'],
-                'isUser': false,
-                'timestamp': msg['timestamp'] ?? '',
-              });
-            }
-          }
-
-          // Sort messages by timestamp
-          tempMessages.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
-
-          // Add sorted messages to the UI
-          for (var msg in tempMessages) {
-            _messages.add(ChatMessage(
-              text: msg['text'],
-              isUser: msg['isUser'],
-            ));
-          }
+          _messages.addAll(messages);
         });
       }
     } catch (e) {
@@ -229,184 +144,11 @@ You're role is to be an advisor, providing suggestions based on the data inside 
     }
   }
 
-  // Delete a chat session
   Future<void> _deleteChatSession(String chatId) async {
     try {
-      await _chatService.deleteChatSession(chatId);
-      await _loadChatHistory(); // Reload the chat history
+      await _sessionManager.deleteChatSession(chatId);
     } catch (e) {
       print('Error deleting chat session: $e');
-    }
-  }
-
-  // Method to set system instruction
-  void setSystemInstruction(String instruction) {
-    setState(() {
-      systemInstruction = instruction;
-
-      // Reset chat history and add system instruction
-      _chatHistory.clear();
-      if (systemInstruction.isNotEmpty) {
-        _chatHistory.add(
-            Content(role: 'system', parts: [Part.text(systemInstruction)]));
-      }
-    });
-  }
-
-  Future<String> _getGeminiResponse(String message) async {
-    try {
-      final apiKey = dotenv.env['GEMINI_API'] ?? '';
-      if (apiKey.isEmpty) {
-        return "I'm sorry, but I can't respond without an API key. Please configure the GEMINI_API in your .env file.";
-      }
-
-      // Get database context from our service
-      String databaseContext = await _databaseService.getFullDatabaseContext();
-
-      // Combine system instruction with database context
-      String enhancedInstruction = """$systemInstruction
-      
-Current System Data:
-$databaseContext
-
-Please use this data to provide informed suggestions.
-""";
-
-      // Use a simpler approach: text-only input with enhanced instruction
-      try {
-        final response =
-            await gemini.text("$enhancedInstruction\n\nUser: $message");
-
-        if (response != null && response.output != null) {
-          return response.output?.trim() ?? "No response";
-        }
-      } catch (innerError) {
-        print('First attempt failed: $innerError');
-
-        // Fall back to simplest possible request
-        try {
-          final response = await gemini.text(message.trim());
-          if (response != null && response.output != null) {
-            return response.output?.trim() ?? "No response";
-          }
-        } catch (fallbackError) {
-          print('Fallback attempt failed: $fallbackError');
-          return "Sorry, I couldn't generate a response at the moment. Technical error: $fallbackError";
-        }
-      }
-
-      return "Sorry, I couldn't generate a response at the moment.";
-    } catch (e) {
-      print('Exception: $e');
-      return "Technical error occurred: $e";
-    }
-  }
-
-  void _handleSubmitted(String text) {
-    _messageController.clear();
-    if (text.trim().startsWith('/routetraffic')) {
-      final idStr = text.substring('/routetraffic'.length).trim();
-      final routeId = int.tryParse(idStr);
-      if (routeId == null) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(ChatMessage(
-            text: 'Usage: /routetraffic <routeId>',
-            isUser: false,
-          ));
-        });
-        return;
-      }
-      setState(() {
-        _messages.add(ChatMessage(text: text, isUser: true));
-        _isTyping = true;
-      });
-      _routeTrafficService.getRouteTraffic(routeId).then((trafficInfo) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(ChatMessage(text: trafficInfo, isUser: false));
-        });
-      });
-      return;
-    }
-    if (text.trim().isEmpty) return;
-
-    setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isUser: true,
-      ));
-      _isTyping = true;
-    });
-
-    Future.delayed(Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-
-    // Get response from Gemini API
-    _getGeminiResponse(text).then((aiResponse) {
-      setState(() {
-        _isTyping = false;
-        _messages.add(ChatMessage(
-          text: aiResponse,
-          isUser: false,
-          onRefresh: () => _regenerateResponse(text),
-        ));
-      });
-
-      // Scroll to bottom again after response
-      Future.delayed(Duration(milliseconds: 100), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    });
-  }
-
-  Future<void> _regenerateResponse(String originalQuery) async {
-    setState(() {
-      _isTyping = true;
-    });
-
-    try {
-      final response = await _getGeminiResponse(originalQuery);
-      setState(() {
-        // Remove the last message (the one we're regenerating)
-        _messages.removeLast();
-        // Add the new response
-        _messages.add(ChatMessage(
-          text: response,
-          isUser: false,
-          onRefresh: () => _regenerateResponse(originalQuery),
-        ));
-        _isTyping = false;
-      });
-
-      // Scroll to the new message
-      Future.delayed(Duration(milliseconds: 100), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _isTyping = false;
-      });
-      print('Error regenerating response: $e');
     }
   }
 
@@ -702,12 +444,223 @@ Please use this data to provide informed suggestions.
                               ],
                             ),
                           ),
+<<<<<<< HEAD
+=======
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _sessionManager.savedChats.length,
+                              itemBuilder: (context, index) {
+                                final chat = _sessionManager.savedChats[index];
+                                return ListTile(
+                                  title: Text(
+                                    chat['title'] ?? 'Untitled Chat',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Text(
+                                    DateTime.parse(chat['created_at'])
+                                        .toString(),
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.delete_outline),
+                                    onPressed: () =>
+                                        _deleteChatSession(chat['history_id']),
+                                  ),
+                                  onTap: () =>
+                                      _loadChatSession(chat['history_id']),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : null,
+            ),
+
+            // Main Chat Area
+            Expanded(
+              child: Column(
+                children: [
+                  // Top bar with history and save buttons
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 212, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.history),
+                          onPressed: () =>
+                              setState(() => _isHistoryOpen = !_isHistoryOpen),
+                          tooltip: 'Chat History',
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.save_outlined),
+                          onPressed: _saveChatSession,
+                          tooltip: 'Save Chat',
+>>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11
                         ),
                       ],
                     ),
                   ),
+<<<<<<< HEAD
                 ),
               ],
+=======
+
+                  // Main chat container
+                  Expanded(
+                    child: Container(
+                      margin:
+                          EdgeInsets.symmetric(horizontal: 212, vertical: 8),
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border:
+                            Border.all(color: Palette.greyColor, width: 1.5),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Palette.blackColor.withValues(alpha: 128),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                        color: Palette.whiteColor,
+                      ),
+                      child: Column(
+                        children: [
+                          // AI Assistant header
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                            color: Palette.whiteColor.withValues(alpha: 128),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Palette.blackColor,
+                                  child: Icon(Icons.smart_toy,
+                                      color: Colors.white),
+                                ),
+                                SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Manong',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Chat messages area
+                          Expanded(
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                itemCount: _messages.length,
+                                itemBuilder: (context, index) {
+                                  return _messages[index];
+                                },
+                              ),
+                            ),
+                          ),
+
+                          // AI typing indicator
+                          if (_isTyping)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Manong is typing...',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+
+                          // Input area
+                          Container(
+                            padding: EdgeInsets.only(
+                              bottom: padding.bottom + 8,
+                              top: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Palette.whiteColor,
+                            ),
+                            child: Row(
+                              children: [
+                                // Plus button
+                                Container(
+                                  margin: EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: Palette.blackColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(Icons.add, color: Colors.white),
+                                    onPressed: () {
+                                      // Handle plus button action here
+                                    },
+                                    padding: EdgeInsets.all(8),
+                                  ),
+                                ),
+
+                                // Text input field
+                                Expanded(
+                                  child: Container(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 16),
+                                    decoration: BoxDecoration(
+                                      color: Palette.greyColor,
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                    child: TextField(
+                                      controller: _textController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Ask me anything...',
+                                        border: InputBorder.none,
+                                      ),
+                                      maxLines: null,
+                                      textInputAction: TextInputAction.send,
+                                      onSubmitted: _handleSubmitted,
+                                    ),
+                                  ),
+                                ),
+
+                                // Send button
+                                SizedBox(width: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Palette.blackColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(Icons.send, color: Colors.white),
+                                    onPressed: () =>
+                                        _handleSubmitted(_textController.text),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+>>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11
             ),
           ),
         ],
@@ -715,6 +668,7 @@ Please use this data to provide informed suggestions.
     );
   }
 }
+<<<<<<< HEAD
 
 class ChatMessage extends StatelessWidget {
   final String text;
@@ -832,3 +786,5 @@ class ChatMessage extends StatelessWidget {
     );
   }
 }
+=======
+>>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11
