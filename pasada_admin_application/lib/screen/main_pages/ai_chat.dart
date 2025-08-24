@@ -2,23 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
-<<<<<<< HEAD
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_gemini/flutter_gemini.dart';
-import 'package:pasada_admin_application/services/database_summary_service.dart';
-import 'package:pasada_admin_application/services/chat_history_service.dart';
-import 'package:pasada_admin_application/services/auth_service.dart';
-import 'package:pasada_admin_application/services/route_traffic_service.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart'; // Add this import for Clipboard
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
-=======
 import 'package:pasada_admin_application/services/gemini_ai_service.dart';
 import 'package:pasada_admin_application/services/chat_session_manager.dart';
 import 'package:pasada_admin_application/services/chat_message_controller.dart';
 import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
->>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11
 
 class AiChat extends StatefulWidget {
   const AiChat({super.key});
@@ -36,6 +25,7 @@ class _AiChatState extends State<AiChat> {
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
   bool _isHistoryOpen = false;
+  List<Map<String, dynamic>> _savedChats = [];
 
   // Services
   late GeminiAIService _aiService;
@@ -68,11 +58,14 @@ class _AiChatState extends State<AiChat> {
     await _sessionManager.loadAuthentication();
     await _sessionManager.loadChatHistory();
 
+    // Load saved chats
+    await _loadSavedChats();
+
     // Add welcome message
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         _messages.add(ChatMessage(
-          text: _aiService.getWelcomeMessage(),
+          text: "Hello! I'm Manong, your AI assistant for Pasada. How can I help you today?",
           isUser: false,
         ));
       });
@@ -147,8 +140,25 @@ class _AiChatState extends State<AiChat> {
   Future<void> _deleteChatSession(String chatId) async {
     try {
       await _sessionManager.deleteChatSession(chatId);
+      // Reload chat history after deletion
+      await _sessionManager.loadChatHistory();
+      setState(() {
+        _savedChats = _sessionManager.savedChats;
+      });
     } catch (e) {
       print('Error deleting chat session: $e');
+    }
+  }
+
+  // Load saved chats from session manager
+  Future<void> _loadSavedChats() async {
+    try {
+      await _sessionManager.loadChatHistory();
+      setState(() {
+        _savedChats = _sessionManager.savedChats;
+      });
+    } catch (e) {
+      print('Error loading saved chats: $e');
     }
   }
 
@@ -190,19 +200,6 @@ class _AiChatState extends State<AiChat> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Page Title (minimal)
-                        Text(
-                          'AI Chat',
-                          style: TextStyle(
-                            fontSize: 26.0,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Palette.darkText : Palette.lightText,
-                            fontFamily: 'Inter',
-                          ),
-                        ),
-                        SizedBox(height: 24.0),
-
-                        // Card-styled container holding history + chat
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
@@ -312,7 +309,12 @@ class _AiChatState extends State<AiChat> {
                                           children: [
                                             IconButton(
                                               icon: Icon(Icons.history),
-                                              onPressed: () => setState(() => _isHistoryOpen = !_isHistoryOpen),
+                                              onPressed: () {
+                                                setState(() => _isHistoryOpen = !_isHistoryOpen);
+                                                if (_isHistoryOpen) {
+                                                  _loadSavedChats();
+                                                }
+                                              },
                                               tooltip: 'Chat History',
                                             ),
                                             SizedBox(width: 4),
@@ -404,7 +406,7 @@ class _AiChatState extends State<AiChat> {
                                                   borderRadius: BorderRadius.circular(24),
                                                 ),
                                                 child: TextField(
-                                                  controller: _messageController,
+                                                  controller: _textController,
                                                   decoration: InputDecoration(
                                                     hintText: 'Ask me anything...',
                                                     hintStyle: TextStyle(
@@ -432,7 +434,7 @@ class _AiChatState extends State<AiChat> {
                                               ),
                                               child: IconButton(
                                                 icon: Icon(Icons.send, color: Colors.white),
-                                                onPressed: () => _handleSubmitted(_messageController.text),
+                                                onPressed: () => _handleSubmitted(_textController.text),
                                               ),
                                             ),
                                           ],
@@ -444,223 +446,12 @@ class _AiChatState extends State<AiChat> {
                               ],
                             ),
                           ),
-<<<<<<< HEAD
-=======
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: _sessionManager.savedChats.length,
-                              itemBuilder: (context, index) {
-                                final chat = _sessionManager.savedChats[index];
-                                return ListTile(
-                                  title: Text(
-                                    chat['title'] ?? 'Untitled Chat',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  subtitle: Text(
-                                    DateTime.parse(chat['created_at'])
-                                        .toString(),
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: Icon(Icons.delete_outline),
-                                    onPressed: () =>
-                                        _deleteChatSession(chat['history_id']),
-                                  ),
-                                  onTap: () =>
-                                      _loadChatSession(chat['history_id']),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : null,
-            ),
-
-            // Main Chat Area
-            Expanded(
-              child: Column(
-                children: [
-                  // Top bar with history and save buttons
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 212, vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.history),
-                          onPressed: () =>
-                              setState(() => _isHistoryOpen = !_isHistoryOpen),
-                          tooltip: 'Chat History',
-                        ),
-                        SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(Icons.save_outlined),
-                          onPressed: _saveChatSession,
-                          tooltip: 'Save Chat',
->>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11
                         ),
                       ],
                     ),
                   ),
-<<<<<<< HEAD
                 ),
               ],
-=======
-
-                  // Main chat container
-                  Expanded(
-                    child: Container(
-                      margin:
-                          EdgeInsets.symmetric(horizontal: 212, vertical: 8),
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border:
-                            Border.all(color: Palette.greyColor, width: 1.5),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Palette.blackColor.withValues(alpha: 128),
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                        color: Palette.whiteColor,
-                      ),
-                      child: Column(
-                        children: [
-                          // AI Assistant header
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 16),
-                            color: Palette.whiteColor.withValues(alpha: 128),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Palette.blackColor,
-                                  child: Icon(Icons.smart_toy,
-                                      color: Colors.white),
-                                ),
-                                SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Manong',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Chat messages area
-                          Expanded(
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                itemCount: _messages.length,
-                                itemBuilder: (context, index) {
-                                  return _messages[index];
-                                },
-                              ),
-                            ),
-                          ),
-
-                          // AI typing indicator
-                          if (_isTyping)
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Manong is typing...',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-
-                          // Input area
-                          Container(
-                            padding: EdgeInsets.only(
-                              bottom: padding.bottom + 8,
-                              top: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Palette.whiteColor,
-                            ),
-                            child: Row(
-                              children: [
-                                // Plus button
-                                Container(
-                                  margin: EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color: Palette.blackColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(Icons.add, color: Colors.white),
-                                    onPressed: () {
-                                      // Handle plus button action here
-                                    },
-                                    padding: EdgeInsets.all(8),
-                                  ),
-                                ),
-
-                                // Text input field
-                                Expanded(
-                                  child: Container(
-                                    padding:
-                                        EdgeInsets.symmetric(horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: Palette.greyColor,
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    child: TextField(
-                                      controller: _textController,
-                                      decoration: InputDecoration(
-                                        hintText: 'Ask me anything...',
-                                        border: InputBorder.none,
-                                      ),
-                                      maxLines: null,
-                                      textInputAction: TextInputAction.send,
-                                      onSubmitted: _handleSubmitted,
-                                    ),
-                                  ),
-                                ),
-
-                                // Send button
-                                SizedBox(width: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Palette.blackColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(Icons.send, color: Colors.white),
-                                    onPressed: () =>
-                                        _handleSubmitted(_textController.text),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
->>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11
             ),
           ),
         ],
@@ -668,123 +459,3 @@ class _AiChatState extends State<AiChat> {
     );
   }
 }
-<<<<<<< HEAD
-
-class ChatMessage extends StatelessWidget {
-  final String text;
-  final bool isUser;
-  final VoidCallback? onRefresh;
-
-  const ChatMessage({
-    super.key,
-    required this.text,
-    required this.isUser,
-    this.onRefresh,
-  });
-
-  void _copyToClipboard(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Message copied to clipboard'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final bool isDark = themeProvider.isDarkMode;
-
-    final Color bubbleColor = isDark ? Palette.darkDivider : Palette.lightDivider;
-    final Color bubbleText = isDark ? Palette.darkText : Palette.lightText;
-
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser) ...[
-            CircleAvatar(
-              backgroundColor: Palette.blackColor,
-              child: Icon(Icons.smart_toy, color: Palette.whiteColor, size: 16),
-            ),
-            SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment:
-                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  constraints: BoxConstraints(
-                    maxWidth: screenWidth * 0.7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    text,
-                    style: TextStyle(
-                      color: bubbleText,
-                    ),
-                  ),
-                ),
-
-                // Action buttons for AI messages
-                if (!isUser) ...[
-                  SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.copy_outlined, size: 16),
-                        onPressed: () => _copyToClipboard(context),
-                        tooltip: 'Copy message',
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      if (onRefresh != null)
-                        IconButton(
-                          icon: Icon(Icons.refresh_outlined, size: 16),
-                          onPressed: onRefresh,
-                          tooltip: 'Regenerate response',
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (isUser) ...[
-            SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: Palette.blackColor,
-              child: Icon(Icons.person, color: Colors.white, size: 16),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-=======
->>>>>>> 731f345f82a184f3495b6f8b6f7ee53762d24f11

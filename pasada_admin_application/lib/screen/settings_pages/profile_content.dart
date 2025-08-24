@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/screen/settings_pages/settings_utils.dart';
-import 'package:bcrypt/bcrypt.dart';
 
 class ProfileContent extends StatefulWidget {
   final bool isDark;
