@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
+import 'package:provider/provider.dart';
 
 class Drivers extends StatefulWidget {
   const Drivers({super.key});
@@ -175,10 +177,183 @@ class _DriversState extends State<Drivers> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final double screenWidth = MediaQuery.of(context)
+        .size
+        .width
+        .clamp(600.0, double.infinity)
+        .toDouble();
+    final double horizontalPadding = screenWidth * 0.1;
+    
     return Scaffold(
-      backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(onFilterPressed: _showFilterDialog),
-      drawer: MyDrawer(),
+      backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          const double minBodyWidth = 900;
+          final double effectiveWidth = constraints.maxWidth < minBodyWidth
+              ? minBodyWidth
+              : constraints.maxWidth;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: minBodyWidth),
+              child: SizedBox(
+                width: effectiveWidth,
+                child: Row(
+                  children: [
+                    // Fixed width sidebar drawer
+                    Container(
+                      width: 280, // Fixed width for the sidebar
+                      child: MyDrawer(),
+                    ),
+                    // Main content area
+                    Expanded(
+                      child: Column(
+                        children: [
+                          // App bar in the main content area
+                          AppBarSearch(onFilterPressed: _showFilterDialog),
+                          // Main content
+                          Expanded(
+                            child: isLoading
+                                ? Center(child: CircularProgressIndicator())
+                                : SingleChildScrollView(
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 24.0,
+                                        horizontal: horizontalPadding,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: isDark
+                                          ? Palette.darkSurface
+                                          : Palette.lightSurface,
+                                      child: Icon(
+                                        Icons.person,
+                                        color: isDark
+                                            ? Palette.darkText
+                                            : Palette.lightText,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12.0),
+                                    Text(
+                                      "Drivers",
+                                      style: TextStyle(
+                                        fontSize: 28.0,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark
+                                            ? Palette.darkText
+                                            : Palette.lightText,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                  ],
+                                ),
+                                const SizedBox(height: 24.0),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0, horizontal: 4.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'All Drivers',
+                                          totalDrivers,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'Online',
+                                          activeDrivers,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'Offline',
+                                          offlineDrivers,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24.0),
+
+                                // View toggle buttons (Grid/List)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Palette.darkCard : Palette.lightCard,
+                                        border: Border.all(
+                                          color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(
+                                              Icons.grid_view,
+                                              size: 18,
+                                              color: isGridView
+                                                  ? (isDark ? Palette.darkText : Palette.lightText)
+                                                  : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                isGridView = true;
+                                              });
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: Icon(
+                                              Icons.view_list,
+                                              size: 18,
+                                              color: !isGridView
+                                                  ? (isDark ? Palette.darkText : Palette.lightText)
+                                                  : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                isGridView = false;
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 16.0),
+
+                                // Driver list with conditional rendering based on view mode
+                                isGridView ? _buildGridView() : _buildListView(),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showDialog(
@@ -191,118 +366,9 @@ class _DriversState extends State<Drivers> {
             ),
           );
         },
-        backgroundColor: Palette.greenColor,
-        child: Icon(Icons.person_add, color: Palette.whiteColor),
+        backgroundColor: Palette.lightPrimary,
+        child: Icon(Icons.person_add, color: Colors.white),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                // Adjust the overall column padding from the start (left side).
-                padding: const EdgeInsets.fromLTRB(24.0, 16.0, 16.0, 16.0),
-                child: Column(
-                  children: [
-                    // Enhanced status summary cards with gradients and icons
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 16.0, horizontal: 8.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.white, Colors.grey.shade100],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(
-                            color: Palette.greyColor.withValues(alpha: 77),
-                            width: 1.0),
-                        borderRadius: BorderRadius.circular(15.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Palette.blackColor.withValues(alpha: 20),
-                            spreadRadius: 0,
-                            blurRadius: 4,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          _buildDriverStatus(
-                            "Drivers Online",
-                            activeDrivers,
-                            Palette.greenColor,
-                            Icons.directions_car_filled,
-                          ),
-                          _buildVerticalDivider(),
-                          _buildDriverStatus(
-                            "Drivers Offline",
-                            offlineDrivers,
-                            Palette.redColor,
-                            Icons.pause_circle_outline,
-                          ),
-                          _buildVerticalDivider(),
-                          _buildDriverStatus(
-                            "Total Drivers",
-                            totalDrivers,
-                            Palette.blackColor,
-                            Icons.group,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24.0),
-
-                    // View toggle buttons (Grid/List)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.grid_view,
-                                  color: isGridView
-                                      ? Palette.blackColor
-                                      : Palette.greyColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    isGridView = true;
-                                  });
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.view_list,
-                                  color: !isGridView
-                                      ? Palette.blackColor
-                                      : Palette.greyColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    isGridView = false;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16.0),
-
-                    // Driver list with conditional rendering based on view mode
-                    isGridView ? _buildGridView() : _buildListView(),
-                  ],
-                ),
-              ),
-            ),
     );
   }
 
@@ -365,6 +431,8 @@ class _DriversState extends State<Drivers> {
 
   // List item for the list view
   Widget _buildDriverListItem(Map<String, dynamic> driver, bool isActive) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
@@ -379,18 +447,13 @@ class _DriversState extends State<Drivers> {
         borderRadius: BorderRadius.circular(12.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Palette.whiteColor,
+            color: isDark ? Palette.darkCard : Palette.lightCard,
             border: Border.all(
-                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+                color: isDark 
+                    ? Palette.darkBorder.withValues(alpha: 77)
+                    : Palette.lightBorder.withValues(alpha: 77), 
+                width: 1.0),
             borderRadius: BorderRadius.circular(12.0),
-            boxShadow: [
-              BoxShadow(
-                color: Palette.blackColor.withValues(alpha: 20),
-                spreadRadius: 0,
-                blurRadius: 4,
-                offset: Offset(0, 1),
-              ),
-            ],
           ),
           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
           child: Row(
@@ -407,14 +470,6 @@ class _DriversState extends State<Drivers> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 15),
-                          blurRadius: 3,
-                          spreadRadius: 0,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: CircleAvatar(
                       radius: 24,
@@ -438,16 +493,6 @@ class _DriversState extends State<Drivers> {
                         color: isActive ? Colors.green : Colors.red,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isActive
-                                ? Colors.green.withValues(alpha: 20)
-                                : Colors.red.withValues(alpha: 20),
-                            spreadRadius: 0,
-                            blurRadius: 2,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
                       ),
                     ),
                   ),
@@ -472,7 +517,7 @@ class _DriversState extends State<Drivers> {
                               fontFamily: 'Inter',
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
-                              color: Palette.blackColor,
+                              color: isDark ? Palette.darkText : Palette.lightText,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -482,7 +527,7 @@ class _DriversState extends State<Drivers> {
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 13.0,
-                              color: Palette.blackColor,
+                              color: isDark ? Palette.darkText : Palette.lightText,
                             ),
                           ),
                         ],
@@ -536,9 +581,7 @@ class _DriversState extends State<Drivers> {
               // Quick action buttons
               Row(
                 children: [
-                  _buildActionButton(Icons.phone, Colors.blue, driver),
-                  _buildActionButton(Icons.message, Colors.orange, driver),
-                  _buildActionButton(Icons.map_outlined, Colors.green, driver),
+                  _buildActionButton(Icons.map_outlined, Palette.blackColor, driver),
                 ],
               ),
             ],
@@ -549,6 +592,8 @@ class _DriversState extends State<Drivers> {
   }
 
   Widget _buildDriverCard(Map<String, dynamic> driver, bool isActive) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
@@ -563,18 +608,13 @@ class _DriversState extends State<Drivers> {
         borderRadius: BorderRadius.circular(15.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Palette.whiteColor,
+            color: isDark ? Palette.darkCard : Palette.lightCard,
             border: Border.all(
-                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+                color: isDark 
+                    ? Palette.darkBorder.withValues(alpha: 77)
+                    : Palette.lightBorder.withValues(alpha: 77),
+                width: 1.0),
             borderRadius: BorderRadius.circular(15.0),
-            boxShadow: [
-              BoxShadow(
-                color: Palette.blackColor.withValues(alpha: 20),
-                spreadRadius: 0,
-                blurRadius: 4,
-                offset: Offset(0, 1),
-              ),
-            ],
           ),
           padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
           child: Stack(
@@ -589,16 +629,6 @@ class _DriversState extends State<Drivers> {
                   decoration: BoxDecoration(
                     color: isActive ? Colors.green : Colors.red,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: isActive
-                            ? Colors.green.withValues(alpha: 20)
-                            : Colors.red.withValues(alpha: 20),
-                        spreadRadius: 0,
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -614,14 +644,6 @@ class _DriversState extends State<Drivers> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 15),
-                          blurRadius: 3,
-                          spreadRadius: 0,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: CircleAvatar(
                       radius: 28,
@@ -645,17 +667,20 @@ class _DriversState extends State<Drivers> {
                             fontFamily: 'Inter',
                             fontSize: 18.0,
                             fontWeight: FontWeight.bold,
-                            color: Palette.blackColor,
+                            color: isDark ? Palette.darkText : Palette.lightText,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8.0),
-                        _buildDriverInfoRow(
-                            Icons.badge_outlined, "ID: ${driver['driver_id']}"),
-                        _buildDriverInfoRow(
-                            Icons.phone_android, "${driver['driver_number']}"),
+                        _buildDriverInfoRow(Icons.badge_outlined,
+                            "ID: ${driver['driver_id']}",
+                            textColor: isDark ? Palette.darkText : Palette.lightText),
+                        _buildDriverInfoRow(Icons.phone_android,
+                            "${driver['driver_number']}",
+                            textColor: isDark ? Palette.darkText : Palette.lightText),
                         _buildDriverInfoRow(Icons.directions_car_outlined,
-                            "Vehicle: ${driver['vehicle_id']}"),
+                            "Vehicle: ${driver['vehicle_id']}",
+                            textColor: isDark ? Palette.darkText : Palette.lightText),
                         _buildDriverInfoRow(
                           isActive
                               ? Icons.play_circle_outline
@@ -675,10 +700,7 @@ class _DriversState extends State<Drivers> {
                 bottom: 8,
                 child: Row(
                   children: [
-                    _buildActionButton(Icons.phone, Colors.blue, driver),
-                    _buildActionButton(Icons.message, Colors.orange, driver),
-                    _buildActionButton(
-                        Icons.map_outlined, Colors.green, driver),
+                    _buildActionButton(Icons.map_outlined, Palette.blackColor, driver),
                   ],
                 ),
               ),
@@ -692,22 +714,16 @@ class _DriversState extends State<Drivers> {
   // Helper widget for action buttons
   Widget _buildActionButton(
       IconData icon, Color color, Map<String, dynamic> driver) {
+    final bool isMap = icon == Icons.map_outlined;
     return Container(
       margin: EdgeInsets.only(left: 4),
       decoration: BoxDecoration(
-        color: color,
+        color: isMap ? Palette.lightSurface : color,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 20),
-            blurRadius: 3,
-            spreadRadius: 0,
-            offset: Offset(0, 1),
-          ),
-        ],
+        border: isMap ? Border.all(color: Palette.blackColor, width: 1.5) : null,
       ),
       child: IconButton(
-        icon: Icon(icon, size: 18, color: Colors.white),
+        icon: Icon(icon, size: 18, color: isMap ? Palette.blackColor : Colors.white),
         onPressed: () {
           // Action button functionality for map icon
           if (icon == Icons.map_outlined) {
@@ -729,6 +745,8 @@ class _DriversState extends State<Drivers> {
 
   // Helper widget for driver info rows with icons
   Widget _buildDriverInfoRow(IconData icon, String text, {Color? textColor}) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),
       child: Row(
@@ -736,7 +754,7 @@ class _DriversState extends State<Drivers> {
           Icon(
             icon,
             size: 14,
-            color: Palette.blackColor,
+            color: isDark ? Palette.darkText : Palette.lightText,
           ),
           SizedBox(width: 4),
           Expanded(
@@ -745,7 +763,7 @@ class _DriversState extends State<Drivers> {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13.0,
-                color: textColor ?? Palette.blackColor,
+                color: textColor ?? (isDark ? Palette.darkText : Palette.lightText),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -755,59 +773,42 @@ class _DriversState extends State<Drivers> {
     );
   }
 
-  Widget _buildDriverStatus(
-      String title, int count, Color countColor, IconData icon) {
-    return Expanded(
-      child: SizedBox(
-        height: 100.0,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: countColor, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  count.toString(),
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 28.0,
-                    fontWeight: FontWeight.bold,
-                    color: countColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16.0,
-                fontWeight: FontWeight.w500,
-                color: Palette.blackColor.withValues(alpha: 179),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Helper to create a vertical divider between status widgets.
-  Widget _buildVerticalDivider() {
-    return Container(
-      height: 70.0,
-      width: 1.0,
-      color: Palette.blackColor.withValues(alpha: 40),
-    );
-  }
+  
 
   // Helper method to capitalize first letter
   String _capitalizeFirstLetter(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
+  }
+
+  // Compact metric item: uppercase label above value (Fleet-like)
+  Widget _buildCompactMetric(String label, int value, Color valueColor) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            letterSpacing: 0.6,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          ),
+        ),
+        const SizedBox(height: 8.0),
+        Text(
+          value.toString(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 22.0,
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
   }
 }

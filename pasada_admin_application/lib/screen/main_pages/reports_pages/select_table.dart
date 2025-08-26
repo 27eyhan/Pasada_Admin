@@ -36,23 +36,42 @@ class _SelectTableState extends State<SelectTable> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(),
-      drawer: MyDrawer(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: List.generate(
-              tableNames.length,
-              (index) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: _buildContainer(context, tableNames[index]),
-                );
-              },
+      body: Row(
+        children: [
+          // Fixed width sidebar drawer
+          Container(
+            width: 280, // Fixed width for the sidebar
+            child: MyDrawer(),
+          ),
+          // Main content area
+          Expanded(
+            child: Column(
+              children: [
+                // App bar in the main content area
+                AppBarSearch(),
+                // Main content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: List.generate(
+                          tableNames.length,
+                          (index) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: _buildContainer(context, tableNames[index]),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

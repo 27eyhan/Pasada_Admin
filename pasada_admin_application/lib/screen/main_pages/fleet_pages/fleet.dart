@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/filter_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
+import 'package:provider/provider.dart';
 
 class Fleet extends StatefulWidget {
   const Fleet({super.key});
@@ -142,15 +144,11 @@ class _FleetState extends State<Fleet> {
       if (mounted) {
         setState(() {
           vehicleData = listData.cast<Map<String, dynamic>>();
-
-          // Sort vehicleData by vehicle_id
           vehicleData.sort((a, b) {
             var aId = a['vehicle_id'];
             var bId = b['vehicle_id'];
-            // Handle null values
             if (aId == null) return 1;
             if (bId == null) return -1;
-            // Numeric sort
             int? aNum = int.tryParse(aId.toString());
             int? bNum = int.tryParse(bId.toString());
             if (aNum != null && bNum != null) {
@@ -166,8 +164,6 @@ class _FleetState extends State<Fleet> {
           _offlineVehicles = offlineCount;
           totalVehicles = totalCount;
           isLoading = false;
-
-          // Apply any existing filters
           _applyFilters();
         });
       }
@@ -202,10 +198,194 @@ class _FleetState extends State<Fleet> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final double screenWidth = MediaQuery.of(context)
+        .size
+        .width
+        .clamp(600.0, double.infinity)
+        .toDouble();
+    final double horizontalPadding = screenWidth * 0.1;
+    
     return Scaffold(
-      backgroundColor: Palette.whiteColor,
-      appBar: AppBarSearch(onFilterPressed: _showFilterDialog),
-      drawer: MyDrawer(),
+      backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          const double minBodyWidth = 900;
+          final double effectiveWidth = constraints.maxWidth < minBodyWidth
+              ? minBodyWidth
+              : constraints.maxWidth;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: minBodyWidth),
+              child: SizedBox(
+                width: effectiveWidth,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 280,
+                      child: MyDrawer(),
+                    ),
+                    // Main content area
+                    Expanded(
+                      child: Column(
+                        children: [
+                          // App bar in the main content area
+                          AppBarSearch(onFilterPressed: _showFilterDialog),
+                          // Main content
+                          Expanded(
+                            child: isLoading
+                                ? Center(child: CircularProgressIndicator())
+                                : SingleChildScrollView(
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 24.0,
+                                        horizontal: horizontalPadding,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: isDark
+                                          ? Palette.darkSurface
+                                          : Palette.lightSurface,
+                                      child: Icon(
+                                        Icons.directions_bus,
+                                        color: isDark
+                                            ? Palette.darkText
+                                            : Palette.lightText,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12.0),
+                                    Text(
+                                      "Fleet",
+                                      style: TextStyle(
+                                        fontSize: 28.0,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark
+                                            ? Palette.darkText
+                                            : Palette.lightText,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                  ],
+                                ),
+                                const SizedBox(height: 24.0),
+                                // Compact metrics row (Resend Audience style)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0, horizontal: 4.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'All Vehicles',
+                                          totalVehicles,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'Online',
+                                          _onlineVehicles,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'Idling',
+                                          _idlingVehicles,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'Driving',
+                                          _drivingVehicles,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _buildCompactMetric(
+                                          'Offline',
+                                          _offlineVehicles,
+                                          isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24.0),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Palette.darkCard : Palette.lightCard,
+                                      border: Border.all(
+                                        color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.grid_view,
+                                            size: 18,
+                                            color: isGridView
+                                                ? (isDark ? Palette.darkText : Palette.lightText)
+                                                : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              isGridView = true;
+                                            });
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.view_list,
+                                            size: 18,
+                                            color: !isGridView
+                                                ? (isDark ? Palette.darkText : Palette.lightText)
+                                                : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              isGridView = false;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16.0),
+                                isGridView ? _buildGridView() : _buildListView(),
+
+                                const SizedBox(height: 8.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showDialog(
@@ -213,116 +393,13 @@ class _FleetState extends State<Fleet> {
             builder: (context) => AddVehicleDialog(
               supabase: supabase,
               onVehicleActionComplete:
-                  fetchVehicleData, // Refresh the vehicle list when a new vehicle is added
+                  fetchVehicleData,
             ),
           );
         },
-        backgroundColor: Palette.greenColor,
-        child: Icon(Icons.directions_car_outlined, color: Palette.whiteColor),
+        backgroundColor: Palette.lightPrimary,
+        child: Icon(Icons.directions_car_outlined, color: Colors.white),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24.0, 16.0, 16.0, 16.0),
-                child: Column(
-                  children: [
-                    // Enhanced status summary cards with gradients and icons
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 16.0, horizontal: 8.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.white, Colors.grey.shade100],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(
-                            color: Palette.greyColor.withValues(alpha: 77),
-                            width: 1.0),
-                        borderRadius: BorderRadius.circular(15.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Palette.blackColor.withValues(alpha: 20),
-                            spreadRadius: 0,
-                            blurRadius: 4,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildVehicleStatus("Online", _onlineVehicles,
-                              Palette.greenColor, Icons.wifi),
-                          _buildVerticalDivider(),
-                          _buildVehicleStatus("Idling", _idlingVehicles,
-                              Palette.orangeColor, Icons.hourglass_bottom),
-                          _buildVerticalDivider(),
-                          _buildVehicleStatus("Driving", _drivingVehicles,
-                              Palette.greenColor, Icons.directions_car),
-                          _buildVerticalDivider(),
-                          _buildVehicleStatus("Offline", _offlineVehicles,
-                              Palette.redColor, Icons.wifi_off),
-                          _buildVerticalDivider(),
-                          _buildVehicleStatus("Total", totalVehicles,
-                              Palette.blackColor, Icons.directions_bus),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24.0),
-
-                    // View toggle buttons (Grid/List)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.grid_view,
-                                  color: isGridView
-                                      ? Palette.blackColor
-                                      : Palette.greyColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    isGridView = true;
-                                  });
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.view_list,
-                                  color: !isGridView
-                                      ? Palette.blackColor
-                                      : Palette.greyColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    isGridView = false;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16.0),
-
-                    // Vehicle list with conditional rendering based on view mode
-                    isGridView ? _buildGridView() : _buildListView(),
-                  ],
-                ),
-              ),
-            ),
     );
   }
 
@@ -331,9 +408,9 @@ class _FleetState extends State<Fleet> {
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount;
-        if (constraints.maxWidth >= 1200) {
+        if (constraints.maxWidth >= 900) {
           crossAxisCount = 3;
-        } else if (constraints.maxWidth >= 800) {
+        } else if (constraints.maxWidth >= 600) {
           crossAxisCount = 2;
         } else {
           crossAxisCount = 1;
@@ -357,7 +434,6 @@ class _FleetState extends State<Fleet> {
     );
   }
 
-  // List view implementation
   Widget _buildListView() {
     return ListView.builder(
       shrinkWrap: true,
@@ -373,7 +449,6 @@ class _FleetState extends State<Fleet> {
     );
   }
 
-  // Get vehicle status from driver data
   String _getVehicleStatus(Map<String, dynamic> vehicle) {
     String vehicleStatus = 'Offline';
     final driverData = vehicle['driverTable'];
@@ -395,36 +470,26 @@ class _FleetState extends State<Fleet> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'online':
-        return Palette.greenColor;
+        return Palette.lightSuccess;
       case 'driving':
-        return Palette.greenColor;
+        return Palette.lightSuccess;
       case 'idling':
-        return Palette.orangeColor;
+        return Palette.lightWarning;
       default:
-        return Palette.redColor;
+        return Palette.lightError;
     }
   }
 
-  // Get status icon based on vehicle status
-  IconData _getStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'online':
-        return Icons.wifi;
-      case 'driving':
-        return Icons.directions_car;
-      case 'idling':
-        return Icons.hourglass_bottom;
-      default:
-        return Icons.wifi_off;
-    }
-  }
+  
 
   // Vehicle card for grid view
   Widget _buildVehicleCard(Map<String, dynamic> vehicle) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final status = _getVehicleStatus(vehicle);
     _isVehicleActive(status);
     final statusColor = _getStatusColor(status);
-    final statusIcon = _getStatusIcon(status);
+    // Note: icon is used in list view; grid card shows a minimal status chip
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -441,26 +506,20 @@ class _FleetState extends State<Fleet> {
             },
           );
         },
-        borderRadius: BorderRadius.circular(15.0),
+        borderRadius: BorderRadius.circular(8.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Palette.whiteColor,
+            color: isDark ? Palette.darkCard : Palette.lightCard,
             border: Border.all(
-                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
-            borderRadius: BorderRadius.circular(15.0),
-            boxShadow: [
-              BoxShadow(
-                color: Palette.blackColor.withValues(alpha: 20),
-                spreadRadius: 0,
-                blurRadius: 4,
-                offset: Offset(0, 1),
-              ),
-            ],
+                color: isDark 
+                    ? Palette.darkBorder.withValues(alpha: 77)
+                    : Palette.lightBorder.withValues(alpha: 77), 
+                width: 1.0),
+            borderRadius: BorderRadius.circular(8.0),
           ),
-          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
+          padding: const EdgeInsets.all(12.0),
           child: Stack(
             children: [
-              // Status indicator dot
               Positioned(
                 top: 8,
                 right: 8,
@@ -470,79 +529,69 @@ class _FleetState extends State<Fleet> {
                   decoration: BoxDecoration(
                     color: statusColor,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: statusColor.withValues(alpha: 20),
-                        spreadRadius: 0,
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
                   ),
                 ),
               ),
-
-              Row(
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Enhanced avatar with gradient background
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF38CE7C), Color(0xFFDDCC34)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0xFF38CE7C).withValues(alpha: 51),
-                          blurRadius: 3,
-                          spreadRadius: 0,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
+                  // Plate number as large title
+                  Text(
+                    "${vehicle['plate_number'] ?? 'N/A'}",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Palette.darkText : Palette.lightText,
                     ),
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.transparent,
-                      child: Image.asset(
-                        'assets/PasadaLogoWithoutText.png',
-                        width: 48,
-                        height: 52,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 16.0),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Plate: ${vehicle['plate_number'] ?? 'N/A'}",
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 18.0,
-                            fontWeight: FontWeight.bold,
-                            color: Palette.blackColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8.0),
-                        _buildVehicleInfoRow(
-                            Icons.tag, "ID: ${vehicle['vehicle_id'] ?? 'N/A'}"),
-                        _buildVehicleInfoRow(Icons.group,
-                            "Capacity: ${vehicle['passenger_capacity'] ?? 'N/A'}"),
-                        _buildVehicleInfoRow(Icons.route,
-                            "Route ID: ${vehicle['route_id'] ?? 'N/A'}"),
-                        _buildVehicleInfoRow(
-                          statusIcon,
-                          "Status: ${_capitalizeFirstLetter(status)}",
-                          textColor: statusColor,
-                        ),
-                      ],
+                  const SizedBox(height: 6.0),
+                  // vehicle_id
+                  Text(
+                    "Fleet ID:${vehicle['vehicle_id'] ?? 'N/A'}",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.0,
+                      color: isDark
+                          ? Palette.darkTextSecondary
+                          : Palette.lightTextSecondary,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4.0),
+                  // route_id
+                  Text(
+                    "Route: ${vehicle['route_id'] ?? 'N/A'}",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.0,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4.0),
+                  // passenger_capacity
+                  Text(
+                    "Seats: ${vehicle['passenger_capacity'] ?? 'N/A'}",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.0,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6.0),
+                  Text(
+                    _capitalizeFirstLetter(status),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13.0,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -555,10 +604,12 @@ class _FleetState extends State<Fleet> {
 
   // List item for the list view
   Widget _buildVehicleListItem(Map<String, dynamic> vehicle) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final status = _getVehicleStatus(vehicle);
     _isVehicleActive(status);
     final statusColor = _getStatusColor(status);
-    final statusIcon = _getStatusIcon(status);
+    // Icon mapping available via _getStatusIcon(status) if needed for future UI
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -578,26 +629,21 @@ class _FleetState extends State<Fleet> {
         borderRadius: BorderRadius.circular(12.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Palette.whiteColor,
+            color: isDark ? Palette.darkCard : Palette.lightCard,
             border: Border.all(
-                color: Palette.greyColor.withValues(alpha: 77), width: 1.0),
+                color: isDark 
+                    ? Palette.darkBorder.withValues(alpha: 77)
+                    : Palette.lightBorder.withValues(alpha: 77), 
+                width: 1.0),
             borderRadius: BorderRadius.circular(12.0),
-            boxShadow: [
-              BoxShadow(
-                color: Palette.blackColor.withValues(alpha: 20),
-                spreadRadius: 0,
-                blurRadius: 4,
-                offset: Offset(0, 1),
-              ),
-            ],
           ),
-          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 18.0),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Avatar with status indicator
               Stack(
                 children: [
-                  // Avatar
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
@@ -606,126 +652,80 @@ class _FleetState extends State<Fleet> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0xFF38CE7C).withValues(alpha: 51),
-                          blurRadius: 3,
-                          spreadRadius: 0,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: CircleAvatar(
-                      radius: 24,
+                      radius: 22,
                       backgroundColor: Colors.transparent,
-                      child: Image.asset(
-                        'assets/PasadaLogoWithoutText.png',
-                        width: 24,
-                        height: 24,
-                        fit: BoxFit.contain,
-                      ),
+                      child: Icon(Icons.directions_bus,
+                          color: isDark ? Palette.darkText : Palette.lightText,
+                          size: 20),
                     ),
                   ),
-
-                  // Status indicator
                   Positioned(
                     bottom: 0,
                     right: 0,
                     child: Container(
-                      width: 12,
-                      height: 12,
+                      width: 10,
+                      height: 10,
                       decoration: BoxDecoration(
                         color: statusColor,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: statusColor.withValues(alpha: 20),
-                            spreadRadius: 0,
-                            blurRadius: 2,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-
               const SizedBox(width: 16.0),
-
-              // Vehicle info
+              // Text block
               Expanded(
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Plate number and vehicle ID
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "${vehicle['plate_number'] ?? 'N/A'}",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.bold,
-                              color: Palette.blackColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4.0),
-                          Text(
-                            "ID: ${vehicle['vehicle_id'] ?? 'N/A'}",
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.0,
-                              color: Palette.blackColor,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      "${vehicle['plate_number'] ?? 'N/A'}",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-
-                    // Capacity
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildVehicleInfoRow(Icons.group,
-                              "${vehicle['passenger_capacity'] ?? 'N/A'} seats"),
-                        ],
+                    const SizedBox(height: 2.0),
+                    Text(
+                      "Fleet ID:${vehicle['vehicle_id'] ?? 'N/A'}",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.0,
+                        color: isDark
+                            ? Palette.darkTextSecondary
+                            : Palette.lightTextSecondary,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-
-                    // Route
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildVehicleInfoRow(Icons.route,
-                              "Route ${vehicle['route_id'] ?? 'N/A'}"),
-                        ],
+                    const SizedBox(height: 4.0),
+                    Text(
+                      "${vehicle['passenger_capacity'] ?? 'N/A'} seats, Route ${vehicle['route_id'] ?? 'N/A'}",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.0,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                       ),
-                    ),
-
-                    // Status
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildVehicleInfoRow(
-                            statusIcon,
-                            "Status: ${_capitalizeFirstLetter(status)}",
-                            textColor: statusColor,
-                          ),
-                        ],
-                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 12.0),
+              // Status at the end
+              Text(
+                _capitalizeFirstLetter(status),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13.0,
+                  fontWeight: FontWeight.w700,
+                  color: statusColor,
                 ),
               ),
             ],
@@ -735,89 +735,46 @@ class _FleetState extends State<Fleet> {
     );
   }
 
-  // Helper widget for vehicle info rows with icons
-  Widget _buildVehicleInfoRow(IconData icon, String text, {Color? textColor}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: Palette.blackColor,
-          ),
-          SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.0,
-                color: textColor ?? Palette.blackColor,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
-  // Enhanced status display with icons
-  Widget _buildVehicleStatus(
-      String title, int count, Color countColor, IconData icon) {
-    return Expanded(
-      child: SizedBox(
-        height: 100.0,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: countColor, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  count.toString(),
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
-                    color: countColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14.0,
-                fontWeight: FontWeight.w500,
-                color: Palette.blackColor.withValues(alpha: 179),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Helper to create a vertical divider between status widgets.
-  Widget _buildVerticalDivider() {
-    return Container(
-      height: 70.0,
-      width: 1.0,
-      color: Palette.blackColor.withValues(alpha: 40),
-      margin: const EdgeInsets.symmetric(horizontal: 2.0),
-    );
-  }
+  
 
   // Helper method to capitalize first letter
   String _capitalizeFirstLetter(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
   }
+
+  // Compact metric item: uppercase label above value (Resend-like)
+  Widget _buildCompactMetric(String label, int value, Color valueColor) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            letterSpacing: 0.6,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          ),
+        ),
+        const SizedBox(height: 8.0),
+        Text(
+          value.toString(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 22.0,
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Removed vertical divider to align with the clean Resend metric layout
 }

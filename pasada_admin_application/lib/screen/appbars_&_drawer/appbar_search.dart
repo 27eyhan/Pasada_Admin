@@ -1,317 +1,224 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
-import 'package:pasada_admin_application/screen/settings_pages/profilepopup.dart';
-import 'package:pasada_admin_application/screen/settings_pages/notifpopup.dart';
-import 'package:pasada_admin_application/screen/settings_pages/securitypopup.dart';
-import 'package:pasada_admin_application/screen/settings_pages/updatespopup.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 typedef FilterCallback = void Function();
+typedef SettingsTabCallback = void Function(int tabIndex);
 
 class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
   @override
   final Size preferredSize;
   final FilterCallback? onFilterPressed;
+  final SettingsTabCallback? onSettingsTabRequested;
 
-  const AppBarSearch({super.key, this.onFilterPressed})
-      : preferredSize = const Size.fromHeight(70.0);
+  const AppBarSearch({
+    super.key, 
+    this.onFilterPressed,
+    this.onSettingsTabRequested,
+  }) : preferredSize = const Size.fromHeight(55.0);
 
   @override
   _AppBarSearchState createState() => _AppBarSearchState();
 }
 
 class _AppBarSearchState extends State<AppBarSearch> {
-  late TextEditingController _searchController;
-  bool _showClearButton = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController();
-    _searchController.addListener(_onSearchChanged);
-  }
-
-  @override
-  void dispose() {
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged() {
-    setState(() {
-      _showClearButton = _searchController.text.isNotEmpty;
-    });
-  }
-
-  Widget _buildMergedNotificationsAndMessages() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Palette.blackColor, width: 1.0),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.notifications,
-                size: 30.0, color: Palette.blackColor),
-            onPressed: () {
-              // Add your notifications action here.
-            },
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            splashRadius: 20.0,
-          ),
-          Container(
-            height: 24.0,
-            width: 1.0,
-            color: Palette.blackColor,
-          ),
-          IconButton(
-            icon: const Icon(Icons.message,
-                size: 30.0, color: Palette.blackColor),
-            onPressed: () {
-              // Add your messages action here.
-            },
-            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-            splashRadius: 20.0,
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return PreferredSize(
       preferredSize: widget.preferredSize,
       child: Container(
-        color: Palette.whiteColor,
+        decoration: BoxDecoration(
+          color: isDark ? Palette.darkSurface : Palette.lightSurface,
+          border: Border(
+            bottom: BorderSide(
+              color: isDark ? Palette.darkBorder : Palette.lightBorder,
+              width: 1.0,
+            ),
+          ),
+        ),
         padding: const EdgeInsets.only(
-            top: 16.0, left: 8.0, bottom: 8.0, right: 8.0),
+            top: 8.0, left: 8.0, bottom: 8.0, right: 26.0),
         child: Row(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Palette.blackColor, width: 1.0),
-              ),
-              child: IconButton(
-                icon: Icon(Icons.menu, size: 30.0, color: Palette.blackColor),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-                padding: const EdgeInsets.all(8.0),
-                splashRadius: 20.0,
-              ),
-            ),
-            const SizedBox(width: 8.0),
-            Flexible(
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.55,
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search for Modern Jeepney ID',
-                    hintStyle: TextStyle(
-                      color: Palette.blackColor.withValues(alpha: 128),
-                      fontSize: 16.0,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Palette.greyColor,
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 8.0,
-                      horizontal: 10.0,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Palette.blackColor,
-                      size: 28.0,
-                    ),
-                    suffixIcon: _showClearButton
-                        ? IconButton(
-                            icon: Icon(Icons.clear,
-                                color: Palette.blackColor.withAlpha(128)),
-                            onPressed: () {
-                              _searchController.clear();
-                            },
-                            splashRadius: 18.0,
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10.0),
+            const Spacer(),
             TextButton(
+              onPressed: widget.onFilterPressed,
               style: TextButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                backgroundColor: Palette.blackColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                minimumSize: const Size(140, 50),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                foregroundColor: isDark ? Palette.darkText : Palette.lightText,
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.filter_list, size: 18.0, color: isDark ? Palette.darkText : Palette.lightText),
+                  const SizedBox(width: 6.0),
+                  Text(
+                    'Filter',
+                    style: TextStyle(
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                      fontSize: 14.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12.0),
+            // Profile button styled like "Docs" link
+            TextButton(
               onPressed: () {
-                // Implement your search action here.
+                _showProfileMenu(context);
               },
-              child: Text(
-                'Search',
-                style: TextStyle(
-                  color: Palette.whiteColor,
-                  fontSize: 16.0,
-                ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                foregroundColor: isDark ? Palette.darkText : Palette.lightText,
               ),
-            ),
-            const SizedBox(width: 10.0),
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Palette.blackColor, width: 1.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.account_circle, size: 18.0, color: isDark ? Palette.darkText : Palette.lightText),
+                  const SizedBox(width: 6.0),
+                  Text(
+                    'Profile',
+                    style: TextStyle(
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                      fontSize: 14.0,
+                    ),
+                  ),
+                ],
               ),
-              child: IconButton(
-                icon: Icon(Icons.filter_list,
-                    size: 30.0, color: Palette.blackColor),
-                onPressed: widget.onFilterPressed,
-                padding: const EdgeInsets.all(8.0),
-                splashRadius: 20.0,
-              ),
-            ),
-            const SizedBox(width: 220.0),
-            _buildMergedNotificationsAndMessages(),
-            const SizedBox(width: 220.0),
-            PopupMenuButton<String>(
-              offset: const Offset(0, 50),
-              child: Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Palette.blackColor, width: 1.0),
-                ),
-                child: Icon(Icons.account_circle,
-                    size: 30.0, color: Palette.blackColor),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                side: BorderSide(color: Palette.blackColor, width: 1.0),
-              ),
-              color: Palette.whiteColor,
-              onSelected: (String result) async {
-                switch (result) {
-                  case 'profile':
-                    final currentAdminID = AuthService().currentAdminID;
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        if (currentAdminID != null) {
-                          return ProfilePopup();
-                        } else {
-                          return AlertDialog(
-                            title: Text("Error"),
-                            content: Text(
-                                "Could not load profile. Admin ID missing."),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text("OK"))
-                            ],
-                          );
-                        }
-                      },
-                    );
-                    break;
-                  case 'notification':
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return NotifPopUp();
-                      },
-                    );
-                    break;
-                  case 'security':
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return SecurityPopUp();
-                      },
-                    );
-                    break;
-                  case 'updates':
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return UpdatesPopup();
-                      },
-                    );
-                    break;
-                  case 'logout':
-                    await AuthService().clearAdminID();
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/login',
-                      (Route<dynamic> route) => false,
-                    );
-                    break;
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'profile',
-                  child: Text('Profile'),
-                ),
-                const PopupMenuItem<String>(
-                  height: 1,
-                  padding: EdgeInsets.zero,
-                  enabled: false,
-                  child: Divider(color: Palette.greyColor, height: 1),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'notification',
-                  child: Text('Notification'),
-                ),
-                const PopupMenuItem<String>(
-                  height: 1,
-                  padding: EdgeInsets.zero,
-                  enabled: false,
-                  child: Divider(color: Palette.greyColor, height: 1),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'security',
-                  child: Text('Security'),
-                ),
-                const PopupMenuItem<String>(
-                  height: 1,
-                  padding: EdgeInsets.zero,
-                  enabled: false,
-                  child: Divider(color: Palette.greyColor, height: 1),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'updates',
-                  child: Text('Updates'),
-                ),
-                const PopupMenuItem<String>(
-                  height: 1,
-                  padding: EdgeInsets.zero,
-                  enabled: false,
-                  child: Divider(color: Palette.greyColor, height: 1),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'logout',
-                  child:
-                      Text('Logout', style: TextStyle(color: Palette.redColor)),
-                ),
-              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _showProfileMenu(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDark = themeProvider.isDarkMode;
+    
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        MediaQuery.of(context).size.width - 220,
+        55,
+        15,
+        0,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      elevation: 4.0,
+      color: isDark ? Palette.darkSurface : Palette.lightSurface,
+      constraints: const BoxConstraints(
+        minWidth: 160.0,
+        maxWidth: 200.0,
+      ),
+      items: [
+        PopupMenuItem<String>(
+          value: 'profile',
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text('Profile', style: TextStyle(fontSize: 14.0)),
+        ),
+        PopupMenuItem<String>(
+          height: 1,
+          padding: EdgeInsets.zero,
+          enabled: false,
+          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
+        ),
+        PopupMenuItem<String>(
+          value: 'notification',
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text('Notification', style: TextStyle(fontSize: 14.0)),
+        ),
+        PopupMenuItem<String>(
+          height: 1,
+          padding: EdgeInsets.zero,
+          enabled: false,
+          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
+        ),
+        PopupMenuItem<String>(
+          value: 'security',
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text('Security', style: TextStyle(fontSize: 14.0)),
+        ),
+        PopupMenuItem<String>(
+          height: 1,
+          padding: EdgeInsets.zero,
+          enabled: false,
+          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
+        ),
+        PopupMenuItem<String>(
+          value: 'updates',
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text('Updates', style: TextStyle(fontSize: 14.0)),
+        ),
+        PopupMenuItem<String>(
+          height: 1,
+          padding: EdgeInsets.zero,
+          enabled: false,
+          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
+        ),
+        PopupMenuItem<String>(
+          value: 'logout',
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text('Logout', style: TextStyle(color: Palette.lightError, fontSize: 14.0)),
+        ),
+      ],
+    ).then((String? result) async {
+      if (result != null) {
+        switch (result) {
+          case 'profile':
+            // Navigate to settings with profile tab (index 0)
+            if (widget.onSettingsTabRequested != null) {
+              widget.onSettingsTabRequested!(0);
+            } else {
+              // Fallback: navigate to settings page with profile tab
+              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 0});
+            }
+            break;
+          case 'notification':
+            // Navigate to settings with notifications tab (index 1)
+            if (widget.onSettingsTabRequested != null) {
+              widget.onSettingsTabRequested!(1);
+            } else {
+              // Fallback: navigate to settings page with notifications tab
+              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 1});
+            }
+            break;
+          case 'security':
+            // Navigate to settings with security tab (index 3)
+            if (widget.onSettingsTabRequested != null) {
+              widget.onSettingsTabRequested!(3);
+            } else {
+              // Fallback: navigate to settings page with security tab
+              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 3});
+            }
+            break;
+          case 'updates':
+            // Navigate to settings with updates tab (index 2)
+            if (widget.onSettingsTabRequested != null) {
+              widget.onSettingsTabRequested!(2);
+            } else {
+              // Fallback: navigate to settings page with updates tab
+              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 2});
+            }
+            break;
+          case 'logout':
+            await AuthService().clearAdminID();
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/login',
+              (Route<dynamic> route) => false,
+            );
+            break;
+        }
+      }
+    });
   }
 }

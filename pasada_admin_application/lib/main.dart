@@ -13,10 +13,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pasada_admin_application/maps/google_maps_api.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: "assets/.env");
 
   // Initialize AuthService and load admin ID
   final authService = AuthService();
@@ -49,31 +51,52 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Pasada',
-        initialRoute: initialRoute,
-        routes: {
-          '/dashboard': (context) => Dashboard(),
-          '/login': (context) => LoginSignup(),
-          '/fleet': (context) => Fleet(),
-          '/drivers': (context) => Drivers(),
-          '/reports': (context) => Reports(),
-          '/ai_chat': (context) => AiChat(),
-          '/settings': (context) => Settings(),
-          '/data_tables': (context) => DataTables(),
-          '/select_table': (context) => SelectTable(),
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Pasada',
+            theme: themeProvider.currentTheme,
+            initialRoute: initialRoute,
+            routes: {
+              '/dashboard': (context) => Dashboard(),
+              '/login': (context) => LoginSignup(),
+              '/fleet': (context) => Fleet(),
+              '/drivers': (context) => Drivers(),
+              '/reports': (context) => Reports(),
+              '/ai_chat': (context) => AiChat(),
+              '/settings': (context) => Settings(),
+              '/data_tables': (context) => DataTables(),
+              '/select_table': (context) => SelectTable(),
+            },
+            onGenerateRoute: (settings) {
+              if (settings.name == '/dashboard') {
+                final args = settings.arguments as Map<String, dynamic>?;
+                if (args != null) {
+                  return MaterialPageRoute(
+                    builder: (context) => Dashboard(driverLocationArgs: args),
+                  );
+                }
+              }
+              
+              // Handle settings with specific tab index
+              if (settings.name == '/settings') {
+                final args = settings.arguments as Map<String, dynamic>?;
+                if (args != null && args.containsKey('tabIndex')) {
+                  final tabIndex = args['tabIndex'] as int;
+                  return MaterialPageRoute(
+                    builder: (context) => Settings(initialTabIndex: tabIndex),
+                  );
+                }
+              }
+              
+              return null;
+            },
+          );
         },
-        onGenerateRoute: (settings) {
-          if (settings.name == '/dashboard') {
-            final args = settings.arguments as Map<String, dynamic>?;
-            if (args != null) {
-              return MaterialPageRoute(
-                builder: (context) => Dashboard(driverLocationArgs: args),
-              );
-            }
-          }
-          return null;
-        });
+      ),
+    );
   }
 }
