@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   // Private constructor to prevent external instantiation
@@ -24,9 +25,9 @@ class AuthService {
     await _initPrefs();
     _adminID = _prefs?.getInt(_adminIdKey);
     if (_adminID != null) {
-      print("AuthService: Admin ID loaded from prefs: $_adminID");
+      debugPrint("AuthService: Admin ID loaded from prefs: $_adminID");
     } else {
-      print("AuthService: No Admin ID found in prefs.");
+      debugPrint("AuthService: No Admin ID found in prefs.");
     }
   }
 
@@ -39,10 +40,10 @@ class AuthService {
     _adminID = id;
     if (id != null) {
       await _prefs?.setInt(_adminIdKey, id);
-      print("AuthService: Admin ID set to $_adminID and saved to prefs");
+      debugPrint("AuthService: Admin ID set to $_adminID and saved to prefs");
     } else {
       await _prefs?.remove(_adminIdKey); // Also clear from prefs if id is null
-      print("AuthService: Admin ID set to null and removed from prefs");
+      debugPrint("AuthService: Admin ID set to null and removed from prefs");
     }
   }
 
@@ -50,6 +51,6 @@ class AuthService {
     await _initPrefs();
     _adminID = null;
     await _prefs?.remove(_adminIdKey);
-    print("AuthService: Admin ID cleared from state and prefs.");
+    debugPrint("AuthService: Admin ID cleared from state and prefs.");
   }
 } 

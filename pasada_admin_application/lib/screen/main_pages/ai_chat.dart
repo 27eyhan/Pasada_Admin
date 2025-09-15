@@ -133,7 +133,7 @@ class _AiChatState extends State<AiChat> {
         });
       }
     } catch (e) {
-      print('Error loading chat session: $e');
+      throw Exception('Error loading chat session: $e');
     }
   }
 
@@ -146,7 +146,7 @@ class _AiChatState extends State<AiChat> {
         _savedChats = _sessionManager.savedChats;
       });
     } catch (e) {
-      print('Error deleting chat session: $e');
+      throw Exception('Error deleting chat session: $e');
     }
   }
 
@@ -158,7 +158,7 @@ class _AiChatState extends State<AiChat> {
         _savedChats = _sessionManager.savedChats;
       });
     } catch (e) {
-      print('Error loading saved chats: $e');
+      throw Exception('Error loading saved chats: $e');
     }
   }
 
@@ -180,7 +180,7 @@ class _AiChatState extends State<AiChat> {
       body: Row(
         children: [
           // Fixed width sidebar drawer
-          Container(
+          SizedBox(
             width: 280, // Fixed width for the sidebar
             child: MyDrawer(),
           ),
@@ -211,8 +211,8 @@ class _AiChatState extends State<AiChat> {
                               boxShadow: [
                                 BoxShadow(
                                   color: isDark
-                                      ? Colors.black.withOpacity(0.08)
-                                      : Colors.grey.withOpacity(0.08),
+                                      ? Colors.black.withValues(alpha: 0.08)
+                                      : Colors.grey.withValues(alpha: 0.08),
                                   spreadRadius: 1,
                                   blurRadius: 10,
                                   offset: Offset(0, 2),

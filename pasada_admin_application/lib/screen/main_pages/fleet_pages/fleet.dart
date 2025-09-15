@@ -278,7 +278,7 @@ class _FleetState extends State<Fleet> {
                                 ),
                                 const SizedBox(height: 24.0),
                                 // Analytics graph (Resend-like)
-                                FleetAnalyticsGraph(),
+                                FleetAnalyticsGraph(routeId: selectedRouteId),
                                 const SizedBox(height: 24.0),
                                 // Compact metrics row (Resend Audience style)
                                 Padding(

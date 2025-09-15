@@ -2,6 +2,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:pasada_admin_application/services/database_summary_service.dart';
 import 'package:pasada_admin_application/services/route_traffic_service.dart';
+import 'package:flutter/foundation.dart';
 
 class GeminiAIService {
   late Gemini _gemini;
@@ -22,7 +23,7 @@ You're role is to be an advisor, providing suggestions based on the data inside 
     try {
       final apiKey = dotenv.env['GEMINI_API'] ?? '';
       if (apiKey.isEmpty) {
-        print('Warning: GEMINI_API key is not set in .env file');
+        debugPrint('Warning: GEMINI_API key is not set in .env file');
         return false;
       }
 
@@ -31,7 +32,7 @@ You're role is to be an advisor, providing suggestions based on the data inside 
       _isInitialized = true;
       return true;
     } catch (e) {
-      print('Error initializing Gemini AI: $e');
+      debugPrint('Error initializing Gemini AI: $e');
       return false;
     }
   }
@@ -82,7 +83,7 @@ Please use this data to provide informed suggestions.
           return response.output?.trim() ?? "No response";
         }
       } catch (innerError) {
-        print('First attempt failed: $innerError');
+        debugPrint('First attempt failed: $innerError');
 
         // Fall back to simplest possible request
         try {
@@ -91,14 +92,14 @@ Please use this data to provide informed suggestions.
             return response.output?.trim() ?? "No response";
           }
         } catch (fallbackError) {
-          print('Fallback attempt failed: $fallbackError');
+          debugPrint('Fallback attempt failed: $fallbackError');
           return "Sorry, I couldn't generate a response at the moment. Technical error: $fallbackError";
         }
       }
 
       return "Sorry, I couldn't generate a response at the moment.";
     } catch (e) {
-      print('Exception: $e');
+      debugPrint('Exception: $e');
       return "Technical error occurred: $e";
     }
   }
@@ -159,7 +160,7 @@ Always start your response with the traffic density format provided, then follow
               "Unable to analyze traffic data at this time.";
         }
       } catch (innerError) {
-        print('Traffic analysis failed: $innerError');
+        debugPrint('Traffic analysis failed: $innerError');
 
         // Fallback with simplified prompt
         try {
@@ -171,14 +172,14 @@ Always start your response with the traffic density format provided, then follow
                 "Unable to analyze traffic data at this time.";
           }
         } catch (fallbackError) {
-          print('Traffic analysis fallback failed: $fallbackError');
+          debugPrint('Traffic analysis fallback failed: $fallbackError');
           return "Sorry, I couldn't analyze the traffic data at the moment. Technical error: $fallbackError";
         }
       }
 
       return "Sorry, I couldn't analyze the traffic data at the moment.";
     } catch (e) {
-      print('Traffic analysis exception: $e');
+      debugPrint('Traffic analysis exception: $e');
       return "Technical error occurred while analyzing traffic: $e";
     }
   }

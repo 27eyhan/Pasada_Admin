@@ -4,12 +4,14 @@ import 'dart:convert';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Resend-like compact analytics card with a dropdown and weekly line chart.
 /// - Modes: Traffic and Bookings
 /// - Shows a 7-day week series with simple predictive extension for next week (dashed)
 class FleetAnalyticsGraph extends StatefulWidget {
-  const FleetAnalyticsGraph({super.key});
+  final String? routeId;
+  const FleetAnalyticsGraph({super.key, this.routeId});
 
   @override
   State<FleetAnalyticsGraph> createState() => _FleetAnalyticsGraphState();
@@ -21,11 +23,27 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   bool _loading = false;
   String? _error;
   List<double> _trafficSeries = const [];
+  List<double> _predictedSeries = const [];
+  List<Map<String, dynamic>> _routes = const [];
+  String? _selectedRouteId; // local selection, defaults to widget.routeId
+  bool _usingHybrid = true;
 
   @override
   void initState() {
     super.initState();
     _fetchTraffic();
+    _loadRoutes();
+  }
+
+  @override
+  void didUpdateWidget(covariant FleetAnalyticsGraph oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.routeId != widget.routeId) {
+      setState(() {
+        _selectedRouteId = widget.routeId;
+      });
+      _fetchPredictions();
+    }
   }
 
   Future<void> _fetchTraffic() async {
@@ -35,50 +53,170 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       });
       return;
     }
+    final String routeId =
+        (_selectedRouteId != null && _selectedRouteId!.isNotEmpty)
+            ? _selectedRouteId!
+            : ((widget.routeId == null || widget.routeId!.isEmpty) ? '1' : widget.routeId!);
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final resp = await _analyticsService.getTrafficData();
-      if (resp.statusCode != 200) {
+      if (_usingHybrid) {
+        final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
+        if (hybrid.statusCode == 200) {
+          final decoded = jsonDecode(hybrid.body);
+          List<double> localSeries = [];
+          if (decoded is Map && decoded['data'] is Map) {
+            final data = decoded['data'] as Map;
+            // Parse from data.historicalData[].trafficDensity
+            if (data['historicalData'] is List) {
+              for (final item in (data['historicalData'] as List)) {
+                if (item is Map && item['trafficDensity'] is num) {
+                  localSeries.add((item['trafficDensity'] as num).toDouble());
+                }
+              }
+            }
+          }
+          // Use the last 7 points from historical data
+          final List<double> week = localSeries.length >= 7
+              ? localSeries.sublist(localSeries.length - 7)
+              : (localSeries.isNotEmpty ? localSeries : _generateWeeklyTraffic());
+          setState(() {
+            _trafficSeries = week;
+            _loading = false;
+          });
+          return; // done
+        } else {
+          // fall back
+          setState(() {
+            _usingHybrid = false;
+          });
+        }
+      }
+
+      // Fallback: local-only endpoint
+      final local = await _analyticsService.getLocalRouteAnalytics(routeId);
+      if (local.statusCode != 200) {
         setState(() {
-          _error = 'Failed to fetch traffic (${resp.statusCode})';
+          _error = 'Failed to fetch route analytics (${local.statusCode})';
           _loading = false;
         });
         return;
       }
-      final decoded = jsonDecode(resp.body);
-      // Expect an array of numeric values or objects with value per day
+      final decoded = jsonDecode(local.body);
       List<double> values = [];
-      if (decoded is List) {
-        for (final item in decoded) {
-          if (item is num) {
-            values.add(item.toDouble());
-          } else if (item is Map && item['value'] is num) {
-            values.add((item['value'] as num).toDouble());
-          }
-        }
-      } else if (decoded is Map && decoded['traffic'] is List) {
-        for (final item in (decoded['traffic'] as List)) {
-          if (item is num) {
-            values.add(item.toDouble());
-          } else if (item is Map && item['value'] is num) {
-            values.add((item['value'] as num).toDouble());
+      if (decoded is Map && decoded['historicalData'] is List) {
+        for (final item in (decoded['historicalData'] as List)) {
+          if (item is Map && item['trafficDensity'] is num) {
+            values.add((item['trafficDensity'] as num).toDouble());
           }
         }
       }
-      if (values.isEmpty) {
-        // fallback to stub to avoid empty chart
-        values = _generateWeeklyTraffic();
-      }
+      final List<double> week = values.length >= 7
+          ? values.sublist(values.length - 7)
+          : (values.isNotEmpty ? values : _generateWeeklyTraffic());
       setState(() {
-        _trafficSeries = values.take(7).toList();
+        _trafficSeries = week;
         _loading = false;
       });
     } catch (e) {
       setState(() {
         _error = 'Failed to fetch traffic';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _loadRoutes() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('official_routes')
+          .select('officialroute_id, route_name')
+          .order('officialroute_id');
+
+      final List<Map<String, dynamic>> routes =
+          (response as List).cast<Map<String, dynamic>>();
+
+      setState(() {
+        _routes = routes;
+        // Initialize local selected route id
+        _selectedRouteId = widget.routeId ??
+            (routes.isNotEmpty ? routes.first['officialroute_id']?.toString() : null);
+      });
+      _fetchPredictions();
+    } catch (e) {
+      // Non-fatal; keep dropdown empty
+    }
+  }
+
+  Future<void> _fetchPredictions() async {
+    if (!_analyticsService.isConfigured) {
+      return;
+    }
+    final String routeId =
+        (_selectedRouteId != null && _selectedRouteId!.isNotEmpty)
+            ? _selectedRouteId!
+            : ((widget.routeId == null || widget.routeId!.isEmpty) ? '1' : widget.routeId!);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      // Prefer hybrid predictions if available
+      if (_usingHybrid) {
+        final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
+        if (hybrid.statusCode == 200) {
+          final decoded = jsonDecode(hybrid.body);
+          List<double> preds = [];
+          if (decoded is Map && decoded['data'] is Map) {
+            final data = decoded['data'] as Map;
+            if (data['predictions'] is List) {
+              for (final item in (data['predictions'] as List)) {
+                if (item is Map && item['predictedDensity'] is num) {
+                  preds.add((item['predictedDensity'] as num).toDouble());
+                }
+              }
+            }
+          }
+          setState(() {
+            _predictedSeries = preds.take(7).toList();
+            _loading = false;
+          });
+          return;
+        } else {
+          setState(() {
+            _usingHybrid = false;
+          });
+        }
+      }
+
+      // Fallback to external predictions endpoint
+      final resp = await _analyticsService.getExternalRoutePredictions(routeId);
+      if (resp.statusCode != 200) {
+        setState(() {
+          _error = 'Failed to fetch predictions (${resp.statusCode})';
+          _loading = false;
+        });
+        return;
+      }
+      final decoded = jsonDecode(resp.body);
+      List<double> preds = [];
+      if (decoded is Map && decoded['data'] is List) {
+        for (final item in (decoded['data'] as List)) {
+          if (item is Map && item['predictedDensity'] is num) {
+            preds.add((item['predictedDensity'] as num).toDouble());
+          }
+        }
+      }
+      setState(() {
+        _predictedSeries = preds.take(7).toList();
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to fetch predictions';
         _loading = false;
       });
     }
@@ -125,7 +263,8 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     final List<double> baseSeries = _selectedMetric == 'Bookings'
         ? _generateWeeklyBookings()
         : (_trafficSeries.isNotEmpty ? _trafficSeries : _generateWeeklyTraffic());
-    final List<double> predictionSeries = _predictNextWeek(baseSeries);
+    final List<double> predictionSeries =
+        _predictedSeries.isNotEmpty ? _predictedSeries : _predictNextWeek(baseSeries);
 
     return Container(
       decoration: BoxDecoration(
@@ -154,6 +293,20 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                 ),
               ),
               const Spacer(),
+              if (_routes.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: _RouteDropdown(
+                    routes: _routes,
+                    value: _selectedRouteId,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedRouteId = val;
+                      });
+                      _fetchPredictions();
+                    },
+                  ),
+                ),
               _MetricDropdown(
                 value: _selectedMetric,
                 onChanged: (val) {
@@ -164,6 +317,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                   });
                   if (val == 'Traffic') {
                     _fetchTraffic();
+                    _fetchPredictions();
                   }
                 },
               ),
@@ -222,6 +376,39 @@ class _MetricDropdown extends StatelessWidget {
             DropdownMenuItem(value: 'Bookings', child: Text('Bookings')),
             DropdownMenuItem(value: 'Traffic', child: Text('Traffic')),
           ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+class _RouteDropdown extends StatelessWidget {
+  final List<Map<String, dynamic>> routes;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  const _RouteDropdown({required this.routes, required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Palette.lightBorder.withValues(alpha: 77)),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: const Text('Route'),
+          items: routes.map((r) {
+            final String id = r['officialroute_id']?.toString() ?? '';
+            final String name = r['route_name']?.toString() ?? 'Route $id';
+            return DropdownMenuItem<String>(
+              value: id,
+              child: Text('$name (ID: $id)'),
+            );
+          }).toList(),
           onChanged: onChanged,
         ),
       ),
@@ -489,5 +676,6 @@ class _WeekAxis extends StatelessWidget {
     );
   }
 }
+
 
 

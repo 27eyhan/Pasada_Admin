@@ -6,7 +6,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class DriverArchTableScreen extends StatefulWidget {
-  const DriverArchTableScreen({Key? key}) : super(key: key);
+  const DriverArchTableScreen({super.key});
 
   @override
   _DriverArchTableScreenState createState() => _DriverArchTableScreenState();

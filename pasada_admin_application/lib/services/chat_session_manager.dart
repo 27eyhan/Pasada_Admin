@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:pasada_admin_application/services/chat_history_service.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
@@ -15,10 +16,10 @@ class ChatSessionManager {
   Future<void> loadAuthentication() async {
     await _authService.loadAdminID();
     if (_authService.currentAdminID == null) {
-      print(
+      debugPrint(
           'Warning: No admin ID found. AI Chat history functionality may be limited.');
     } else {
-      print('Admin ID loaded: ${_authService.currentAdminID}');
+      debugPrint('Admin ID loaded: ${_authService.currentAdminID}');
     }
   }
 
@@ -28,7 +29,7 @@ class ChatSessionManager {
       final chats = await _chatService.getChatHistories();
       _savedChats = chats;
     } catch (e) {
-      print('Error loading chat history: $e');
+      debugPrint('Error loading chat history: $e');
       rethrow;
     }
   }
@@ -74,7 +75,7 @@ class ChatSessionManager {
 
       return 'Chat saved successfully';
     } catch (e) {
-      print('Error saving chat session: $e');
+      debugPrint('Error saving chat session: $e');
       throw Exception('Error saving chat: ${e.toString()}');
     }
   }
@@ -128,7 +129,7 @@ class ChatSessionManager {
 
       return messages;
     } catch (e) {
-      print('Error loading chat session: $e');
+      debugPrint('Error loading chat session: $e');
       return null;
     }
   }
@@ -139,7 +140,7 @@ class ChatSessionManager {
       await _chatService.deleteChatSession(chatId);
       await loadChatHistory(); // Reload the chat history
     } catch (e) {
-      print('Error deleting chat session: $e');
+      debugPrint('Error deleting chat session: $e');
       rethrow;
     }
   }

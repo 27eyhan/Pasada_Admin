@@ -145,10 +145,10 @@ class _DriverInfoState extends State<DriverInfo> {
       String? currentStatus = widget.driver['driving_status'];
       if (currentStatus != null) {
         await _activityLogs.logDriverActivity(currentStatus, DateTime.now());
-        print(
+        debugPrint(
             '_saveChanges: Explicitly logged activity for status $currentStatus');
       } else {
-        print('_saveChanges: No status available to log activity');
+        debugPrint('_saveChanges: No status available to log activity');
       }
 
       // Close loading dialog
@@ -218,7 +218,7 @@ class _DriverInfoState extends State<DriverInfo> {
       _heatMapData[date] = 0;
     }
 
-    print(
+    debugPrint(
         'Fetching driver activity logs for driver ${widget.driver['driver_id']} from $firstDayOfMonth to $lastDayOfMonth');
 
     // Fetch driver activity logs for the current month
@@ -257,51 +257,51 @@ class _DriverInfoState extends State<DriverInfo> {
 
               _heatMapData[logDate] = activityLevel;
               hasActivityData = true;
-              print(
+              debugPrint(
                   'Added activity level $activityLevel for date $logDate (session duration: ${sessionDuration / 3600} hours)');
             } else {
               // If no session duration, just mark as active
               _heatMapData[logDate] = 1;
               hasActivityData = true;
-              print(
+              debugPrint(
                   'Added activity level 1 for date $logDate (no session duration)');
             }
           } catch (e) {
-            print('Error processing activity log: $e');
+            debugPrint('Error processing activity log: $e');
             // Continue with other logs instead of failing completely
             continue;
           }
         }
       } else {
-        print('No activity logs found for the current month');
+        debugPrint('No activity logs found for the current month');
       }
 
       // Only use last_online as fallback if we couldn't find ANY activity data
       if (!hasActivityData && widget.driver['last_online'] != null) {
         try {
-          print('No activity data found, using last_online as fallback');
+          debugPrint('No activity data found, using last_online as fallback');
           final DateTime lastOnline =
               DateTime.parse(widget.driver['last_online'].toString());
           if (lastOnline.month == _currentMonth.month &&
               lastOnline.year == _currentMonth.year) {
             _heatMapData[DateTime(
                 lastOnline.year, lastOnline.month, lastOnline.day)] = 1;
-            print(
+            debugPrint(
                 'Added last_online data for ${lastOnline.toString()} with level 1');
           }
         } catch (e) {
-          print('Error parsing last_online date: $e');
+          debugPrint('Error parsing last_online date: $e');
         }
       }
 
       setState(() {});
     }).catchError((error) {
-      print('Error fetching activity logs: $error');
+      debugPrint('Error fetching activity logs: $error');
 
       // Only use last_online if we couldn't fetch activity logs at all
       if (widget.driver['last_online'] != null) {
         try {
-          print('Using last_online as fallback due to error fetching logs');
+          debugPrint('Using last_online as fallback due to error fetching logs');
           final DateTime lastOnline =
               DateTime.parse(widget.driver['last_online'].toString());
           if (lastOnline.month == _currentMonth.month &&
@@ -309,11 +309,11 @@ class _DriverInfoState extends State<DriverInfo> {
             _heatMapData[DateTime(
                     lastOnline.year, lastOnline.month, lastOnline.day)] =
                 1; // Changed from 4 to 1 for consistency
-            print(
+            debugPrint(
                 'Added last_online data for ${lastOnline.toString()} with level 1');
           }
         } catch (e) {
-          print('Error parsing last_online date: $e');
+          debugPrint('Error parsing last_online date: $e');
         }
       }
       setState(() {});
@@ -338,7 +338,7 @@ class _DriverInfoState extends State<DriverInfo> {
       // Refresh UI
       setState(() {});
     } catch (e) {
-      print('Error updating driver status: ${e.toString()}');
+      debugPrint('Error updating driver status: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error updating driver status: ${e.toString()}'),
@@ -386,7 +386,7 @@ class _DriverInfoState extends State<DriverInfo> {
         }
       }
     } catch (e) {
-      print('Error fetching driver rating: $e');
+      debugPrint('Error fetching driver rating: $e');
       // If there's an error, keep the default values (0.0 rating, 0 reviews)
     }
   }

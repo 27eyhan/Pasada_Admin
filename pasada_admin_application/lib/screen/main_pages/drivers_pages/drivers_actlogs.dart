@@ -13,13 +13,13 @@ class DriverActivityLogs {
   // Log driver activity when status changes
   Future<void> logDriverActivity(String drivingStatus, DateTime timestamp) async {
     try {
-      print('Starting logDriverActivity for driver $driverId with driving status $drivingStatus');
+      debugPrint('Starting logDriverActivity for driver $driverId with driving status $drivingStatus');
       final supabase = Supabase.instance.client;
       
       // First, check if this is an active status (Online, Driving, or Idling)
       // Only proceed with logging if it's one of these statuses
       if (drivingStatus == 'Online' || drivingStatus == 'Driving' || drivingStatus == 'Idling') {
-        print('Status is active, proceeding with activity logging');
+        debugPrint('Status is active, proceeding with activity logging');
         
         // Check if there's an ongoing session without a logout
         final ongoingSession = await supabase
@@ -29,14 +29,14 @@ class DriverActivityLogs {
             .filter('logout_timestamp', 'is', null)
             .maybeSingle();
         
-        print('Checked for ongoing session: ${ongoingSession != null ? 'Found' : 'Not found'}');
+        debugPrint('Checked for ongoing session: ${ongoingSession != null ? 'Found' : 'Not found'}');
         
         if (ongoingSession != null) {
           // Calculate session duration in seconds
           final loginTime = DateTime.parse(ongoingSession['login_timestamp']);
           final duration = timestamp.difference(loginTime).inSeconds;
           
-          print('Updating session with log_id: ${ongoingSession['log_id']} - duration: $duration seconds');
+          debugPrint('Updating session with log_id: ${ongoingSession['log_id']} - duration: $duration seconds');
           
           // Update the existing session with logout time and duration
           final updateResponse = await supabase
@@ -49,16 +49,16 @@ class DriverActivityLogs {
               .eq('log_id', ongoingSession['log_id'])
               .select();
           
-          print('Update response: $updateResponse');
-          print('Updated session duration: ${updateResponse.isNotEmpty ? updateResponse[0]['session_duration'] : 'unknown'} seconds');
-          print('Updated existing driver activity log: ID ${ongoingSession['log_id']} with logout time and duration');
+          debugPrint('Update response: $updateResponse');
+          debugPrint('Updated session duration: ${updateResponse.isNotEmpty ? updateResponse[0]['session_duration'] : 'unknown'} seconds');
+          debugPrint('Updated existing driver activity log: ID ${ongoingSession['log_id']} with logout time and duration');
         }
         
         // Always create a new activity log for active statuses
         // Generate a unique log_id
         final int logId = DateTime.now().millisecondsSinceEpoch * 100 + (driverId % 100);
         
-        print('Creating new activity log with ID $logId for driver $driverId with driving status $drivingStatus');
+        debugPrint('Creating new activity log with ID $logId for driver $driverId with driving status $drivingStatus');
         
         final activityData = {
           'log_id': logId,
@@ -67,17 +67,17 @@ class DriverActivityLogs {
           'status': 'SAVED', // Set status to SAVED
         };
         
-        print('Activity data for insertion: $activityData');
+        debugPrint('Activity data for insertion: $activityData');
         
         final insertResponse = await supabase
             .from('driverActivityLog')
             .insert(activityData)
             .select();
         
-        print('Insertion response: $insertResponse');
-        print('Successfully created new driver activity log: ID $logId for driver $driverId with driving status $drivingStatus');
+        debugPrint('Insertion response: $insertResponse');
+        debugPrint('Successfully created new driver activity log: ID $logId for driver $driverId with driving status $drivingStatus');
       } else {
-        print('Driver status is $drivingStatus - not logging activity (only logs for Online, Driving, or Idling)');
+        debugPrint('Driver status is $drivingStatus - not logging activity (only logs for Online, Driving, or Idling)');
         
         // If driver is not in an active state, check if there's an ongoing session to close
         final ongoingSession = await supabase
@@ -102,17 +102,17 @@ class DriverActivityLogs {
               })
               .eq('log_id', ongoingSession['log_id']);
               
-          print('Closed ongoing session due to inactive status');
+          debugPrint('Closed ongoing session due to inactive status');
         }
       }
       
     } catch (e) {
-      print('Error logging driver activity: ${e.toString()}');
+      debugPrint('Error logging driver activity: ${e.toString()}');
       // Check if exception is a PostgreSQL error with more details
       if (e is PostgrestException) {
-        print('PostgreSQL error code: ${e.code}');
-        print('PostgreSQL error message: ${e.message}');
-        print('PostgreSQL error details: ${e.details}');
+        debugPrint('PostgreSQL error code: ${e.code}');
+        debugPrint('PostgreSQL error message: ${e.message}');
+        debugPrint('PostgreSQL error details: ${e.details}');
       }
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +135,7 @@ class DriverActivityLogs {
       
       return response;
     } catch (e) {
-      print('Error getting active drivers: ${e.toString()}');
+      debugPrint('Error getting active drivers: ${e.toString()}');
       return [];
     }
   }

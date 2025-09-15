@@ -99,8 +99,7 @@ class _LoginSignupState extends State<LoginSignup> {
         }
       }
     } catch (e) {
-      print('Login Error: $e');
-      _showErrorSnackBar('An error occurred during login. Please try again.');
+      throw Exception('Login Error: $e');
     } finally {
       if (mounted) {
         setState(() {

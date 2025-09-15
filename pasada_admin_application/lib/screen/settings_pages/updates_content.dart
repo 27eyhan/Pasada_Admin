@@ -5,7 +5,7 @@ import 'package:pasada_admin_application/screen/settings_pages/settings_utils.da
 class UpdatesContent extends StatefulWidget {
   final bool isDark;
   
-  const UpdatesContent({Key? key, required this.isDark}) : super(key: key);
+  const UpdatesContent({super.key, required this.isDark});
 
   @override
   _UpdatesContentState createState() => _UpdatesContentState();

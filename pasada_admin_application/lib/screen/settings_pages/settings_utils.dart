@@ -9,13 +9,13 @@ class SwitchTile extends StatelessWidget {
   final bool isDark;
   
   const SwitchTile({
-    Key? key,
+    super.key,
     required this.title,
     required this.subtitle,
     required this.value,
     required this.onChanged,
     required this.isDark,
-  }) : super(key: key);
+  });
   
   @override
   Widget build(BuildContext context) {
@@ -65,12 +65,12 @@ class ProfileInfoTile extends StatelessWidget {
   final IconData? icon;
   
   const ProfileInfoTile({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     required this.isDark,
     this.icon,
-  }) : super(key: key);
+  });
   
   @override
   Widget build(BuildContext context) {

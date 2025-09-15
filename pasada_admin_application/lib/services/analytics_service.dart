@@ -62,6 +62,16 @@ class AnalyticsService {
   Future<http.Response> getExternalAdminMetrics() {
     return http.get(_u('/api/analytics/external/admin/metrics'));
   }
+
+  // Route analytics (local)
+  Future<http.Response> getLocalRouteAnalytics(String routeId) {
+    return http.get(_u('/api/analytics/routes/$routeId'));
+  }
+
+  // Hybrid analytics (combined local + external)
+  Future<http.Response> getHybridRouteAnalytics(String routeId) {
+    return http.get(_u('/api/analytics/hybrid/route/$routeId'));
+  }
 }
 
  

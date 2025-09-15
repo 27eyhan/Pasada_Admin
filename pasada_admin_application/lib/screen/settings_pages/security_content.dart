@@ -8,7 +8,7 @@ import 'package:bcrypt/bcrypt.dart';
 class SecurityContent extends StatefulWidget {
   final bool isDark;
   
-  const SecurityContent({Key? key, required this.isDark}) : super(key: key);
+  const SecurityContent({super.key, required this.isDark});
 
   @override
   _SecurityContentState createState() => _SecurityContentState();

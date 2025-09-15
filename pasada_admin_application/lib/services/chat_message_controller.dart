@@ -169,7 +169,7 @@ class ChatMessageController {
       });
     } catch (e) {
       _setTypingState(false);
-      print('Error regenerating response: $e');
+      throw Exception('Error regenerating response: $e');
     }
   }
 
@@ -195,7 +195,7 @@ class ChatMessageController {
       });
     } catch (e) {
       _setTypingState(false);
-      print('Error regenerating traffic response: $e');
+      throw Exception('Error regenerating traffic response: $e');
     }
   }
 
