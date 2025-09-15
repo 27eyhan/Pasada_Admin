@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'dart:convert';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pasada_admin_application/services/analytics_service.dart';
 
 /// Resend-like compact analytics card with a dropdown and weekly line chart.
 /// - Modes: Traffic and Bookings
@@ -14,7 +16,73 @@ class FleetAnalyticsGraph extends StatefulWidget {
 }
 
 class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
-  String _selectedMetric = 'Bookings';
+  String _selectedMetric = 'Traffic';
+  final AnalyticsService _analyticsService = AnalyticsService();
+  bool _loading = false;
+  String? _error;
+  List<double> _trafficSeries = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTraffic();
+  }
+
+  Future<void> _fetchTraffic() async {
+    if (!_analyticsService.isConfigured) {
+      setState(() {
+        _error = 'API not configured';
+      });
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final resp = await _analyticsService.getTrafficData();
+      if (resp.statusCode != 200) {
+        setState(() {
+          _error = 'Failed to fetch traffic (${resp.statusCode})';
+          _loading = false;
+        });
+        return;
+      }
+      final decoded = jsonDecode(resp.body);
+      // Expect an array of numeric values or objects with value per day
+      List<double> values = [];
+      if (decoded is List) {
+        for (final item in decoded) {
+          if (item is num) {
+            values.add(item.toDouble());
+          } else if (item is Map && item['value'] is num) {
+            values.add((item['value'] as num).toDouble());
+          }
+        }
+      } else if (decoded is Map && decoded['traffic'] is List) {
+        for (final item in (decoded['traffic'] as List)) {
+          if (item is num) {
+            values.add(item.toDouble());
+          } else if (item is Map && item['value'] is num) {
+            values.add((item['value'] as num).toDouble());
+          }
+        }
+      }
+      if (values.isEmpty) {
+        // fallback to stub to avoid empty chart
+        values = _generateWeeklyTraffic();
+      }
+      setState(() {
+        _trafficSeries = values.take(7).toList();
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to fetch traffic';
+        _loading = false;
+      });
+    }
+  }
 
   // Stub data generators for a week (Mon-Sun)
   List<double> _generateWeeklyBookings() {
@@ -56,7 +124,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
 
     final List<double> baseSeries = _selectedMetric == 'Bookings'
         ? _generateWeeklyBookings()
-        : _generateWeeklyTraffic();
+        : (_trafficSeries.isNotEmpty ? _trafficSeries : _generateWeeklyTraffic());
     final List<double> predictionSeries = _predictNextWeek(baseSeries);
 
     return Container(
@@ -90,21 +158,41 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                 value: _selectedMetric,
                 onChanged: (val) {
                   if (val == null) return;
-                  setState(() => _selectedMetric = val);
+                  setState(() {
+                    _selectedMetric = val;
+                    _error = null;
+                  });
+                  if (val == 'Traffic') {
+                    _fetchTraffic();
+                  }
                 },
               ),
             ],
           ),
           const SizedBox(height: 12.0),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                _error!,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.0,
+                  color: Palette.lightError,
+                ),
+              ),
+            ),
           _Legend(isDark: isDark),
           const SizedBox(height: 8.0),
           SizedBox(
             height: 160,
-            child: _MiniLineChart(
-              currentWeek: baseSeries,
-              nextWeek: predictionSeries,
-              isDark: isDark,
-            ),
+            child: _loading
+                ? Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+                : _MiniLineChart(
+                    currentWeek: baseSeries,
+                    nextWeek: predictionSeries,
+                    isDark: isDark,
+                  ),
           ),
           const SizedBox(height: 8.0),
           _WeekAxis(isDark: isDark),
@@ -243,18 +331,21 @@ class _MiniLineChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Layout margins for y-axis labels and right padding
+    const double leftMargin = 40.0;
+    const double rightMargin = 8.0;
+    final double chartLeft = leftMargin;
+    final double chartRight = size.width - rightMargin;
+    final double chartWidth = (chartRight - chartLeft).clamp(1.0, double.infinity);
+
     final Color gridColor = (isDark ? Palette.darkBorder : Palette.lightBorder).withValues(alpha: 51);
     final Paint gridPaint = Paint()
       ..color = gridColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    // Draw subtle horizontal grid lines
-    const int gridLines = 4;
-    for (int i = 0; i <= gridLines; i++) {
-      final double y = size.height * (i / gridLines);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
+    // Draw subtle horizontal grid lines (and leave space on the left for labels)
+    const int gridLines = 4; // results in 5 ticks (0..4)
 
     // Combine series to compute global min/max for scaling
     final List<double> combined = [...currentWeek, ...nextWeek];
@@ -282,9 +373,47 @@ class _MiniLineChartPainter extends CustomPainter {
       return p;
     }
 
-    // Current week occupies left half, next week occupies right half
-    final Path currentPath = pathFor(currentWeek, 0, size.width * 0.48);
-    final Path nextPath = pathFor(nextWeek, size.width * 0.52, size.width);
+    // Draw horizontal grid lines with Y-axis labels
+    for (int i = 0; i <= gridLines; i++) {
+      final double y = size.height * (i / gridLines);
+      // Grid line
+      canvas.drawLine(Offset(chartLeft, y), Offset(chartRight, y), gridPaint);
+
+      // Axis tick value
+      final double valueAtTick = maxVal - (maxVal - minVal) * (i / gridLines);
+      final String label;
+      if (maxVal <= 1.0) {
+        label = '${(valueAtTick * 100).round()}%';
+      } else if ((maxVal - minVal) < 5) {
+        label = valueAtTick.toStringAsFixed(1);
+      } else {
+        label = valueAtTick.round().toString();
+      }
+
+      final TextPainter tp = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 10,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          ),
+        ),
+        textAlign: TextAlign.right,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: leftMargin - 6);
+
+      tp.paint(canvas, Offset(leftMargin - tp.width - 6, y - tp.height / 2));
+    }
+
+    // Draw Y axis line
+    canvas.drawLine(Offset(chartLeft, 0), Offset(chartLeft, size.height), gridPaint);
+
+    // Current week occupies left half, next week occupies right half within chart area
+    final double leftHalfEnd = chartLeft + chartWidth * 0.48;
+    final double rightHalfStart = chartLeft + chartWidth * 0.52;
+    final Path currentPath = pathFor(currentWeek, chartLeft, leftHalfEnd);
+    final Path nextPath = pathFor(nextWeek, rightHalfStart, chartRight);
 
     final Paint currentPaint = Paint()
       ..color = Palette.lightPrimary
