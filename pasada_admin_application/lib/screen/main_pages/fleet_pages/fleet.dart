@@ -7,6 +7,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/filter_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
+import 'analytics/fleet_analytics_graph.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
 import 'package:provider/provider.dart';
 
@@ -275,6 +276,9 @@ class _FleetState extends State<Fleet> {
                                     const Spacer(),
                                   ],
                                 ),
+                                const SizedBox(height: 24.0),
+                                // Analytics graph (Resend-like)
+                                FleetAnalyticsGraph(routeId: selectedRouteId),
                                 const SizedBox(height: 24.0),
                                 // Compact metrics row (Resend Audience style)
                                 Padding(

@@ -6,7 +6,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class PassengerArchTableScreen extends StatefulWidget {
-  const PassengerArchTableScreen({Key? key}) : super(key: key);
+  const PassengerArchTableScreen({super.key});
 
   @override
   _PassengerArchTableScreenState createState() => _PassengerArchTableScreenState();

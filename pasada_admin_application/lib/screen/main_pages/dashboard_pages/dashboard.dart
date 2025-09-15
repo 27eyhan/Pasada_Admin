@@ -60,7 +60,7 @@ class _DashboardState extends State<Dashboard> {
       body: Row(
         children: [
           // Fixed width sidebar drawer
-          Container(
+          SizedBox(
             width: 280, // Fixed width for the sidebar
             child: MyDrawer(),
           ),

@@ -77,12 +77,12 @@ class DriverDeleteHandler {
                     
                     // Step 1: Archive the driver BEFORE deleting
                     try {
-                      print('Attempting to archive driver data');
+                      debugPrint('Attempting to archive driver data');
                       
                       // Create a simple archive ID 
                       final int archiveId = DateTime.now().second * 1000 + int.parse(driverId.toString());
                       
-                      print('Using archive ID: $archiveId');
+                      debugPrint('Using archive ID: $archiveId');
                       
                       await supabase.from('driverArchives').insert({
                         'archive_id': archiveId,
@@ -96,7 +96,7 @@ class DriverDeleteHandler {
                         'archived_at': DateTime.now().toIso8601String(),
                       });
                       
-                      print('Archive operation completed successfully');
+                      debugPrint('Archive operation completed successfully');
                       
                       // Step 2: Now that archiving succeeded, delete from driver table
                       await supabase
@@ -108,7 +108,7 @@ class DriverDeleteHandler {
                       refreshDriverData();
                       
                     } catch (e) {
-                      print('Error: ${e.toString()}');
+                      debugPrint('Error: ${e.toString()}');
                       showInfoSnackBar('Error processing driver: ${e.toString()}');
                     }
 

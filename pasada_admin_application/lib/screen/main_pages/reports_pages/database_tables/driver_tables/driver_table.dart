@@ -10,7 +10,7 @@ import 'package:pasada_admin_application/screen/main_pages/reports_pages/databas
 import 'package:flutter/services.dart';
 
 class DriverTableScreen extends StatefulWidget {
-  const DriverTableScreen({Key? key}) : super(key: key);
+  const DriverTableScreen({super.key});
 
   @override
   _DriverTableScreenState createState() => _DriverTableScreenState();

@@ -12,7 +12,7 @@ import 'package:pasada_admin_application/screen/settings_pages/security_content.
 class Settings extends StatefulWidget {
   final int? initialTabIndex;
   
-  const Settings({Key? key, this.initialTabIndex}) : super(key: key);
+  const Settings({super.key, this.initialTabIndex});
 
   @override
   _SettingsState createState() => _SettingsState();
@@ -241,8 +241,8 @@ class _SettingsState extends State<Settings> with SingleTickerProviderStateMixin
           boxShadow: [
             BoxShadow(
               color: isDark 
-                ? Colors.black.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
+                ? Colors.black.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 10,
               offset: Offset(0, 2),
@@ -365,8 +365,8 @@ class _SettingsState extends State<Settings> with SingleTickerProviderStateMixin
           boxShadow: [
             BoxShadow(
               color: isDark 
-                ? Colors.black.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
+                ? Colors.black.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 10,
               offset: Offset(0, 2),

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class DatabaseSummaryService {
   // Singleton pattern
@@ -53,7 +54,7 @@ class DatabaseSummaryService {
         'lastUpdated': DateTime.now().toString()
       };
     } catch (e) {
-      print('Error fetching booking summary: $e');
+      debugPrint('Error fetching booking summary: $e');
       return {
         'error': 'Failed to fetch booking data',
         'message': e.toString()
@@ -88,7 +89,7 @@ class DatabaseSummaryService {
         'lastUpdated': DateTime.now().toString()
       };
     } catch (e) {
-      print('Error fetching driver summary: $e');
+      debugPrint('Error fetching driver summary: $e');
       return {
         'error': 'Failed to fetch driver data',
         'message': e.toString()
@@ -118,7 +119,7 @@ class DatabaseSummaryService {
         'lastUpdated': DateTime.now().toString()
       };
     } catch (e) {
-      print('Error fetching route summary: $e');
+      debugPrint('Error fetching route summary: $e');
       return {
         'error': 'Failed to fetch route data',
         'message': e.toString()
@@ -159,7 +160,7 @@ class DatabaseSummaryService {
         'lastUpdated': DateTime.now().toString()
       };
     } catch (e) {
-      print('Error fetching vehicle summary: $e');
+      debugPrint('Error fetching vehicle summary: $e');
       return {
         'error': 'Failed to fetch vehicle data',
         'message': e.toString()
@@ -235,7 +236,7 @@ class DatabaseSummaryService {
       
       return summary.toString();
     } catch (e) {
-      print('Error generating database context: $e');
+      debugPrint('Error generating database context: $e');
       return "Error retrieving system data: $e";
     }
   }

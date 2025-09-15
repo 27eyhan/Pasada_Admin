@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 
@@ -20,8 +21,8 @@ class ChatHistoryService {
       
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print('Error fetching chat histories: $e');
-      return [];
+      debugPrint('Error fetching chat histories: $e');
+      throw Exception('Error fetching chat histories: $e');
     }
   }
 
@@ -42,8 +43,7 @@ class ChatHistoryService {
         'created_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      print('Error saving chat session: $e');
-      rethrow;
+      throw Exception('Error saving chat session: $e');
     }
   }
 
@@ -55,8 +55,7 @@ class ChatHistoryService {
           .delete()
           .eq('history_id', chatId);
     } catch (e) {
-      print('Error deleting chat session: $e');
-      rethrow;
+      throw Exception('Error deleting chat session: $e');
     }
   }
 
@@ -71,8 +70,7 @@ class ChatHistoryService {
       
       return response;
     } catch (e) {
-      print('Error fetching chat session: $e');
-      return null;
+      throw Exception('Error fetching chat session: $e');
     }
   }
 } 
