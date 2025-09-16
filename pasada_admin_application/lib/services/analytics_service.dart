@@ -72,6 +72,27 @@ class AnalyticsService {
   Future<http.Response> getHybridRouteAnalytics(String routeId) {
     return http.get(_u('/api/analytics/hybrid/route/$routeId'));
   }
+
+  // Booking frequency analytics
+  Future<http.Response> getBookingFrequency({int days = 14}) {
+    return http.get(_u('/api/analytics/bookings/frequency?days=$days'));
+  }
+
+  Future<http.Response> persistBookingFrequencyDaily({int days = 14}) {
+    return http.post(_u('/api/analytics/bookings/frequency/persist/daily?days=$days'));
+  }
+
+  Future<http.Response> persistBookingFrequencyForecast({int days = 14}) {
+    return http.post(_u('/api/analytics/bookings/frequency/persist/forecast?days=$days'));
+  }
+
+  Future<http.Response> getBookingFrequencyDaily({int days = 14}) {
+    return http.get(_u('/api/analytics/bookings/frequency/daily?days=$days'));
+  }
+
+  Future<http.Response> getLatestBookingFrequencyForecast() {
+    return http.get(_u('/api/analytics/bookings/frequency/forecast/latest'));
+  }
 }
 
  
