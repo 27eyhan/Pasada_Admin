@@ -4,8 +4,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+// import removed; base URL handled in service
 
 class BookingFrequencyGraph extends StatefulWidget {
   final int days;
@@ -22,7 +21,6 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
   List<double> _history = const [];
   List<double> _forecast = const [];
   String _source = 'live';
-  String? _debugUrl;
 
   @override
   void initState() {
@@ -50,23 +48,15 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
           final decodedForecast = latestForecast.statusCode == 200 ? jsonDecode(latestForecast.body) : null;
           return _parseAndSet(decodedDaily, decodedForecast);
         }
-        // Try alternate base path variants (in case API_URL already includes /api)
-        final alt = await _tryAlternateBasePaths(days: widget.days);
-        if (alt == null) {
-          setState(() {
-            _error = 'Bookings endpoints not found (404). Live and persisted unavailable.';
-            _loading = false;
-          });
-          return;
-        } else {
-          // success handled in _tryAlternateBasePaths
-          return;
-        }
+        setState(() {
+          _error = 'Bookings endpoints not found (404). Live and persisted unavailable.';
+          _loading = false;
+        });
+        return;
       }
       if (resp.statusCode != 200) {
         setState(() {
           _error = 'Failed to fetch bookings (${resp.statusCode}): ${resp.body}';
-          _debugUrl = _composeUrl('/api/analytics/bookings/frequency?days=${widget.days}');
           _loading = false;
         });
         return;
@@ -102,7 +92,6 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
         _history = lastWeek;
         _forecast = nextWeek;
         _source = 'live';
-        _debugUrl = _composeUrl('/api/analytics/bookings/frequency?days=${widget.days}');
         _loading = false;
       });
     } catch (e) {
@@ -113,116 +102,9 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
     }
   }
 
-  String _composeUrl(String path) {
-    final base = dotenv.env['API_URL'] ?? '';
-    if (base.isEmpty) return path;
-    if (base.endsWith('/') && path.startsWith('/')) {
-      return base.substring(0, base.length - 1) + path;
-    }
-    if (!base.endsWith('/') && !path.startsWith('/')) {
-      return base + '/' + path;
-    }
-    return base + path;
-  }
+  // Removed debug URL composition
 
-  Future<bool?> _tryAlternateBasePaths({required int days}) async {
-    try {
-      final base = dotenv.env['API_URL'] ?? '';
-      if (base.isEmpty) return null;
-      final candidates = <String>[
-        _composeUrl('/analytics/bookings/frequency?days=$days'),
-        _composeUrl('/api/analytics/bookings/frequency?days=$days'),
-      ];
-
-      http.Response? ok;
-      String? used;
-      for (final url in candidates) {
-        final r = await http.get(Uri.parse(url));
-        if (r.statusCode == 200) {
-          ok = r;
-          used = url;
-          break;
-        }
-      }
-      if (ok == null) {
-        // Try persisted daily/forecast with alternate path
-        final dailyCandidates = <String>[
-          _composeUrl('/analytics/bookings/frequency/daily?days=$days'),
-          _composeUrl('/api/analytics/bookings/frequency/daily?days=$days'),
-        ];
-        http.Response? dailyOk;
-        String? dailyUsed;
-        for (final url in dailyCandidates) {
-          final r = await http.get(Uri.parse(url));
-          if (r.statusCode == 200) {
-            dailyOk = r;
-            dailyUsed = url;
-            break;
-          }
-        }
-        http.Response? forecastOk;
-        String? forecastUsed;
-        final forecastCandidates = <String>[
-          _composeUrl('/analytics/bookings/frequency/forecast/latest'),
-          _composeUrl('/api/analytics/bookings/frequency/forecast/latest'),
-        ];
-        for (final url in forecastCandidates) {
-          final r = await http.get(Uri.parse(url));
-          if (r.statusCode == 200) {
-            forecastOk = r;
-            forecastUsed = url;
-            break;
-          }
-        }
-        if (dailyOk != null) {
-          final decodedDaily = jsonDecode(dailyOk.body);
-          final decodedForecast = forecastOk != null ? jsonDecode(forecastOk.body) : null;
-          _parseAndSet(decodedDaily, decodedForecast);
-          setState(() {
-            _debugUrl = dailyUsed ?? forecastUsed;
-          });
-          return true;
-        }
-        setState(() {
-          _debugUrl = candidates.join(' | ');
-        });
-        return null;
-      } else {
-        final decoded = jsonDecode(ok.body);
-        List<double> history = [];
-        List<double> forecast = [];
-        if (decoded is Map && decoded['data'] is Map) {
-          final data = decoded['data'] as Map;
-          if (data['history'] is List) {
-            for (final item in (data['history'] as List)) {
-              if (item is Map && item['count'] is num) {
-                history.add((item['count'] as num).toDouble());
-              }
-            }
-          }
-          if (data['forecast'] is List) {
-            for (final item in (data['forecast'] as List)) {
-              if (item is Map && item['predictedCount'] is num) {
-                forecast.add((item['predictedCount'] as num).toDouble());
-              }
-            }
-          }
-        }
-        final List<double> lastWeek = history.length >= 7 ? history.sublist(history.length - 7) : history;
-        final List<double> nextWeek = forecast.take(7).toList();
-        setState(() {
-          _history = lastWeek;
-          _forecast = nextWeek;
-          _source = 'live';
-          _debugUrl = used;
-          _loading = false;
-        });
-        return true;
-      }
-    } catch (_) {
-      return null;
-    }
-  }
+  // Removed alternate path probing
 
   void _parseAndSet(dynamic decodedDaily, dynamic decodedForecast) {
     List<double> history = [];
@@ -300,19 +182,7 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
                     ),
                   ),
                 ),
-              if (_debugUrl != null)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Text(
-                    _debugUrl!,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 10.0,
-                      color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                    ),
-                  ),
-                ),
+              // Removed debug URL text
               IconButton(
                 tooltip: 'Persist daily',
                 onPressed: _loading
