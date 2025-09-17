@@ -277,7 +277,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
           Row(
             children: [
               Text(
-                'Analytics',
+                'Traffic',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16.0,
