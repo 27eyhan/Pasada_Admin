@@ -184,7 +184,7 @@ class _DriversState extends State<Drivers> {
         .width
         .clamp(600.0, double.infinity)
         .toDouble();
-    final double horizontalPadding = screenWidth * 0.1;
+    final double horizontalPadding = screenWidth * 0.05;
     
     return Scaffold(
       backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
@@ -255,11 +255,27 @@ class _DriversState extends State<Drivers> {
                                   ],
                                 ),
                                 const SizedBox(height: 24.0),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0, horizontal: 4.0),
+                                // Status metrics container with separators
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Palette.darkCard : Palette.lightCard,
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    border: Border.all(
+                                      color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isDark
+                                            ? Colors.black.withValues(alpha: 0.08)
+                                            : Colors.grey.withValues(alpha: 0.08),
+                                        spreadRadius: 1,
+                                        blurRadius: 10,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(20.0),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
                                         child: _buildCompactMetric(
@@ -268,6 +284,7 @@ class _DriversState extends State<Drivers> {
                                           isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       ),
+                                      _buildVerticalSeparator(isDark),
                                       Expanded(
                                         child: _buildCompactMetric(
                                           'Online',
@@ -275,6 +292,7 @@ class _DriversState extends State<Drivers> {
                                           isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       ),
+                                      _buildVerticalSeparator(isDark),
                                       Expanded(
                                         child: _buildCompactMetric(
                                           'Offline',
@@ -809,6 +827,19 @@ class _DriversState extends State<Drivers> {
           ),
         ),
       ],
+    );
+  }
+
+  // Vertical separator for status metrics
+  Widget _buildVerticalSeparator(bool isDark) {
+    return Container(
+      height: 40.0,
+      width: 1.0,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkDivider : Palette.lightDivider,
+        borderRadius: BorderRadius.circular(0.5),
+      ),
     );
   }
 }

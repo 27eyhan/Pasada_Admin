@@ -185,7 +185,7 @@ class _ReportsState extends State<Reports> {
         .width
         .clamp(600.0, double.infinity)
         .toDouble();
-    final double horizontalPadding = screenWidth * 0.1;
+    final double horizontalPadding = screenWidth * 0.05;
 
     return Scaffold(
       backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
@@ -252,12 +252,27 @@ class _ReportsState extends State<Reports> {
                                             ],
                                           ),
                                           const SizedBox(height: 24.0),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 4.0, horizontal: 4.0),
+                                          // Status metrics container with separators
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color: isDark ? Palette.darkCard : Palette.lightCard,
+                                              borderRadius: BorderRadius.circular(12.0),
+                                              border: Border.all(
+                                                color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: isDark
+                                                      ? Colors.black.withValues(alpha: 0.08)
+                                                      : Colors.grey.withValues(alpha: 0.08),
+                                                  spreadRadius: 1,
+                                                  blurRadius: 10,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            padding: const EdgeInsets.all(20.0),
                                             child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.spaceBetween,
                                               children: [
                                                 Expanded(
                                                   child: _buildCompactMetric(
@@ -268,6 +283,7 @@ class _ReportsState extends State<Reports> {
                                                         : Palette.lightText,
                                                   ),
                                                 ),
+                                                _buildVerticalSeparator(isDark),
                                                 Expanded(
                                                   child: _buildCompactMetric(
                                                     'Total Earnings',
@@ -465,7 +481,9 @@ class _ReportsState extends State<Reports> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [Colors.grey.shade700, Colors.black],
+                        colors: isDark 
+                            ? [Colors.grey.shade600, Colors.grey.shade800]
+                            : [Colors.grey.shade400, Colors.grey.shade600],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -475,7 +493,7 @@ class _ReportsState extends State<Reports> {
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
-                        color: Palette.whiteColor,
+                        color: Colors.white,
                         size: 28,
                       ),
                     ),
@@ -559,7 +577,9 @@ class _ReportsState extends State<Reports> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [Colors.grey.shade700, Colors.black],
+                        colors: isDark 
+                            ? [Colors.grey.shade600, Colors.grey.shade800]
+                            : [Colors.grey.shade400, Colors.grey.shade600],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -569,7 +589,7 @@ class _ReportsState extends State<Reports> {
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
-                        color: Palette.whiteColor,
+                        color: Colors.white,
                         size: 24,
                       ),
                     ),
@@ -610,7 +630,7 @@ class _ReportsState extends State<Reports> {
                               fontFamily: 'Inter',
                               fontSize: 16.0,
                               fontWeight: FontWeight.bold,
-                              color: Palette.blackColor,
+                              color: isDark ? Palette.darkText : Palette.lightText,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -620,7 +640,7 @@ class _ReportsState extends State<Reports> {
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 13.0,
-                              color: Palette.blackColor,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                             ),
                           ),
                         ],
@@ -658,7 +678,7 @@ class _ReportsState extends State<Reports> {
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 11.0,
-                              color: Palette.greyColor,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                             ),
                           ),
                         ],
@@ -681,7 +701,7 @@ class _ReportsState extends State<Reports> {
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 11.0,
-                              color: Palette.greyColor,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                             ),
                           ),
                         ],
@@ -699,6 +719,9 @@ class _ReportsState extends State<Reports> {
 
   // Helper widget for driver info rows with icons
   Widget _buildDriverInfoRow(IconData icon, String text, {Color? textColor}) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),
       child: Row(
@@ -706,7 +729,7 @@ class _ReportsState extends State<Reports> {
           Icon(
             icon,
             size: 14,
-            color: Palette.blackColor,
+            color: textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
           ),
           SizedBox(width: 4),
           Expanded(
@@ -715,7 +738,7 @@ class _ReportsState extends State<Reports> {
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13.0,
-                color: textColor ?? Palette.blackColor,
+                color: textColor ?? (isDark ? Palette.darkText : Palette.lightText),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -753,6 +776,19 @@ class _ReportsState extends State<Reports> {
           ),
         ),
       ],
+    );
+  }
+
+  // Vertical separator for status metrics
+  Widget _buildVerticalSeparator(bool isDark) {
+    return Container(
+      height: 40.0,
+      width: 1.0,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkDivider : Palette.lightDivider,
+        borderRadius: BorderRadius.circular(0.5),
+      ),
     );
   }
 }

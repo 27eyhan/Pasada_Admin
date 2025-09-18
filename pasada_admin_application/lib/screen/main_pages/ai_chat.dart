@@ -173,7 +173,7 @@ class _AiChatState extends State<AiChat> {
         .width
         .clamp(600.0, double.infinity)
         .toDouble();
-    final double horizontalPadding = screenWidth * 0.15;
+    final double horizontalPadding = screenWidth * 0.05;
 
     return Scaffold(
       backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
