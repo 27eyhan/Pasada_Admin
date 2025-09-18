@@ -3,6 +3,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
+import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
 import 'package:pasada_admin_application/maps/map_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -16,23 +17,65 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  late Widget _mapscreenInstance;
+  late Mapscreen _mapscreenInstance;
+  final GlobalKey<MapsScreenState> _mapScreenKey = GlobalKey<MapsScreenState>();
+  
+  // Filter state
+  Set<String> selectedStatuses = {};
+  String? selectedVehicleId;
+  String sortOption = 'numeric'; // Default sorting
 
   @override
   void initState() {
     super.initState();
     // Pass the driver location arguments to the map screen
     _mapscreenInstance = Mapscreen(
+      key: _mapScreenKey,
       driverToFocus: widget.driverLocationArgs != null
           ? widget.driverLocationArgs!['driverId']
           : null,
       initialShowDriverInfo: widget.driverLocationArgs != null
           ? widget.driverLocationArgs!['viewDriverLocation']
           : false,
+      selectedStatuses: selectedStatuses,
+      selectedVehicleId: selectedVehicleId,
+      sortOption: sortOption,
     );
 
     debugPrint(
         '[Dashboard] initState: Mapscreen instance created with driver focus: ${widget.driverLocationArgs?.toString() ?? 'none'}');
+  }
+
+  void _showFilterDialog() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return DriverFilterDialog(
+          selectedStatuses: selectedStatuses,
+          selectedVehicleId: selectedVehicleId,
+          sortOption: sortOption,
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        selectedStatuses = result['selectedStatuses'] as Set<String>;
+        selectedVehicleId = result['selectedVehicleId'] as String?;
+        sortOption = result['sortOption'] as String;
+        _applyFilters();
+      });
+    }
+  }
+
+  void _applyFilters() {
+    // Update the map screen with new filter parameters
+    _mapScreenKey.currentState?.updateFilters(
+      selectedStatuses: selectedStatuses,
+      selectedVehicleId: selectedVehicleId,
+      sortOption: sortOption,
+    );
+    debugPrint('[Dashboard] Applied filters: $selectedStatuses, $selectedVehicleId, $sortOption');
   }
 
   @override
@@ -50,8 +93,12 @@ class _DashboardState extends State<Dashboard> {
     // If we got route arguments but didn't initialize with them, recreate the map screen
     if (routeArgs != null && widget.driverLocationArgs == null) {
       _mapscreenInstance = Mapscreen(
+        key: _mapScreenKey,
         driverToFocus: routeArgs['driverId'],
         initialShowDriverInfo: routeArgs['viewDriverLocation'] ?? false,
+        selectedStatuses: selectedStatuses,
+        selectedVehicleId: selectedVehicleId,
+        sortOption: sortOption,
       );
     }
 
@@ -69,7 +116,7 @@ class _DashboardState extends State<Dashboard> {
             child: Column(
               children: [
                 // App bar in the main content area
-                AppBarSearch(),
+                AppBarSearch(onFilterPressed: _showFilterDialog),
                 // Map content
                 Expanded(
                   child: _mapscreenInstance,
