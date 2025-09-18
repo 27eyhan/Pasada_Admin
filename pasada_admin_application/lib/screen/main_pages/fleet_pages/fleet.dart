@@ -8,6 +8,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/filter_dialog.d
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
 import 'analytics/fleet_analytics_graph.dart';
+import 'analytics/booking_frequency_graph.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
 import 'package:provider/provider.dart';
 
@@ -206,7 +207,7 @@ class _FleetState extends State<Fleet> {
         .width
         .clamp(600.0, double.infinity)
         .toDouble();
-    final double horizontalPadding = screenWidth * 0.1;
+    final double horizontalPadding = screenWidth * 0.05;
     
     return Scaffold(
       backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
@@ -277,15 +278,33 @@ class _FleetState extends State<Fleet> {
                                   ],
                                 ),
                                 const SizedBox(height: 24.0),
-                                // Analytics graph (Resend-like)
+                                // Booking frequency graph
+                                BookingFrequencyGraph(days: 14),
+                                const SizedBox(height: 24.0),
+                                // Traffic graph
                                 FleetAnalyticsGraph(routeId: selectedRouteId),
                                 const SizedBox(height: 24.0),
-                                // Compact metrics row (Resend Audience style)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0, horizontal: 4.0),
+                                // Status metrics container with separators
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Palette.darkCard : Palette.lightCard,
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    border: Border.all(
+                                      color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isDark
+                                            ? Colors.black.withValues(alpha: 0.08)
+                                            : Colors.grey.withValues(alpha: 0.08),
+                                        spreadRadius: 1,
+                                        blurRadius: 10,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(20.0),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
                                         child: _buildCompactMetric(
@@ -294,6 +313,7 @@ class _FleetState extends State<Fleet> {
                                           isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       ),
+                                      _buildVerticalSeparator(isDark),
                                       Expanded(
                                         child: _buildCompactMetric(
                                           'Online',
@@ -301,6 +321,7 @@ class _FleetState extends State<Fleet> {
                                           isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       ),
+                                      _buildVerticalSeparator(isDark),
                                       Expanded(
                                         child: _buildCompactMetric(
                                           'Idling',
@@ -308,6 +329,7 @@ class _FleetState extends State<Fleet> {
                                           isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       ),
+                                      _buildVerticalSeparator(isDark),
                                       Expanded(
                                         child: _buildCompactMetric(
                                           'Driving',
@@ -315,6 +337,7 @@ class _FleetState extends State<Fleet> {
                                           isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       ),
+                                      _buildVerticalSeparator(isDark),
                                       Expanded(
                                         child: _buildCompactMetric(
                                           'Offline',
@@ -780,5 +803,16 @@ class _FleetState extends State<Fleet> {
     );
   }
 
-  // Removed vertical divider to align with the clean Resend metric layout
+  // Vertical separator for status metrics
+  Widget _buildVerticalSeparator(bool isDark) {
+    return Container(
+      height: 40.0,
+      width: 1.0,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkDivider : Palette.lightDivider,
+        borderRadius: BorderRadius.circular(0.5),
+      ),
+    );
+  }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class EarningsBreakdownDialog extends StatelessWidget {
   final Map<String, dynamic> driver;
@@ -13,6 +15,8 @@ class EarningsBreakdownDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final double screenWidth = MediaQuery.of(context).size.width * 0.65;
     final double dialogWidth = screenWidth * 0.6;
     final double dialogHeight = screenWidth * 0.75;
@@ -30,10 +34,10 @@ class EarningsBreakdownDialog extends StatelessWidget {
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: Palette.blackColor.withAlpha(100), width: 1.5),
+        side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 1.5),
       ),
       elevation: 8.0,
-      backgroundColor: Palette.whiteColor,
+      backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
       child: Container(
         width: dialogWidth,
         height: dialogHeight,
@@ -48,14 +52,14 @@ class EarningsBreakdownDialog extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.bar_chart, color: Palette.blackColor, size: 28),
+                    Icon(Icons.bar_chart, color: isDark ? Palette.darkText : Palette.lightText, size: 28),
                     SizedBox(width: 12.0),
                     Text(
                       "Earnings Report",
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Palette.blackColor,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                         fontFamily: 'Inter',
                       ),
                     ),
@@ -69,13 +73,13 @@ class EarningsBreakdownDialog extends StatelessWidget {
                     child: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: isDark ? Palette.darkBorder : Colors.grey[200],
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.close,
                         size: 24,
-                        color: Palette.blackColor,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                       ),
                     ),
                   ),
@@ -83,16 +87,16 @@ class EarningsBreakdownDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16.0),
-            Divider(color: Palette.blackColor.withAlpha(50), thickness: 1.5),
+            Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, thickness: 1.5),
             const SizedBox(height: 16.0),
             
             // Driver information
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Palette.blackColor.withAlpha(10),
+                color: isDark ? Palette.darkSurface : Palette.lightSurface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Palette.blackColor.withAlpha(50)),
+                border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
               ),
               child: Text(
                 "${driver['full_name']} (ID: ${driver['driver_id']})",
@@ -100,7 +104,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
                   fontFamily: 'Inter',
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Palette.blackColor,
+                  color: isDark ? Palette.darkText : Palette.lightText,
                 ),
               ),
             ),
@@ -110,12 +114,14 @@ class EarningsBreakdownDialog extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(16.0),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: isDark ? Palette.darkSurface : Palette.lightSurface,
                 borderRadius: BorderRadius.circular(12.0),
-                border: Border.all(color: Colors.grey[200]!),
+                border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withAlpha(30),
+                    color: isDark 
+                        ? Colors.black.withValues(alpha: 0.1)
+                        : Colors.grey.withValues(alpha: 0.1),
                     spreadRadius: 1,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
@@ -125,11 +131,11 @@ class EarningsBreakdownDialog extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildEarningsSummary('Weekly', weeklyEarnings),
-                  _buildVerticalDivider(),
-                  _buildEarningsSummary('Monthly', monthlyEarnings),
-                  _buildVerticalDivider(),
-                  _buildEarningsSummary('All Time', totalEarnings),
+                  _buildEarningsSummary('Weekly', weeklyEarnings, isDark),
+                  _buildVerticalDivider(isDark),
+                  _buildEarningsSummary('Monthly', monthlyEarnings, isDark),
+                  _buildVerticalDivider(isDark),
+                  _buildEarningsSummary('All Time', totalEarnings, isDark),
                 ],
               ),
             ),
@@ -149,11 +155,11 @@ class EarningsBreakdownDialog extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionHeader("This Week's Bookings"),
+                          _buildSectionHeader("This Week's Bookings", isDark),
                           const SizedBox(height: 8.0),
                           Expanded(
                             child: SingleChildScrollView(
-                              child: _buildBookingsList(weeklyBookings),
+                              child: _buildBookingsList(weeklyBookings, isDark),
                             ),
                           ),
                         ],
@@ -169,11 +175,11 @@ class EarningsBreakdownDialog extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionHeader("This Month's Bookings"),
+                          _buildSectionHeader("This Month's Bookings", isDark),
                           const SizedBox(height: 8.0),
                           Expanded(
                             child: SingleChildScrollView(
-                              child: _buildBookingsList(monthlyBookings),
+                              child: _buildBookingsList(monthlyBookings, isDark),
                             ),
                           ),
                         ],
@@ -191,11 +197,11 @@ class EarningsBreakdownDialog extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Palette.whiteColor,
-                  foregroundColor: Palette.blackColor,
+                  backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+                  foregroundColor: isDark ? Palette.darkText : Palette.lightText,
                   elevation: 4.0,
-                  shadowColor: Colors.grey.shade300,
-                  side: BorderSide(color: Colors.grey.shade400, width: 1.0),
+                  shadowColor: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.grey.shade300,
+                  side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 1.0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
@@ -225,15 +231,15 @@ class EarningsBreakdownDialog extends StatelessWidget {
     );
   }
   
-  Widget _buildVerticalDivider() {
+  Widget _buildVerticalDivider(bool isDark) {
     return Container(
       height: 60.0,
       width: 1.0,
-      color: Colors.grey[300],
+      color: isDark ? Palette.darkDivider : Palette.lightDivider,
     );
   }
   
-  Widget _buildEarningsSummary(String period, double amount) {
+  Widget _buildEarningsSummary(String period, double amount, bool isDark) {
     return Column(
       children: [
         Text(
@@ -242,7 +248,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
             fontFamily: 'Inter',
             fontSize: 16.0,
             fontWeight: FontWeight.bold,
-            color: Palette.blackColor,
+            color: isDark ? Palette.darkText : Palette.lightText,
           ),
         ),
         SizedBox(height: 8.0),
@@ -252,40 +258,41 @@ class EarningsBreakdownDialog extends StatelessWidget {
             fontFamily: 'Inter',
             fontSize: 18.0,
             fontWeight: FontWeight.bold,
-            color: amount > 0 ? Palette.greenColor : Colors.grey[600],
+            color: amount > 0 ? Palette.greenColor : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
           ),
         ),
       ],
     );
   }
   
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, bool isDark) {
     return Text(
       title,
       style: TextStyle(
         fontFamily: 'Inter',
         fontSize: 18.0,
         fontWeight: FontWeight.bold,
-        color: Palette.blackColor,
+        color: isDark ? Palette.darkText : Palette.lightText,
       ),
     );
   }
   
-  Widget _buildBookingsList(List bookings) {
+  Widget _buildBookingsList(List bookings, bool isDark) {
+    
     if (bookings.isEmpty) {
       return Container(
         height: 80,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: isDark ? Palette.darkSurface : Palette.lightSurface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey[200]!),
+          border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
         ),
         child: Text(
           'No bookings in this period',
           style: TextStyle(
             fontFamily: 'Inter',
-            color: Colors.grey[600],
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
             fontStyle: FontStyle.italic,
           ),
         ),
@@ -295,7 +302,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
       ),
       child: Column(
         children: bookings.map<Widget>((booking) {
@@ -303,7 +310,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(
                 bottom: bookings.last != booking 
-                  ? BorderSide(color: Colors.grey[200]!) 
+                  ? BorderSide(color: isDark ? Palette.darkDivider : Palette.lightDivider) 
                   : BorderSide.none,
               ),
             ),
@@ -314,6 +321,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
+                  color: isDark ? Palette.darkText : Palette.lightText,
                 ),
               ),
               trailing: Text(
@@ -322,6 +330,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
+                  color: isDark ? Palette.darkText : Palette.lightText,
                 ),
               ),
             ),

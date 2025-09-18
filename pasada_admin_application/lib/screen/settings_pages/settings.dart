@@ -62,7 +62,7 @@ class _SettingsState extends State<Settings> with SingleTickerProviderStateMixin
         .width
         .clamp(600.0, double.infinity)
         .toDouble();
-    final double horizontalPadding = screenWidth * 0.15;
+    final double horizontalPadding = screenWidth * 0.08;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 

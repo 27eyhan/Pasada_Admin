@@ -18,7 +18,6 @@ class FleetAnalyticsGraph extends StatefulWidget {
 }
 
 class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
-  String _selectedMetric = 'Traffic';
   final AnalyticsService _analyticsService = AnalyticsService();
   bool _loading = false;
   String? _error;
@@ -222,11 +221,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     }
   }
 
-  // Stub data generators for a week (Mon-Sun)
-  List<double> _generateWeeklyBookings() {
-    // Example base values representing bookings frequency
-    return [12, 18, 15, 20, 26, 22, 16];
-  }
+  // Stub data generator for a week (Mon-Sun)
 
   List<double> _generateWeeklyTraffic() {
     // Example base values representing traffic density on a route
@@ -260,9 +255,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    final List<double> baseSeries = _selectedMetric == 'Bookings'
-        ? _generateWeeklyBookings()
-        : (_trafficSeries.isNotEmpty ? _trafficSeries : _generateWeeklyTraffic());
+    final List<double> baseSeries = _trafficSeries.isNotEmpty ? _trafficSeries : _generateWeeklyTraffic();
     final List<double> predictionSeries =
         _predictedSeries.isNotEmpty ? _predictedSeries : _predictNextWeek(baseSeries);
 
@@ -284,7 +277,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
           Row(
             children: [
               Text(
-                'Analytics',
+                'Traffic',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16.0,
@@ -307,20 +300,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                     },
                   ),
                 ),
-              _MetricDropdown(
-                value: _selectedMetric,
-                onChanged: (val) {
-                  if (val == null) return;
-                  setState(() {
-                    _selectedMetric = val;
-                    _error = null;
-                  });
-                  if (val == 'Traffic') {
-                    _fetchTraffic();
-                    _fetchPredictions();
-                  }
-                },
-              ),
+              // Metric dropdown removed (traffic-only)
             ],
           ),
           const SizedBox(height: 12.0),
@@ -356,32 +336,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 }
 
-class _MetricDropdown extends StatelessWidget {
-  final String value;
-  final ValueChanged<String?> onChanged;
-  const _MetricDropdown({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Palette.lightBorder.withValues(alpha: 77)),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10.0),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          items: const [
-            DropdownMenuItem(value: 'Bookings', child: Text('Bookings')),
-            DropdownMenuItem(value: 'Traffic', child: Text('Traffic')),
-          ],
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-}
+// Metric dropdown removed
 
 class _RouteDropdown extends StatelessWidget {
   final List<Map<String, dynamic>> routes;

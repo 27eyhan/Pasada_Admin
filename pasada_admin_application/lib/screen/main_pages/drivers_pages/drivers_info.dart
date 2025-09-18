@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'drivers_actlogs.dart';
@@ -393,6 +395,8 @@ class _DriverInfoState extends State<DriverInfo> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final double screenWidth =
         MediaQuery.of(context).size.width * 0.55; // Increased width ratio
     final double dialogWidth = screenWidth;
@@ -403,10 +407,10 @@ class _DriverInfoState extends State<DriverInfo> {
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: Palette.greenColor, width: 2),
+        side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 2),
       ),
       elevation: 8.0,
-      backgroundColor: Palette.whiteColor,
+      backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
       child: Container(
         width: dialogWidth,
         height: dialogHeight,
@@ -421,14 +425,14 @@ class _DriverInfoState extends State<DriverInfo> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.person, color: Palette.greenColor, size: 28),
+                    Icon(Icons.person, color: isDark ? Palette.darkText : Palette.lightText, size: 28),
                     SizedBox(width: 12.0),
                     Text(
                       "Driver Information",
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Palette.greenColor,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                         fontFamily: 'Inter',
                       ),
                     ),
@@ -442,13 +446,13 @@ class _DriverInfoState extends State<DriverInfo> {
                     child: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: isDark ? Palette.darkBorder : Colors.grey[200],
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.close,
                         size: 24,
-                        color: Palette.blackColor,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                       ),
                     ),
                   ),
@@ -456,7 +460,7 @@ class _DriverInfoState extends State<DriverInfo> {
               ],
             ),
             const SizedBox(height: 12.0),
-            Divider(color: Palette.greenColor.withAlpha(50), thickness: 1.5),
+            Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, thickness: 1.5),
             const SizedBox(height: 12.0),
 
             // Main content with two columns
@@ -476,10 +480,10 @@ class _DriverInfoState extends State<DriverInfo> {
                             padding: EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Palette.greenColor.withAlpha(40),
+                              color: isDark ? Palette.darkSurface : Palette.lightSurface,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                  color: Palette.greenColor.withAlpha(100)),
+                                  color: isDark ? Palette.darkBorder : Palette.lightBorder),
                             ),
                             child: Text(
                               "Driver ID: ${driver['driver_id']?.toString() ?? 'N/A'}",
@@ -487,7 +491,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                 fontFamily: 'Inter',
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Palette.greenColor,
+                                color: isDark ? Palette.darkText : Palette.lightText,
                               ),
                             ),
                           ),
@@ -516,7 +520,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                     fontFamily: 'Inter',
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Palette.blackColor,
+                                    color: isDark ? Palette.darkText : Palette.lightText,
                                   ),
                                 ),
                               ),
@@ -552,7 +556,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                         style: TextStyle(
                                           fontFamily: 'Inter',
                                           fontSize: 16,
-                                          color: Palette.blackColor,
+                                          color: isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       )
                                     : Text(
@@ -560,7 +564,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                         style: TextStyle(
                                           fontFamily: 'Inter',
                                           fontSize: 16,
-                                          color: Palette.blackColor,
+                                          color: isDark ? Palette.darkText : Palette.lightText,
                                         ),
                                       ),
                               ),
@@ -585,7 +589,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                     fontFamily: 'Inter',
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Palette.blackColor,
+                                    color: isDark ? Palette.darkText : Palette.lightText,
                                   ),
                                 ),
                               ),
@@ -623,7 +627,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                     fontFamily: 'Inter',
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Palette.blackColor,
+                                    color: isDark ? Palette.darkText : Palette.lightText,
                                   ),
                                 ),
                               ),
@@ -645,19 +649,19 @@ class _DriverInfoState extends State<DriverInfo> {
                                     fontFamily: 'Inter',
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Palette.blackColor,
+                                    color: isDark ? Palette.darkText : Palette.lightText,
                                   ),
                                 ),
                               ),
                               Icon(Icons.access_time,
-                                  size: 16, color: Colors.grey[600]),
+                                  size: 16, color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
                               SizedBox(width: 6),
                               Text(
                                 _formatLastOnline(driver['last_online']),
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 15,
-                                  color: Palette.blackColor,
+                                  color: isDark ? Palette.darkText : Palette.lightText,
                                 ),
                               ),
                             ],
@@ -680,13 +684,15 @@ class _DriverInfoState extends State<DriverInfo> {
                           child: Container(
                             padding: const EdgeInsets.all(16.0),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: isDark ? Palette.darkSurface : Palette.lightSurface,
                               borderRadius: BorderRadius.circular(12.0),
                               border: Border.all(
-                                  color: Palette.greenColor.withAlpha(30)),
+                                  color: isDark ? Palette.darkBorder : Palette.lightBorder),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.grey.withAlpha(20),
+                                  color: isDark 
+                                      ? Colors.black.withValues(alpha: 0.1)
+                                      : Colors.grey.withValues(alpha: 0.1),
                                   spreadRadius: 1,
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
@@ -701,7 +707,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(Icons.calendar_today,
-                                        color: Palette.greenColor, size: 20),
+                                        color: isDark ? Palette.darkText : Palette.lightText, size: 20),
                                     SizedBox(width: 8),
                                     Text(
                                       "Driver Activity",
@@ -709,7 +715,7 @@ class _DriverInfoState extends State<DriverInfo> {
                                         fontFamily: 'Inter',
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Palette.greenColor,
+                                        color: isDark ? Palette.darkText : Palette.lightText,
                                       ),
                                     ),
                                   ],
@@ -723,8 +729,8 @@ class _DriverInfoState extends State<DriverInfo> {
                                     child: HeatMapCalendar(
                                       datasets: _heatMapData,
                                       colorMode: ColorMode.color,
-                                      defaultColor: Palette.greyColor,
-                                      textColor: Palette.blackColor,
+                                      defaultColor: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                      textColor: isDark ? Palette.darkText : Palette.lightText,
                                       colorsets: {
                                         1: Palette.greenColor.withAlpha(100),
                                         2: Palette.greenColor.withAlpha(150),
@@ -785,14 +791,14 @@ class _DriverInfoState extends State<DriverInfo> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        _isEditMode ? Colors.red.shade400 : Palette.whiteColor,
-                    foregroundColor: Palette.blackColor,
+                        _isEditMode ? Colors.red.shade400 : (isDark ? Palette.darkSurface : Palette.lightSurface),
+                    foregroundColor: _isEditMode ? Colors.white : (isDark ? Palette.darkText : Palette.lightText),
                     elevation: 4.0,
-                    shadowColor: Colors.grey.shade300,
+                    shadowColor: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.grey.shade300,
                     side: BorderSide(
                         color: _isEditMode
                             ? Colors.red.shade400
-                            : Colors.grey.shade400,
+                            : (isDark ? Palette.darkBorder : Palette.lightBorder),
                         width: 1.0),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
@@ -831,7 +837,7 @@ class _DriverInfoState extends State<DriverInfo> {
                       Icon(_isEditMode ? Icons.cancel : Icons.phone,
                           size: 20,
                           color:
-                              _isEditMode ? Colors.white : Palette.blackColor),
+                              _isEditMode ? Colors.white : (isDark ? Palette.darkText : Palette.lightText)),
                       SizedBox(width: 8),
                       Text(
                         _isEditMode ? "Cancel" : "Contact Driver",
@@ -840,7 +846,7 @@ class _DriverInfoState extends State<DriverInfo> {
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color:
-                              _isEditMode ? Colors.white : Palette.blackColor,
+                              _isEditMode ? Colors.white : (isDark ? Palette.darkText : Palette.lightText),
                         ),
                       ),
                     ],
@@ -850,14 +856,14 @@ class _DriverInfoState extends State<DriverInfo> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        _isEditMode ? Palette.greenColor : Palette.whiteColor,
-                    foregroundColor: Palette.blackColor,
+                        _isEditMode ? Palette.greenColor : (isDark ? Palette.darkSurface : Palette.lightSurface),
+                    foregroundColor: _isEditMode ? Colors.white : (isDark ? Palette.darkText : Palette.lightText),
                     elevation: 4.0,
-                    shadowColor: Colors.grey.shade300,
+                    shadowColor: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.grey.shade300,
                     side: BorderSide(
                         color: _isEditMode
                             ? Palette.greenColor
-                            : Colors.grey.shade400,
+                            : (isDark ? Palette.darkBorder : Palette.lightBorder),
                         width: 1.0),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0),
@@ -872,7 +878,7 @@ class _DriverInfoState extends State<DriverInfo> {
                       Icon(_isEditMode ? Icons.save : Icons.edit,
                           size: 20,
                           color:
-                              _isEditMode ? Colors.white : Palette.blackColor),
+                              _isEditMode ? Colors.white : (isDark ? Palette.darkText : Palette.lightText)),
                       SizedBox(width: 8),
                       Text(
                         _isEditMode ? "Save Changes" : "Manage Driver",
@@ -881,7 +887,7 @@ class _DriverInfoState extends State<DriverInfo> {
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color:
-                              _isEditMode ? Colors.white : Palette.blackColor,
+                              _isEditMode ? Colors.white : (isDark ? Palette.darkText : Palette.lightText),
                         ),
                       ),
                     ],
@@ -897,6 +903,9 @@ class _DriverInfoState extends State<DriverInfo> {
 
   // Helper method to build legend items
   Widget _buildLegendItem(Color color, String label) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -914,7 +923,7 @@ class _DriverInfoState extends State<DriverInfo> {
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 12,
-            color: Colors.grey[700],
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
           ),
         ),
       ],
@@ -946,6 +955,9 @@ class _DriverInfoState extends State<DriverInfo> {
     required String value,
     required TextEditingController controller,
   }) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
     return _isEditMode
         ? Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -958,7 +970,7 @@ class _DriverInfoState extends State<DriverInfo> {
                     fontFamily: 'Inter',
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Palette.blackColor,
+                    color: isDark ? Palette.darkText : Palette.lightText,
                   ),
                 ),
               ),
@@ -967,12 +979,12 @@ class _DriverInfoState extends State<DriverInfo> {
                   controller: controller,
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: isDark ? Palette.darkSurface : Palette.lightSurface,
                     contentPadding:
                         EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[400]!),
+                      borderSide: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -981,13 +993,13 @@ class _DriverInfoState extends State<DriverInfo> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[400]!),
+                      borderSide: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
                     ),
                   ),
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 16,
-                    color: Palette.blackColor,
+                    color: isDark ? Palette.darkText : Palette.lightText,
                   ),
                 ),
               ),
@@ -1004,7 +1016,7 @@ class _DriverInfoState extends State<DriverInfo> {
                     fontFamily: 'Inter',
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Palette.blackColor,
+                    color: isDark ? Palette.darkText : Palette.lightText,
                   ),
                 ),
               ),
@@ -1014,7 +1026,7 @@ class _DriverInfoState extends State<DriverInfo> {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 16,
-                    color: Palette.blackColor,
+                    color: isDark ? Palette.darkText : Palette.lightText,
                   ),
                 ),
               ),
