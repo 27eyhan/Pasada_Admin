@@ -53,20 +53,24 @@ class TablePreviewHelper {
       dataFetcher: dataFetcher,
       columns: const [
         DataColumn(label: Text('Driver ID')),
-        DataColumn(label: Text('Name')),
-        DataColumn(label: Text('Mobile')),
+        DataColumn(label: Text('Full Name')),
+        DataColumn(label: Text('Driver Number')),
+        DataColumn(label: Text('License Number')),
+        DataColumn(label: Text('Vehicle Plate')),
         DataColumn(label: Text('Status')),
-        DataColumn(label: Text('Vehicle')),
+        DataColumn(label: Text('Last Online')),
         DataColumn(label: Text('Created At')),
       ],
       rowBuilder: (data) => data.map((driver) {
         return DataRow(
           cells: [
             DataCell(Text(driver['driver_id']?.toString() ?? 'N/A')),
-            DataCell(Text('${driver['first_name'] ?? ''} ${driver['last_name'] ?? ''}')),
-            DataCell(Text(driver['driver_mobile_number']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['full_name']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['driver_number']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['driver_license_number']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['vehicleplate_number']?.toString() ?? 'N/A')),
             DataCell(Text(driver['driving_status']?.toString() ?? 'N/A')),
-            DataCell(Text(driver['vehicle_id']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['last_online']?.toString() ?? 'N/A')),
             DataCell(Text(driver['created_at']?.toString() ?? 'N/A')),
           ],
         );
@@ -91,19 +95,23 @@ class TablePreviewHelper {
       tableColor: Palette.lightInfo,
       dataFetcher: dataFetcher,
       columns: const [
-        DataColumn(label: Text('Passenger ID')),
-        DataColumn(label: Text('Name')),
-        DataColumn(label: Text('Mobile')),
+        DataColumn(label: Text('ID')),
+        DataColumn(label: Text('Display Name')),
+        DataColumn(label: Text('Contact Number')),
         DataColumn(label: Text('Email')),
+        DataColumn(label: Text('Type')),
+        DataColumn(label: Text('Last Login')),
         DataColumn(label: Text('Created At')),
       ],
       rowBuilder: (data) => data.map((passenger) {
         return DataRow(
           cells: [
-            DataCell(Text(passenger['passenger_id']?.toString() ?? 'N/A')),
-            DataCell(Text('${passenger['first_name'] ?? ''} ${passenger['last_name'] ?? ''}')),
-            DataCell(Text(passenger['passenger_mobile_number']?.toString() ?? 'N/A')),
+            DataCell(Text(passenger['id']?.toString() ?? 'N/A')),
+            DataCell(Text(passenger['display_name']?.toString() ?? 'N/A')),
+            DataCell(Text(passenger['contact_number']?.toString() ?? 'N/A')),
             DataCell(Text(passenger['passenger_email']?.toString() ?? 'N/A')),
+            DataCell(Text(passenger['passenger_type']?.toString() ?? 'N/A')),
+            DataCell(Text(passenger['last_login']?.toString() ?? 'N/A')),
             DataCell(Text(passenger['created_at']?.toString() ?? 'N/A')),
           ],
         );
@@ -129,9 +137,10 @@ class TablePreviewHelper {
       columns: const [
         DataColumn(label: Text('Vehicle ID')),
         DataColumn(label: Text('Plate Number')),
-        DataColumn(label: Text('Model')),
-        DataColumn(label: Text('Capacity')),
-        DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Route ID')),
+        DataColumn(label: Text('Passenger Capacity')),
+        DataColumn(label: Text('Sitting Passengers')),
+        DataColumn(label: Text('Standing Passengers')),
         DataColumn(label: Text('Created At')),
       ],
       rowBuilder: (data) => data.map((vehicle) {
@@ -139,9 +148,10 @@ class TablePreviewHelper {
           cells: [
             DataCell(Text(vehicle['vehicle_id']?.toString() ?? 'N/A')),
             DataCell(Text(vehicle['plate_number']?.toString() ?? 'N/A')),
-            DataCell(Text(vehicle['vehicle_model']?.toString() ?? 'N/A')),
-            DataCell(Text(vehicle['capacity']?.toString() ?? 'N/A')),
-            DataCell(Text(vehicle['vehicle_status']?.toString() ?? 'N/A')),
+            DataCell(Text(vehicle['route_id']?.toString() ?? 'N/A')),
+            DataCell(Text(vehicle['passenger_capacity']?.toString() ?? 'N/A')),
+            DataCell(Text(vehicle['sitting_passenger']?.toString() ?? 'N/A')),
+            DataCell(Text(vehicle['standing_passenger']?.toString() ?? 'N/A')),
             DataCell(Text(vehicle['created_at']?.toString() ?? 'N/A')),
           ],
         );
@@ -169,18 +179,20 @@ class TablePreviewHelper {
         DataColumn(label: Text('Route Name')),
         DataColumn(label: Text('Origin')),
         DataColumn(label: Text('Destination')),
-        DataColumn(label: Text('Fare')),
+        DataColumn(label: Text('Description')),
         DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Created At')),
       ],
       rowBuilder: (data) => data.map((route) {
         return DataRow(
           cells: [
-            DataCell(Text(route['route_id']?.toString() ?? 'N/A')),
+            DataCell(Text(route['officialroute_id']?.toString() ?? 'N/A')),
             DataCell(Text(route['route_name']?.toString() ?? 'N/A')),
-            DataCell(Text(route['origin']?.toString() ?? 'N/A')),
-            DataCell(Text(route['destination']?.toString() ?? 'N/A')),
-            DataCell(Text(route['fare']?.toString() ?? 'N/A')),
-            DataCell(Text(route['route_status']?.toString() ?? 'N/A')),
+            DataCell(Text(route['origin_name']?.toString() ?? 'N/A')),
+            DataCell(Text(route['destination_name']?.toString() ?? 'N/A')),
+            DataCell(Text(route['description']?.toString() ?? 'N/A')),
+            DataCell(Text(route['status']?.toString() ?? 'N/A')),
+            DataCell(Text(route['created_at']?.toString() ?? 'N/A')),
           ],
         );
       }).toList(),
@@ -281,8 +293,9 @@ class TablePreviewHelper {
       columns: const [
         DataColumn(label: Text('Archive ID')),
         DataColumn(label: Text('Driver ID')),
-        DataColumn(label: Text('Name')),
-        DataColumn(label: Text('Reason')),
+        DataColumn(label: Text('Full Name')),
+        DataColumn(label: Text('Driver Number')),
+        DataColumn(label: Text('Last Vehicle Used')),
         DataColumn(label: Text('Archived At')),
       ],
       rowBuilder: (data) => data.map((archive) {
@@ -290,8 +303,9 @@ class TablePreviewHelper {
           cells: [
             DataCell(Text(archive['archive_id']?.toString() ?? 'N/A')),
             DataCell(Text(archive['driver_id']?.toString() ?? 'N/A')),
-            DataCell(Text('${archive['first_name'] ?? ''} ${archive['last_name'] ?? ''}')),
-            DataCell(Text(archive['archive_reason']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['full_name']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['driver_number']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['last_vehicle_used']?.toString() ?? 'N/A')),
             DataCell(Text(archive['archived_at']?.toString() ?? 'N/A')),
           ],
         );

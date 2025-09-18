@@ -3,18 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/maps/maps_call_driver.dart'; // Import the service
 import 'package:pasada_admin_application/config/palette.dart'; // Import palette for consistent colors
+import 'package:pasada_admin_application/config/theme_provider.dart';
 
 class Mapscreen extends StatefulWidget {
   // Add parameters to focus on a specific driver
   final dynamic driverToFocus;
   final bool initialShowDriverInfo;
+  
+  // Filter parameters
+  final Set<String>? selectedStatuses;
+  final String? selectedVehicleId;
+  final String? sortOption;
 
   const Mapscreen({
     super.key,
     this.driverToFocus,
     this.initialShowDriverInfo = false,
+    this.selectedStatuses,
+    this.selectedVehicleId,
+    this.sortOption,
   });
 
   @override
@@ -43,6 +53,11 @@ class MapsScreenState extends State<Mapscreen>
   // Selected driver info for custom overlay
   Map<String, dynamic>? _selectedDriverInfo;
   bool _showDriverOverlay = false;
+  
+  // Filter state
+  Set<String>? _currentSelectedStatuses;
+  String? _currentSelectedVehicleId;
+  String? _currentSortOption;
 
   @override
   bool get wantKeepAlive => true;
@@ -51,6 +66,11 @@ class MapsScreenState extends State<Mapscreen>
   void initState() {
     super.initState();
     debugPrint('[MapsScreenState] initState called.');
+
+    // Initialize filter state
+    _currentSelectedStatuses = widget.selectedStatuses;
+    _currentSelectedVehicleId = widget.selectedVehicleId;
+    _currentSortOption = widget.sortOption;
 
     // Load custom pin icons
     _loadCustomPinIcons();
@@ -112,6 +132,22 @@ class MapsScreenState extends State<Mapscreen>
       debugPrint('[MapsScreenState] Error loading custom pin icons: $e');
       // Fallback to default markers if custom icons fail to load
     }
+  }
+
+  // Update filter state
+  void updateFilters({
+    Set<String>? selectedStatuses,
+    String? selectedVehicleId,
+    String? sortOption,
+  }) {
+    setState(() {
+      _currentSelectedStatuses = selectedStatuses;
+      _currentSelectedVehicleId = selectedVehicleId;
+      _currentSortOption = sortOption;
+    });
+    
+    // Refresh markers with new filters
+    _updateDriverMarkers();
   }
 
   // Get the appropriate pin icon based on driver status
@@ -190,6 +226,67 @@ class MapsScreenState extends State<Mapscreen>
     });
   }
 
+  // Apply filters to driver data
+  List<Map<String, dynamic>> _applyFiltersToDrivers(List<Map<String, dynamic>> driverLocations) {
+    if (_currentSelectedStatuses == null && _currentSelectedVehicleId == null) {
+      // No filters applied, return all drivers
+      return driverLocations;
+    }
+
+    List<Map<String, dynamic>> filteredDrivers = driverLocations.where((driver) {
+      // Filter by status
+      bool statusMatch = true;
+      if (_currentSelectedStatuses != null && _currentSelectedStatuses!.isNotEmpty) {
+        final status = driver["driving_status"]?.toString() ?? "Offline";
+
+        if (_currentSelectedStatuses!.contains('Online')) {
+          // For Online, match any of these statuses
+          bool isActive = status.toLowerCase() == "driving" ||
+              status.toLowerCase() == "online" ||
+              status.toLowerCase() == "idling" ||
+              status.toLowerCase() == "active";
+
+          if (_currentSelectedStatuses!.contains('Offline')) {
+            // If both Online and Offline are selected, show all
+            statusMatch = true;
+          } else {
+            // Only Online is selected
+            statusMatch = isActive;
+          }
+        } else if (_currentSelectedStatuses!.contains('Offline')) {
+          // Only Offline is selected
+          bool isOffline = status.toLowerCase() == "offline" ||
+              status.toLowerCase() == "";
+          statusMatch = isOffline;
+        }
+      }
+
+      // Filter by vehicle ID
+      bool vehicleMatch = _currentSelectedVehicleId == null ||
+          driver['vehicle_id']?.toString() == _currentSelectedVehicleId;
+
+      return statusMatch && vehicleMatch;
+    }).toList();
+
+    // Apply sorting
+    if (_currentSortOption == 'alphabetical') {
+      filteredDrivers.sort((a, b) {
+        final nameA = a['full_name']?.toString() ?? '';
+        final nameB = b['full_name']?.toString() ?? '';
+        return nameA.compareTo(nameB);
+      });
+    } else {
+      // numeric sorting is default (by driver ID)
+      filteredDrivers.sort((a, b) {
+        final idA = int.tryParse(a['driver_id']?.toString() ?? '0') ?? 0;
+        final idB = int.tryParse(b['driver_id']?.toString() ?? '0') ?? 0;
+        return idA.compareTo(idB);
+      });
+    }
+
+    return filteredDrivers;
+  }
+
   Future<void> _updateDriverMarkers() async {
     debugPrint('[MapsScreenState] _updateDriverMarkers called.');
     List<Map<String, dynamic>> driverLocations =
@@ -197,10 +294,15 @@ class MapsScreenState extends State<Mapscreen>
     debugPrint(
         '[MapsScreenState] Received driver locations: ${driverLocations.length} drivers.');
 
+    // Apply filters to driver locations
+    List<Map<String, dynamic>> filteredDriverLocations = _applyFiltersToDrivers(driverLocations);
+    debugPrint(
+        '[MapsScreenState] After filtering: ${filteredDriverLocations.length} drivers.');
+
     Set<Marker> updatedMarkers = {};
     bool foundFocusDriver = false;
 
-    for (var driverData in driverLocations) {
+    for (var driverData in filteredDriverLocations) {
       final String driverId = driverData['driver_id'].toString();
       final LatLng position = driverData['position'];
       final String? drivingStatus = driverData['driving_status'];
@@ -363,169 +465,173 @@ class MapsScreenState extends State<Mapscreen>
     Color statusColor = _getStatusColor(drivingStatus);
 
     final screenSize = MediaQuery.of(context).size;
-    final overlayWidth = screenSize.width * 0.2;
-    final maxOverlayHeight = screenSize.height * 1;
+    final overlayWidth = screenSize.width * 0.25;
+    final maxOverlayHeight = screenSize.height * 0.4;
 
+    // Position overlay in the center-top area (above where pins typically appear)
     return Positioned(
-      top: 60,
-      left: (screenSize.width - overlayWidth) / 2,
+      top: 80, // Position above the typical pin area
+      left: (screenSize.width - overlayWidth) / 2, // Center horizontally
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: overlayWidth,
           maxHeight: maxOverlayHeight,
         ),
-        child: SingleChildScrollView(
-          child: Stack(
-            children: [
-              Positioned(
-                bottom: -8,
-                left: overlayWidth / 2 - 8,
-                child: CustomPaint(
-                  size: Size(16, 8),
-                  painter: ArrowPainter(color: Palette.whiteColor),
-                ),
-              ),
-              // Main card
-              Material(
-                borderRadius: BorderRadius.circular(12.0),
-                elevation: 6.0,
-                child: Container(
-                  width: overlayWidth,
-                  decoration: BoxDecoration(
-                    color: Palette.whiteColor,
-                    borderRadius: BorderRadius.circular(12.0),
-                    border: Border.all(
-                        color: statusColor.withAlpha(100), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Palette.blackColor.withAlpha(100),
-                        spreadRadius: 0,
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            final isDark = themeProvider.isDarkMode;
+            
+            return SingleChildScrollView(
+              child: Stack(
+                children: [
+                  Positioned(
+                    bottom: -8,
+                    left: overlayWidth / 2 - 8,
+                    child: CustomPaint(
+                      size: Size(16, 8),
+                      painter: ArrowPainter(color: isDark ? Palette.darkSurface : Palette.lightSurface),
+                    ),
                   ),
-                  padding: EdgeInsets.all(12),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Compact header
-                      Row(
+                  // Main card
+                  Material(
+                    borderRadius: BorderRadius.circular(12.0),
+                    elevation: 6.0,
+                    child: Container(
+                      width: overlayWidth,
+                      decoration: BoxDecoration(
+                        color: isDark ? Palette.darkSurface : Palette.lightSurface,
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                            color: statusColor.withAlpha(100), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? Colors.black.withAlpha(150) : Colors.grey.withAlpha(100),
+                            spreadRadius: 0,
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      padding: EdgeInsets.all(12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Status indicator
+                          // Compact header
+                          Row(
+                            children: [
+                              // Status indicator
+                              Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: statusColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  driverName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Palette.darkText : Palette.lightText,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _showDriverOverlay = false;
+                                    _selectedDriverInfo = null;
+                                  });
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Palette.darkCard : Colors.grey[200],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: isDark ? Palette.darkText : Palette.lightText,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 12),
+
+                          // Compact info in 2 rows
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactInfoItem(
+                                    "ID: $driverId", Icons.badge, statusColor),
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: _buildCompactInfoItem("Vehicle: $vehicleId",
+                                    Icons.directions_car, Palette.orangeColor),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 10),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactInfoItem("Plate: $plateNumber",
+                                    Icons.credit_card, Palette.yellowColor),
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: _buildCompactInfoItem("Route: $routeId",
+                                    Icons.route, Palette.redColor),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 10),
+
+                          // Status row
                           Container(
-                            width: 14,
-                            height: 14,
+                            width: double.infinity,
+                            padding:
+                                EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                             decoration: BoxDecoration(
-                              color: statusColor,
-                              shape: BoxShape.circle,
+                              color: statusColor.withAlpha(100),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: statusColor.withAlpha(100)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(_getStatusIcon(drivingStatus),
+                                    size: 16, color: statusColor),
+                                SizedBox(width: 6),
+                                Text(
+                                  _capitalizeFirstLetter(drivingStatus ?? 'N/A'),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              driverName,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Palette.blackColor,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _showDriverOverlay = false;
-                                _selectedDriverInfo = null;
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.close,
-                                size: 16,
-                                color: Palette.blackColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
 
-                      SizedBox(height: 12),
+                          SizedBox(height: 12),
 
-                      // Compact info in 2 rows
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildCompactInfoItem(
-                                "ID: $driverId", Icons.badge, statusColor),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: _buildCompactInfoItem("Vehicle: $vehicleId",
-                                Icons.directions_car, Palette.orangeColor),
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: 10),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildCompactInfoItem("Plate: $plateNumber",
-                                Icons.credit_card, Palette.yellowColor),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: _buildCompactInfoItem("Route: $routeId",
-                                Icons.route, Palette.redColor),
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: 10),
-
-                      // Status row
-                      Container(
-                        width: double.infinity,
-                        padding:
-                            EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: statusColor.withAlpha(100),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: statusColor.withAlpha(100)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(_getStatusIcon(drivingStatus),
-                                size: 16, color: statusColor),
-                            SizedBox(width: 6),
-                            Text(
-                              _capitalizeFirstLetter(drivingStatus ?? 'N/A'),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: 12),
-
-                      // Compact action buttons
-                      Row(
-                        children: [
-                          Expanded(
+                          // Center button only (call button removed)
+                          SizedBox(
+                            width: double.infinity,
                             child: ElevatedButton(
                               onPressed: () {
                                 mapController?.animateCamera(
@@ -533,7 +639,7 @@ class MapsScreenState extends State<Mapscreen>
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Palette.greenColor,
+                                backgroundColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
                                 foregroundColor: Colors.white,
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(
@@ -541,29 +647,7 @@ class MapsScreenState extends State<Mapscreen>
                                 ),
                                 minimumSize: Size(0, 40),
                               ),
-                              child: Text("Center",
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                debugPrint('Call driver $driverId');
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Palette.greenColor,
-                                side: BorderSide(
-                                    color: Palette.greenColor, width: 2),
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                minimumSize: Size(0, 40),
-                              ),
-                              child: Text("Call",
+                              child: Text("Center on Driver",
                                   style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold)),
@@ -571,12 +655,12 @@ class MapsScreenState extends State<Mapscreen>
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

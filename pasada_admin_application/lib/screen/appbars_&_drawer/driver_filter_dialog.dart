@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
 
 class DriverFilterDialog extends StatefulWidget {
   final Set<String> selectedStatuses;
@@ -37,14 +39,14 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
     super.dispose();
   }
 
-  Widget _buildStatusCheckbox(String status) {
+  Widget _buildStatusCheckbox(String status, bool isDark) {
     return CheckboxListTile(
       title: Text(
         status,
         style: TextStyle(
           fontFamily: 'Inter',
           fontSize: 16.0,
-          color: Palette.blackColor,
+          color: isDark ? Palette.darkText : Palette.lightText,
         ),
       ),
       value: _selectedStatuses.contains(status),
@@ -57,21 +59,21 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
           }
         });
       },
-      activeColor: Palette.blackColor,
-      checkColor: Palette.whiteColor,
+      activeColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
+      checkColor: Colors.white,
       controlAffinity: ListTileControlAffinity.leading,
       contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
     );
   }
 
-  Widget _buildSortOption(String title, String value) {
+  Widget _buildSortOption(String title, String value, bool isDark) {
     return RadioListTile<String>(
       title: Text(
         title,
         style: TextStyle(
           fontFamily: 'Inter',
           fontSize: 16.0,
-          color: Palette.blackColor,
+          color: isDark ? Palette.darkText : Palette.lightText,
         ),
       ),
       value: value,
@@ -83,7 +85,7 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
           });
         }
       },
-      activeColor: Palette.blackColor,
+      activeColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
       contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
     );
   }
@@ -93,13 +95,17 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
     final double screenWidth = MediaQuery.of(context).size.width * 0.6;
     final double dialogWidth = screenWidth * 0.5;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: Palette.blackColor, width: 1),
-      ),
-      elevation: 8.0,
-      backgroundColor: Palette.whiteColor,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final isDark = themeProvider.isDarkMode;
+        
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+            side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 1),
+          ),
+          elevation: 8.0,
+          backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
       child: Container(
         width: dialogWidth,
         padding: const EdgeInsets.all(24.0),
@@ -113,14 +119,14 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                 Row(
                   children: [
                     Icon(Icons.filter_list,
-                        color: Palette.blackColor, size: 28),
+                        color: isDark ? Palette.darkText : Palette.lightText, size: 28),
                     SizedBox(width: 12.0),
                     Text(
                       "Filter Options",
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Palette.blackColor,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                         fontFamily: 'Inter',
                       ),
                     ),
@@ -134,13 +140,13 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                     child: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: isDark ? Palette.darkCard : Colors.grey[200],
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.close,
                         size: 24,
-                        color: Palette.blackColor,
+                        color: isDark ? Palette.darkText : Palette.lightText,
                       ),
                     ),
                   ),
@@ -148,7 +154,7 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
               ],
             ),
             const SizedBox(height: 16.0),
-            Divider(color: Palette.blackColor.withAlpha(50), thickness: 1.5),
+            Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, thickness: 1.5),
             const SizedBox(height: 24.0),
 
             // Status section
@@ -158,21 +164,21 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                 fontFamily: 'Inter',
                 fontSize: 18.0,
                 fontWeight: FontWeight.bold,
-                color: Palette.blackColor,
+                color: isDark ? Palette.darkText : Palette.lightText,
               ),
             ),
             const SizedBox(height: 12.0),
             Container(
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: isDark ? Palette.darkCard : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12.0),
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(color: isDark ? Palette.darkBorder : Colors.grey[300]!),
               ),
               margin: EdgeInsets.only(bottom: 20.0),
               child: Column(
                 children: [
-                  _buildStatusCheckbox('Online'),
-                  _buildStatusCheckbox('Offline'),
+                  _buildStatusCheckbox('Online', isDark),
+                  _buildStatusCheckbox('Offline', isDark),
                 ],
               ),
             ),
@@ -184,32 +190,36 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                 fontFamily: 'Inter',
                 fontSize: 18.0,
                 fontWeight: FontWeight.bold,
-                color: Palette.blackColor,
+                color: isDark ? Palette.darkText : Palette.lightText,
               ),
             ),
             const SizedBox(height: 12.0),
             TextField(
               controller: _vehicleIdController,
+              style: TextStyle(
+                color: isDark ? Palette.darkText : Palette.lightText,
+                fontFamily: 'Inter',
+              ),
               decoration: InputDecoration(
                 hintText: 'Enter Vehicle ID',
                 hintStyle: TextStyle(
-                  color: Palette.blackColor.withAlpha(128),
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                   fontSize: 14.0,
                   fontFamily: 'Inter',
                 ),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: isDark ? Palette.darkCard : Colors.grey[100],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                  borderSide: BorderSide(color: isDark ? Palette.darkBorder : Colors.grey[300]!),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                  borderSide: BorderSide(color: isDark ? Palette.darkBorder : Colors.grey[300]!),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
-                  borderSide: BorderSide(color: Palette.blackColor),
+                  borderSide: BorderSide(color: isDark ? Palette.darkPrimary : Palette.lightPrimary),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   vertical: 12.0,
@@ -226,21 +236,21 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                 fontFamily: 'Inter',
                 fontSize: 18.0,
                 fontWeight: FontWeight.bold,
-                color: Palette.blackColor,
+                color: isDark ? Palette.darkText : Palette.lightText,
               ),
             ),
             const SizedBox(height: 12.0),
             Container(
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: isDark ? Palette.darkCard : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12.0),
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(color: isDark ? Palette.darkBorder : Colors.grey[300]!),
               ),
               margin: EdgeInsets.only(bottom: 20.0),
               child: Column(
                 children: [
-                  _buildSortOption('Name (A-Z)', 'alphabetical'),
-                  _buildSortOption('Driver ID', 'numeric'),
+                  _buildSortOption('Name (A-Z)', 'alphabetical', isDark),
+                  _buildSortOption('Driver ID', 'numeric', isDark),
                 ],
               ),
             ),
@@ -260,11 +270,11 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                     });
                   },
                   icon:
-                      Icon(Icons.clear_all, color: Palette.redColor, size: 20),
+                      Icon(Icons.clear_all, color: Palette.lightError, size: 20),
                   label: Text(
                     'Clear All',
                     style: TextStyle(
-                      color: Palette.redColor,
+                      color: Palette.lightError,
                       fontSize: 14.0,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w600,
@@ -286,7 +296,7 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                       child: Text(
                         'Cancel',
                         style: TextStyle(
-                          color: Palette.blackColor,
+                          color: isDark ? Palette.darkText : Palette.lightText,
                           fontSize: 14.0,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
@@ -296,10 +306,10 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                     SizedBox(width: 12.0),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Palette.blackColor,
-                        foregroundColor: Palette.whiteColor,
+                        backgroundColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
+                        foregroundColor: Colors.white,
                         elevation: 4.0,
-                        shadowColor: Colors.grey.shade300,
+                        shadowColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.0),
                         ),
@@ -326,7 +336,7 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
                           fontFamily: 'Inter',
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Palette.whiteColor,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -337,6 +347,8 @@ class _DriverFilterDialogState extends State<DriverFilterDialog> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 }

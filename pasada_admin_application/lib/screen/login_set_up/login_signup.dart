@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Added for LogicalKeyboardKey
-import 'package:pasada_admin_application/config/palette.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import './login_password_util.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
@@ -121,207 +120,258 @@ class _LoginSignupState extends State<LoginSignup> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width.clamp(800, double.infinity);
-    final containerWidth = (screenWidth * 0.4).clamp(700, 1100);
-    final horizontalPadding = (screenWidth - containerWidth) / 2;
-
     return Scaffold(
-      backgroundColor: Palette.whiteColor,
+      backgroundColor: Colors.black,
       body: Focus(
-        focusNode: FocusNode(), // Needs a focus node to receive events
+        focusNode: FocusNode(),
         onKeyEvent: (FocusNode node, KeyEvent event) {
           if (event is KeyDownEvent &&
               HardwareKeyboard.instance
                   .isLogicalKeyPressed(LogicalKeyboardKey.enter)) {
             if (!_isLoading) {
-              // Check if not already loading
               _login();
             }
           }
-          return KeyEventResult
-              .ignored; // Or KeyEventResult.handled if you want to stop event propagation
+          return KeyEventResult.ignored;
         },
-        child: Stack(
-          children: [
-            Positioned(
-              top: 250,
-              left: horizontalPadding,
-              right: horizontalPadding,
-              child: Container(
-                height: 500,
-                padding: EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Palette.whiteColor,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Palette.greyColor),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Palette.blackColor.withValues(alpha: 100),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(28),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.black,
+                Color(0xFF1a1a1a),
+                Colors.black,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: 400),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
+                      // Back to Home link
+                      // Logo and Title
+                      Column(
                         children: [
-                          Image.asset('assets/novadeci.png',
-                              width: 58, height: 58),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 16),
-                              child: Text(
-                                "Novadeci Transport Cooperative",
-                                style: TextStyle(
-                                    fontSize: 26, fontWeight: FontWeight.bold),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                softWrap: false,
+                          // Logo
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/novadeci.png',
+                                width: 40,
+                                height: 40,
                               ),
                             ),
                           ),
+                          SizedBox(height: 24),
+                          
+                          // Title
+                          Text(
+                            'Log in to Pasada Admin',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8),
                         ],
                       ),
-                      SizedBox(height: 56),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              "Log-in to your account",
+                      
+                      SizedBox(height: 40),
+                      
+                      // Login Form
+                      Container(
+                        padding: EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF1a1a1a),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Color(0xFF333333),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Email Field
+                            Text(
+                              'Email',
                               style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: EdgeInsets.only(left: 16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildRichText('Enter your ', 'Username'),
-                                  SizedBox(height: 8),
-                                  _buildTextField(
-                                    "Enter your username",
-                                    _usernameController,
-                                    _usernameFocusNode, // Pass focus node
+                            SizedBox(height: 8),
+                            _buildModernTextField(
+                              "Enter your email",
+                              _usernameController,
+                              _usernameFocusNode,
+                              Icons.email_outlined,
+                            ),
+                            
+                            SizedBox(height: 24),
+                            
+                            // Password Field
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Password',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  SizedBox(height: 24),
-                                  _buildRichText('Enter your ', 'password.'),
-                                  SizedBox(height: 8),
-                                  _buildPasswordField(
-                                    _passwordController,
-                                    _passwordFocusNode, // Pass focus node
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            _buildModernPasswordField(
+                              _passwordController,
+                              _passwordFocusNode,
+                            ),
+                            
+                            SizedBox(height: 32),
+                            
+                            // Login Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _login,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(0xFF333333),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  SizedBox(height: 28),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: ElevatedButton(
-                                      onPressed: _login,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Palette.blackColor,
-                                        foregroundColor: Palette.whiteColor,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(5),
+                                  elevation: 0,
+                                ),
+                                child: _isLoading
+                                    ? SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
                                         ),
-                                        minimumSize: Size(170, 50),
-                                        elevation: 5,
-                                        shadowColor: Palette.blackColor,
+                                      )
+                                    : Text(
+                                        'Log In',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                      child: _isLoading
-                                          ? SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: CircularProgressIndicator(
-                                                  color: Palette.whiteColor,
-                                                  strokeWidth: 2))
-                                          : Text("Log-in"),
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                      
+                      SizedBox(height: 32),
+                      
+                      // Terms and Privacy
+                      Text(
+                        'Made by Pasada Technologies in Partnership with Novadeci Transport Cooperative.',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  RichText _buildRichText(String text, String boldText) {
-    return RichText(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: 16,
-          letterSpacing: 1,
-          color: Palette.blackColor,
-        ),
-        children: [
-          TextSpan(
-            text: boldText,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  TextField _buildTextField(
-      String hintText, TextEditingController controller, FocusNode focusNode) {
+
+  TextField _buildModernTextField(
+      String hintText, TextEditingController controller, FocusNode focusNode, IconData icon) {
     return TextField(
       controller: controller,
       focusNode: focusNode,
+      style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey[500]),
+        prefixIcon: Icon(icon, color: Colors.grey[400]),
+        filled: true,
+        fillColor: Color(0xFF2a2a2a),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10.0)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF404040)),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF404040)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.white, width: 1),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
 
-  TextField _buildPasswordField(
+  TextField _buildModernPasswordField(
       TextEditingController controller, FocusNode focusNode) {
     return TextField(
       controller: controller,
       focusNode: focusNode,
       obscureText: isObscure,
+      style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: "Enter your password",
+        hintStyle: TextStyle(color: Colors.grey[500]),
+        prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[400]),
+        filled: true,
+        fillColor: Color(0xFF2a2a2a),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF404040)),
         ),
-        suffixIcon: Padding(
-          padding: EdgeInsets.only(right: 12),
-          child: IconButton(
-            icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility),
-            onPressed: () {
-              setState(() {
-                isObscure = !isObscure;
-              });
-            },
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF404040)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.white, width: 1),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            isObscure ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey[400],
           ),
+          onPressed: () {
+            setState(() {
+              isObscure = !isObscure;
+            });
+          },
         ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
