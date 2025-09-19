@@ -18,6 +18,7 @@ class TablePreviewWidget extends StatefulWidget {
   final bool showFilterButton;
   final VoidCallback? onFilterPressed;
   final Widget? customActions;
+  final bool includeNavigation; // New parameter to control navigation inclusion
 
   const TablePreviewWidget({
     super.key,
@@ -33,6 +34,7 @@ class TablePreviewWidget extends StatefulWidget {
     this.showFilterButton = false,
     this.onFilterPressed,
     this.customActions,
+    this.includeNavigation = true, // Default to true for backward compatibility
   });
 
   @override
@@ -116,77 +118,90 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
     final double screenWidth = MediaQuery.of(context).size.width;
     final double horizontalPadding = screenWidth * 0.05;
 
-    return Scaffold(
-      backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          const double minBodyWidth = 900;
-          final double effectiveWidth = constraints.maxWidth < minBodyWidth
-              ? minBodyWidth
-              : constraints.maxWidth;
-          
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: minBodyWidth),
-              child: SizedBox(
-                width: effectiveWidth,
-                child: Row(
-                  children: [
-                    // Fixed width sidebar drawer
-                    SizedBox(
-                      width: 280,
-                      child: MyDrawer(),
-                    ),
-                    // Main content area
-                    Expanded(
-                      child: Column(
-                        children: [
-                          // App bar in the main content area
-                          AppBarSearch(
-                            onFilterPressed: widget.showFilterButton 
-                                ? widget.onFilterPressed 
-                                : null,
-                          ),
-                          // Main content
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 24.0,
-                                  horizontal: horizontalPadding,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Header section
-                                    _buildHeader(isDark),
-                                    const SizedBox(height: 24.0),
-                                    
-                                    // Stats container
-                                    _buildStatsContainer(isDark),
-                                    const SizedBox(height: 24.0),
-                                    
-                                    // Actions row
-                                    _buildActionsRow(isDark),
-                                    const SizedBox(height: 16.0),
-                                    
-                                    // Table content
-                                    _buildTableContent(isDark),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+    // If navigation should be included, wrap in Scaffold with navigation
+    if (widget.includeNavigation) {
+      return Scaffold(
+        backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            const double minBodyWidth = 900;
+            final double effectiveWidth = constraints.maxWidth < minBodyWidth
+                ? minBodyWidth
+                : constraints.maxWidth;
+            
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: minBodyWidth),
+                child: SizedBox(
+                  width: effectiveWidth,
+                  child: Row(
+                    children: [
+                      // Fixed width sidebar drawer
+                      SizedBox(
+                        width: 280,
+                        child: MyDrawer(),
                       ),
-                    ),
-                  ],
+                      // Main content area
+                      Expanded(
+                        child: Column(
+                          children: [
+                            // App bar in the main content area
+                            AppBarSearch(
+                              onFilterPressed: widget.showFilterButton 
+                                  ? widget.onFilterPressed 
+                                  : null,
+                            ),
+                            // Main content
+                            Expanded(
+                              child: _buildMainContent(isDark, horizontalPadding),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
+      );
+    } else {
+      // If navigation should not be included, return just the content
+      return Container(
+        color: isDark ? Palette.darkSurface : Palette.lightSurface,
+        child: _buildMainContent(isDark, horizontalPadding),
+      );
+    }
+  }
+
+  Widget _buildMainContent(bool isDark, double horizontalPadding) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          vertical: 24.0,
+          horizontal: horizontalPadding,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header section
+            _buildHeader(isDark),
+            const SizedBox(height: 24.0),
+            
+            // Stats container
+            _buildStatsContainer(isDark),
+            const SizedBox(height: 24.0),
+            
+            // Actions row
+            _buildActionsRow(isDark),
+            const SizedBox(height: 16.0),
+            
+            // Table content
+            _buildTableContent(isDark),
+          ],
+        ),
       ),
     );
   }

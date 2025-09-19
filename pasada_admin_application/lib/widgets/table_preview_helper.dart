@@ -8,6 +8,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Admin',
@@ -36,6 +37,7 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 
@@ -44,6 +46,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver',
@@ -79,6 +82,7 @@ class TablePreviewHelper {
       showFilterButton: true,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 
@@ -87,6 +91,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Passenger',
@@ -119,6 +124,7 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 
@@ -127,6 +133,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Vehicle',
@@ -159,6 +166,7 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 
@@ -167,6 +175,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Route',
@@ -199,6 +208,7 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 
@@ -207,6 +217,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Bookings',
@@ -237,6 +248,7 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 
@@ -245,6 +257,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver Reviews',
@@ -275,6 +288,7 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 
@@ -283,6 +297,7 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver Archives',
@@ -313,6 +328,7 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
     );
   }
 }

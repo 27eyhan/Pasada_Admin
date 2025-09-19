@@ -61,7 +61,10 @@ class _MainNavigationState extends State<MainNavigation> {
           onNavigateToPage: navigateToPage,
         );
       case '/data_tables':
-        return DataTablesContent(onNavigateToPage: navigateToPage);
+        return DataTablesContent(
+          onNavigateToPage: navigateToPage,
+          initialArgs: _currentArgs,
+        );
       case '/select_table':
         return SelectTableContent(onNavigateToPage: navigateToPage);
       default:
