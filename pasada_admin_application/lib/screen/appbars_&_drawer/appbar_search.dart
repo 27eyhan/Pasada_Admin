@@ -191,24 +191,18 @@ class _AppBarSearchState extends State<AppBarSearch> {
               Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 1});
             }
             break;
-          case 'security':
-            // Navigate to settings with security tab (index 3)
-            if (widget.onSettingsTabRequested != null) {
-              widget.onSettingsTabRequested!(3);
-            } else {
-              // Fallback: navigate to settings page with security tab
-              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 3});
-            }
-            break;
-          case 'updates':
-            // Navigate to settings with updates tab (index 2)
-            if (widget.onSettingsTabRequested != null) {
-              widget.onSettingsTabRequested!(2);
-            } else {
-              // Fallback: navigate to settings page with updates tab
-              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 2});
-            }
-            break;
+            case 'security':
+              // Navigate to settings with security tab (index 3)
+              if (widget.onSettingsTabRequested != null) {
+                widget.onSettingsTabRequested!(3);
+              }
+              break;
+            case 'updates':
+              // Navigate to settings with updates tab (index 2)
+              if (widget.onSettingsTabRequested != null) {
+                widget.onSettingsTabRequested!(2);
+              }
+              break;
           case 'logout':
             await AuthService().clearAdminID();
             Navigator.pushNamedAndRemoveUntil(

@@ -91,14 +91,14 @@ class _LoginSignupState extends State<LoginSignup> {
           );
           // Store the adminID in the AuthService
           await AuthService().setAdminID(adminID);
-          // Navigate without arguments
-          Navigator.pushReplacementNamed(context, '/dashboard');
+          // Navigate to main navigation with dashboard as initial page
+          Navigator.pushReplacementNamed(context, '/main', arguments: {'page': '/dashboard'});
         } else {
           _showErrorSnackBar('Invalid username or password.');
         }
       }
     } catch (e) {
-      throw Exception('Login Error: $e');
+      _showErrorSnackBar('Login failed: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() {

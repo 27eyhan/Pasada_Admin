@@ -168,6 +168,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         });
       }
     }
+    return;
   }
 
   // --- Action Handlers ---
@@ -178,7 +179,7 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
         builder: (BuildContext context) {
           return AddDriverDialog(
             supabase: supabase,
-            onDriverAdded: fetchDriverData,
+            onDriverAdded: fetchDriverData, onDriverActionComplete: () async {  },
           );
         },
       );
