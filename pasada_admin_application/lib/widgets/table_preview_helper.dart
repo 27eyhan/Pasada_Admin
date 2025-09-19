@@ -8,6 +8,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Admin',
@@ -17,7 +19,8 @@ class TablePreviewHelper {
       dataFetcher: dataFetcher,
       columns: const [
         DataColumn(label: Text('Admin ID')),
-        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('First Name')),
+        DataColumn(label: Text('Last Name')),
         DataColumn(label: Text('Mobile')),
         DataColumn(label: Text('Username')),
         DataColumn(label: Text('Created At')),
@@ -26,7 +29,8 @@ class TablePreviewHelper {
         return DataRow(
           cells: [
             DataCell(Text(admin['admin_id']?.toString() ?? 'N/A')),
-            DataCell(Text('${admin['first_name'] ?? ''} ${admin['last_name'] ?? ''}')),
+            DataCell(Text(admin['first_name']?.toString() ?? 'N/A')),
+            DataCell(Text(admin['last_name']?.toString() ?? 'N/A')),
             DataCell(Text(admin['admin_mobile_number']?.toString() ?? 'N/A')),
             DataCell(Text(admin['admin_username']?.toString() ?? 'N/A')),
             DataCell(Text(admin['created_at']?.toString() ?? 'N/A')),
@@ -36,6 +40,8 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 
@@ -44,6 +50,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver',
@@ -53,11 +61,14 @@ class TablePreviewHelper {
       dataFetcher: dataFetcher,
       columns: const [
         DataColumn(label: Text('Driver ID')),
+        DataColumn(label: Text('Vehicle ID')),
         DataColumn(label: Text('Full Name')),
         DataColumn(label: Text('Driver Number')),
+        DataColumn(label: Text('Driver Password')),
         DataColumn(label: Text('License Number')),
         DataColumn(label: Text('Vehicle Plate')),
-        DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Current Location')),
+        DataColumn(label: Text('Driving Status')),
         DataColumn(label: Text('Last Online')),
         DataColumn(label: Text('Created At')),
       ],
@@ -65,10 +76,13 @@ class TablePreviewHelper {
         return DataRow(
           cells: [
             DataCell(Text(driver['driver_id']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['vehicle_id']?.toString() ?? 'N/A')),
             DataCell(Text(driver['full_name']?.toString() ?? 'N/A')),
             DataCell(Text(driver['driver_number']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['driver_password']?.toString() ?? 'N/A')),
             DataCell(Text(driver['driver_license_number']?.toString() ?? 'N/A')),
             DataCell(Text(driver['vehicleplate_number']?.toString() ?? 'N/A')),
+            DataCell(Text(driver['current_location']?.toString() ?? 'N/A')),
             DataCell(Text(driver['driving_status']?.toString() ?? 'N/A')),
             DataCell(Text(driver['last_online']?.toString() ?? 'N/A')),
             DataCell(Text(driver['created_at']?.toString() ?? 'N/A')),
@@ -79,6 +93,8 @@ class TablePreviewHelper {
       showFilterButton: true,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 
@@ -87,6 +103,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Passenger',
@@ -101,6 +119,8 @@ class TablePreviewHelper {
         DataColumn(label: Text('Email')),
         DataColumn(label: Text('Type')),
         DataColumn(label: Text('Last Login')),
+        DataColumn(label: Text('Updated At')),
+        DataColumn(label: Text('Avatar URL')),
         DataColumn(label: Text('Created At')),
       ],
       rowBuilder: (data) => data.map((passenger) {
@@ -112,6 +132,8 @@ class TablePreviewHelper {
             DataCell(Text(passenger['passenger_email']?.toString() ?? 'N/A')),
             DataCell(Text(passenger['passenger_type']?.toString() ?? 'N/A')),
             DataCell(Text(passenger['last_login']?.toString() ?? 'N/A')),
+            DataCell(Text(passenger['updated_at']?.toString() ?? 'N/A')),
+            DataCell(Text(passenger['avatar_url']?.toString() ?? 'N/A')),
             DataCell(Text(passenger['created_at']?.toString() ?? 'N/A')),
           ],
         );
@@ -119,6 +141,8 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 
@@ -127,6 +151,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Vehicle',
@@ -159,6 +185,8 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 
@@ -167,6 +195,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Route',
@@ -181,6 +211,11 @@ class TablePreviewHelper {
         DataColumn(label: Text('Destination')),
         DataColumn(label: Text('Description')),
         DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Origin Latitude')),
+        DataColumn(label: Text('Origin Longitude')),
+        DataColumn(label: Text('Destination Latitude')),
+        DataColumn(label: Text('Destination Longitude')),
+        DataColumn(label: Text('Intermediate Coordinates')),
         DataColumn(label: Text('Created At')),
       ],
       rowBuilder: (data) => data.map((route) {
@@ -192,6 +227,11 @@ class TablePreviewHelper {
             DataCell(Text(route['destination_name']?.toString() ?? 'N/A')),
             DataCell(Text(route['description']?.toString() ?? 'N/A')),
             DataCell(Text(route['status']?.toString() ?? 'N/A')),
+            DataCell(Text(route['origin_lat']?.toString() ?? 'N/A')),
+            DataCell(Text(route['origin_lng']?.toString() ?? 'N/A')),
+            DataCell(Text(route['destination_lat']?.toString() ?? 'N/A')),
+            DataCell(Text(route['destination_lng']?.toString() ?? 'N/A')),
+            DataCell(Text(route['intermediate_coordinates']?.toString() ?? 'N/A')),
             DataCell(Text(route['created_at']?.toString() ?? 'N/A')),
           ],
         );
@@ -199,6 +239,8 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 
@@ -207,6 +249,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Bookings',
@@ -219,7 +263,19 @@ class TablePreviewHelper {
         DataColumn(label: Text('Passenger')),
         DataColumn(label: Text('Driver')),
         DataColumn(label: Text('Route')),
-        DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Fare')),
+        DataColumn(label: Text('Pickup Address')),
+        DataColumn(label: Text('Dropoff Address')),
+        DataColumn(label: Text('Payment Method')),
+        DataColumn(label: Text('Passenger Type')),
+        DataColumn(label: Text('Seat Type')),
+        DataColumn(label: Text('Ride Status')),
+        DataColumn(label: Text('Rating')),
+        DataColumn(label: Text('Review')),
+        DataColumn(label: Text('Pickup Latitude')),
+        DataColumn(label: Text('Pickup Longitude')),
+        DataColumn(label: Text('Dropoff Latitude')),
+        DataColumn(label: Text('Dropoff Longitude')),
         DataColumn(label: Text('Created At')),
       ],
       rowBuilder: (data) => data.map((booking) {
@@ -229,7 +285,19 @@ class TablePreviewHelper {
             DataCell(Text(booking['passenger_id']?.toString() ?? 'N/A')),
             DataCell(Text(booking['driver_id']?.toString() ?? 'N/A')),
             DataCell(Text(booking['route_id']?.toString() ?? 'N/A')),
-            DataCell(Text(booking['booking_status']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['fare']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['pickup_address']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['dropoff_address']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['payment_method']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['passenger_type']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['seat_type']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['ride_status']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['rating']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['review']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['pickup_lat']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['pickup_long']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['dropoff_lat']?.toString() ?? 'N/A')),
+            DataCell(Text(booking['dropoff_long']?.toString() ?? 'N/A')),
             DataCell(Text(booking['created_at']?.toString() ?? 'N/A')),
           ],
         );
@@ -237,6 +305,8 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 
@@ -245,6 +315,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver Reviews',
@@ -275,6 +347,8 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 
@@ -283,6 +357,8 @@ class TablePreviewHelper {
     VoidCallback? onRefresh,
     VoidCallback? onFilterPressed,
     Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver Archives',
@@ -313,6 +389,51 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
+  static Widget createAdminArchivesTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'Admin Archives',
+      tableDescription: 'Historical admin data and records',
+      tableIcon: Icons.archive,
+      tableColor: Palette.lightTextSecondary,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('Archive ID')),
+        DataColumn(label: Text('Admin ID')),
+        DataColumn(label: Text('Full Name')),
+        DataColumn(label: Text('Admin Number')),
+        DataColumn(label: Text('Admin Password')),
+        DataColumn(label: Text('Archived At')),
+      ],
+      rowBuilder: (data) => data.map((archive) {
+        return DataRow(
+          cells: [
+            DataCell(Text(archive['archive_id']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['admin_id']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['first_name']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['last_name']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['admin_mobile_number']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['admin_password']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['archived_at']?.toString() ?? 'N/A')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
     );
   }
 }
