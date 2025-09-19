@@ -484,7 +484,9 @@ class _DriversState extends State<Drivers> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [Colors.grey.shade700, Colors.black],
+                        colors: isDark
+                            ? [Colors.grey.shade600, Colors.grey.shade800]
+                            : [Colors.grey.shade400, Colors.grey.shade600],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -494,7 +496,7 @@ class _DriversState extends State<Drivers> {
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
-                        color: Palette.whiteColor,
+                        color: Colors.white,
                         size: 24,
                       ),
                     ),
@@ -658,7 +660,9 @@ class _DriversState extends State<Drivers> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [Colors.grey.shade700, Colors.black],
+                        colors: isDark
+                            ? [Colors.grey.shade600, Colors.grey.shade800]
+                            : [Colors.grey.shade400, Colors.grey.shade600],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -668,7 +672,7 @@ class _DriversState extends State<Drivers> {
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
-                        color: Palette.whiteColor,
+                        color: Colors.white,
                         size: 28,
                       ),
                     ),
@@ -733,15 +737,28 @@ class _DriversState extends State<Drivers> {
   Widget _buildActionButton(
       IconData icon, Color color, Map<String, dynamic> driver) {
     final bool isMap = icon == Icons.map_outlined;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     return Container(
       margin: EdgeInsets.only(left: 4),
       decoration: BoxDecoration(
-        color: isMap ? Palette.lightSurface : color,
+        color: isMap ? (isDark ? Palette.darkSurface : Palette.lightSurface) : color,
         shape: BoxShape.circle,
-        border: isMap ? Border.all(color: Palette.blackColor, width: 1.5) : null,
+        border: isMap
+            ? Border.all(
+                color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                width: 1.5,
+              )
+            : null,
       ),
       child: IconButton(
-        icon: Icon(icon, size: 18, color: isMap ? Palette.blackColor : Colors.white),
+        icon: Icon(
+          icon,
+          size: 18,
+          color: isMap
+              ? (isDark ? Palette.darkText : Palette.blackColor)
+              : Colors.white,
+        ),
         onPressed: () {
           // Action button functionality for map icon
           if (icon == Icons.map_outlined) {
@@ -772,7 +789,8 @@ class _DriversState extends State<Drivers> {
           Icon(
             icon,
             size: 14,
-            color: isDark ? Palette.darkText : Palette.lightText,
+            color:
+                textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
           ),
           SizedBox(width: 4),
           Expanded(
