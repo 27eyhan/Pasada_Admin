@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pasada_admin_application/screen/main_pages/dashboard_pages/dashboard.dart';
+import 'package:pasada_admin_application/screen/main_navigation.dart';
 import 'package:pasada_admin_application/screen/login_set_up/login_signup.dart';
-import 'package:pasada_admin_application/screen/main_pages/fleet_pages/fleet.dart';
-import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/reports.dart';
-import 'package:pasada_admin_application/screen/main_pages/ai_chat.dart';
-import 'package:pasada_admin_application/screen/settings_pages/settings.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/data_tables.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/select_table.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -42,7 +35,7 @@ Future<void> main() async {
     GoogleMapsApiInitializer.initialize();
   }
 
-  runApp(MainApp(initialRoute: authService.currentAdminID != null ? '/dashboard' : '/login'));
+  runApp(MainApp(initialRoute: authService.currentAdminID != null ? '/main' : '/login'));
 }
 
 class MainApp extends StatelessWidget {
@@ -61,35 +54,18 @@ class MainApp extends StatelessWidget {
             theme: themeProvider.currentTheme,
             initialRoute: initialRoute,
             routes: {
-              '/dashboard': (context) => Dashboard(),
+              '/main': (context) => MainNavigation(),
               '/login': (context) => LoginSignup(),
-              '/fleet': (context) => Fleet(),
-              '/drivers': (context) => Drivers(),
-              '/reports': (context) => Reports(),
-              '/ai_chat': (context) => AiChat(),
-              '/settings': (context) => Settings(),
-              '/data_tables': (context) => DataTables(),
-              '/select_table': (context) => SelectTable(),
             },
             onGenerateRoute: (settings) {
-              if (settings.name == '/dashboard') {
+              if (settings.name == '/main') {
                 final args = settings.arguments as Map<String, dynamic>?;
-                if (args != null) {
-                  return MaterialPageRoute(
-                    builder: (context) => Dashboard(driverLocationArgs: args),
-                  );
-                }
-              }
-              
-              // Handle settings with specific tab index
-              if (settings.name == '/settings') {
-                final args = settings.arguments as Map<String, dynamic>?;
-                if (args != null && args.containsKey('tabIndex')) {
-                  final tabIndex = args['tabIndex'] as int;
-                  return MaterialPageRoute(
-                    builder: (context) => Settings(initialTabIndex: tabIndex),
-                  );
-                }
+                return MaterialPageRoute(
+                  builder: (context) => MainNavigation(
+                    initialPage: args?['page'] ?? '/dashboard',
+                    initialArgs: args,
+                  ),
+                );
               }
               
               return null;

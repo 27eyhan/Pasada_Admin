@@ -9,11 +9,13 @@ import 'package:flutter/services.dart';
 class AddDriverDialog extends StatefulWidget {
   final SupabaseClient supabase;
   final VoidCallback onDriverAdded; // Callback to refresh the table
+  final Future<void> Function() onDriverActionComplete;
 
   const AddDriverDialog({
     super.key,
     required this.supabase,
     required this.onDriverAdded,
+    required this.onDriverActionComplete,
   });
 
   @override

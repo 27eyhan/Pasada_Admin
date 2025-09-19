@@ -2,22 +2,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
-import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
-import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
-import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
 import 'package:provider/provider.dart';
 
-class Drivers extends StatefulWidget {
-  const Drivers({super.key});
+class DriversContent extends StatefulWidget {
+  final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
+
+  const DriversContent({super.key, this.onNavigateToPage});
 
   @override
-  _DriversState createState() => _DriversState();
+  _DriversContentState createState() => _DriversContentState();
 }
 
-class _DriversState extends State<Drivers> {
+class _DriversContentState extends State<DriversContent> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> driverData = [];
   List<Map<String, dynamic>> filteredDriverData = [];
@@ -52,27 +50,6 @@ class _DriversState extends State<Drivers> {
     super.dispose();
   }
 
-  void _showFilterDialog() async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (BuildContext context) {
-        return DriverFilterDialog(
-          selectedStatuses: selectedStatuses,
-          selectedVehicleId: selectedVehicleId,
-          sortOption: sortOption,
-        );
-      },
-    );
-
-    if (result != null) {
-      setState(() {
-        selectedStatuses = result['selectedStatuses'] as Set<String>;
-        selectedVehicleId = result['selectedVehicleId'] as String?;
-        sortOption = result['sortOption'] as String;
-        _applyFilters();
-      });
-    }
-  }
 
   void _applyFilters() {
     setState(() {
@@ -187,9 +164,9 @@ class _DriversState extends State<Drivers> {
         .toDouble();
     final double horizontalPadding = screenWidth * 0.05;
     
-    return Scaffold(
-      backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
-      body: LayoutBuilder(
+    return Container(
+      color: isDark ? Palette.darkSurface : Palette.lightSurface,
+      child: LayoutBuilder(
         builder: (context, constraints) {
           const double minBodyWidth = 900;
           final double effectiveWidth = constraints.maxWidth < minBodyWidth
@@ -201,169 +178,155 @@ class _DriversState extends State<Drivers> {
               constraints: const BoxConstraints(minWidth: minBodyWidth),
               child: SizedBox(
                 width: effectiveWidth,
-                child: Row(
+                child: Column(
                   children: [
-                    // Fixed width sidebar drawer
-                    Container(
-                      width: 280, // Fixed width for the sidebar
-                      child: MyDrawer(),
-                    ),
-                    // Main content area
+                    // Main content
                     Expanded(
-                      child: Column(
-                        children: [
-                          // App bar in the main content area
-                          AppBarSearch(onFilterPressed: _showFilterDialog),
-                          // Main content
-                          Expanded(
-                            child: isLoading
-                                ? Center(child: CircularProgressIndicator())
-                                : SingleChildScrollView(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 24.0,
-                                        horizontal: horizontalPadding,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 20,
-                                      backgroundColor: isDark
-                                          ? Palette.darkSurface
-                                          : Palette.lightSurface,
-                                      child: Icon(
-                                        Icons.person,
-                                        color: isDark
-                                            ? Palette.darkText
-                                            : Palette.lightText,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12.0),
-                                    Text(
-                                      "Drivers",
-                                      style: TextStyle(
-                                        fontSize: 28.0,
-                                        fontWeight: FontWeight.w700,
-                                        color: isDark
-                                            ? Palette.darkText
-                                            : Palette.lightText,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                  ],
+                      child: isLoading
+                          ? Center(child: CircularProgressIndicator())
+                          : SingleChildScrollView(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 24.0,
+                                  horizontal: horizontalPadding,
                                 ),
-                                const SizedBox(height: 24.0),
-                                // Status metrics container with separators
+                                child: Column(
+                                  children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: isDark
+                                      ? Palette.darkSurface
+                                      : Palette.lightSurface,
+                                  child: Icon(
+                                    Icons.person,
+                                    color: isDark
+                                        ? Palette.darkText
+                                        : Palette.lightText,
+                                  ),
+                                ),
+                                const SizedBox(width: 12.0),
+                                Text(
+                                  "Drivers",
+                                  style: TextStyle(
+                                    fontSize: 28.0,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? Palette.darkText
+                                        : Palette.lightText,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                const Spacer(),
+                              ],
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Status metrics container with separators
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? Palette.darkCard : Palette.lightCard,
+                                borderRadius: BorderRadius.circular(12.0),
+                                border: Border.all(
+                                  color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark
+                                        ? Colors.black.withValues(alpha: 0.08)
+                                        : Colors.grey.withValues(alpha: 0.08),
+                                    spreadRadius: 1,
+                                    blurRadius: 10,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(20.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'All Drivers',
+                                      totalDrivers,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Online',
+                                      activeDrivers,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Offline',
+                                      offlineDrivers,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24.0),
+
+                            // View toggle buttons (Grid/List)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
                                 Container(
                                   decoration: BoxDecoration(
                                     color: isDark ? Palette.darkCard : Palette.lightCard,
-                                    borderRadius: BorderRadius.circular(12.0),
                                     border: Border.all(
                                       color: isDark ? Palette.darkBorder : Palette.lightBorder,
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: isDark
-                                            ? Colors.black.withValues(alpha: 0.08)
-                                            : Colors.grey.withValues(alpha: 0.08),
-                                        spreadRadius: 1,
-                                        blurRadius: 10,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  padding: const EdgeInsets.all(20.0),
                                   child: Row(
                                     children: [
-                                      Expanded(
-                                        child: _buildCompactMetric(
-                                          'All Drivers',
-                                          totalDrivers,
-                                          isDark ? Palette.darkText : Palette.lightText,
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.grid_view,
+                                          size: 18,
+                                          color: isGridView
+                                              ? (isDark ? Palette.darkText : Palette.lightText)
+                                              : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
                                         ),
+                                        onPressed: () {
+                                          setState(() {
+                                            isGridView = true;
+                                          });
+                                        },
                                       ),
-                                      _buildVerticalSeparator(isDark),
-                                      Expanded(
-                                        child: _buildCompactMetric(
-                                          'Online',
-                                          activeDrivers,
-                                          isDark ? Palette.darkText : Palette.lightText,
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.view_list,
+                                          size: 18,
+                                          color: !isGridView
+                                              ? (isDark ? Palette.darkText : Palette.lightText)
+                                              : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
                                         ),
-                                      ),
-                                      _buildVerticalSeparator(isDark),
-                                      Expanded(
-                                        child: _buildCompactMetric(
-                                          'Offline',
-                                          offlineDrivers,
-                                          isDark ? Palette.darkText : Palette.lightText,
-                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            isGridView = false;
+                                          });
+                                        },
                                       ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 24.0),
+                              ],
+                            ),
 
-                                // View toggle buttons (Grid/List)
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Palette.darkCard : Palette.lightCard,
-                                        border: Border.all(
-                                          color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          IconButton(
-                                            icon: Icon(
-                                              Icons.grid_view,
-                                              size: 18,
-                                              color: isGridView
-                                                  ? (isDark ? Palette.darkText : Palette.lightText)
-                                                  : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
-                                            ),
-                                            onPressed: () {
-                                              setState(() {
-                                                isGridView = true;
-                                              });
-                                            },
-                                          ),
-                                          IconButton(
-                                            icon: Icon(
-                                              Icons.view_list,
-                                              size: 18,
-                                              color: !isGridView
-                                                  ? (isDark ? Palette.darkText : Palette.lightText)
-                                                  : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
-                                            ),
-                                            onPressed: () {
-                                              setState(() {
-                                                isGridView = false;
-                                              });
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                            const SizedBox(height: 16.0),
+
+                            // Driver list with conditional rendering based on view mode
+                            isGridView ? _buildGridView() : _buildListView(),
                                   ],
                                 ),
-
-                                const SizedBox(height: 16.0),
-
-                                // Driver list with conditional rendering based on view mode
-                                isGridView ? _buildGridView() : _buildListView(),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ],
+                              ),
                       ),
                     ),
                   ],
@@ -372,21 +335,6 @@ class _DriversState extends State<Drivers> {
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => AddDriverDialog(
-              supabase: supabase,
-              onDriverAdded: () {
-                fetchDriverData(); // Refresh the drivers list when a new driver is added
-              }, onDriverActionComplete: () async {  },
-            ),
-          );
-        },
-        backgroundColor: Palette.lightPrimary,
-        child: Icon(Icons.person_add, color: Colors.white),
       ),
     );
   }
@@ -485,9 +433,7 @@ class _DriversState extends State<Drivers> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: isDark
-                            ? [Colors.grey.shade600, Colors.grey.shade800]
-                            : [Colors.grey.shade400, Colors.grey.shade600],
+                        colors: [Colors.grey.shade700, Colors.black],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -497,7 +443,7 @@ class _DriversState extends State<Drivers> {
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
-                        color: Colors.white,
+                        color: Palette.whiteColor,
                         size: 24,
                       ),
                     ),
@@ -661,9 +607,7 @@ class _DriversState extends State<Drivers> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: isDark
-                            ? [Colors.grey.shade600, Colors.grey.shade800]
-                            : [Colors.grey.shade400, Colors.grey.shade600],
+                        colors: [Colors.grey.shade700, Colors.black],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -673,7 +617,7 @@ class _DriversState extends State<Drivers> {
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
-                        color: Colors.white,
+                        color: Palette.whiteColor,
                         size: 28,
                       ),
                     ),
@@ -738,37 +682,26 @@ class _DriversState extends State<Drivers> {
   Widget _buildActionButton(
       IconData icon, Color color, Map<String, dynamic> driver) {
     final bool isMap = icon == Icons.map_outlined;
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDark = themeProvider.isDarkMode;
     return Container(
       margin: EdgeInsets.only(left: 4),
       decoration: BoxDecoration(
-        color: isMap ? (isDark ? Palette.darkSurface : Palette.lightSurface) : color,
+        color: isMap ? Palette.lightSurface : color,
         shape: BoxShape.circle,
-        border: isMap
-            ? Border.all(
-                color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                width: 1.5,
-              )
-            : null,
+        border: isMap ? Border.all(color: Palette.blackColor, width: 1.5) : null,
       ),
       child: IconButton(
-        icon: Icon(
-          icon,
-          size: 18,
-          color: isMap
-              ? (isDark ? Palette.darkText : Palette.blackColor)
-              : Colors.white,
-        ),
+        icon: Icon(icon, size: 18, color: isMap ? Palette.blackColor : Colors.white),
         onPressed: () {
           // Action button functionality for map icon
           if (icon == Icons.map_outlined) {
             // Navigate to dashboard with the driver ID as an argument
-            Navigator.pushNamed(context, '/dashboard', arguments: {
-              'viewDriverLocation': true,
-              'driverId': driver['driver_id'],
-              'driverName': driver['full_name'],
-            });
+            if (widget.onNavigateToPage != null) {
+              widget.onNavigateToPage!('/dashboard', args: {
+                'viewDriverLocation': true,
+                'driverId': driver['driver_id'],
+                'driverName': driver['full_name'],
+              });
+            }
           }
           // Other icon actions can be added here
         },
@@ -790,8 +723,7 @@ class _DriversState extends State<Drivers> {
           Icon(
             icon,
             size: 14,
-            color:
-                textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+            color: isDark ? Palette.darkText : Palette.lightText,
           ),
           SizedBox(width: 4),
           Expanded(
@@ -809,8 +741,6 @@ class _DriversState extends State<Drivers> {
       ),
     );
   }
-
-  
 
   // Helper method to capitalize first letter
   String _capitalizeFirstLetter(String text) {
