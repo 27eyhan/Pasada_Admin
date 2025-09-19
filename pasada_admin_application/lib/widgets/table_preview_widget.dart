@@ -19,6 +19,7 @@ class TablePreviewWidget extends StatefulWidget {
   final VoidCallback? onFilterPressed;
   final Widget? customActions;
   final bool includeNavigation; // New parameter to control navigation inclusion
+  final VoidCallback? onBackPressed; // Callback for back button navigation
 
   const TablePreviewWidget({
     super.key,
@@ -35,6 +36,7 @@ class TablePreviewWidget extends StatefulWidget {
     this.onFilterPressed,
     this.customActions,
     this.includeNavigation = true, // Default to true for backward compatibility
+    this.onBackPressed, // Callback for back button navigation
   });
 
   @override
@@ -224,7 +226,13 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
               Icons.arrow_back,
               color: isDark ? Palette.darkText : Palette.lightText,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              } else {
+                Navigator.pop(context);
+              }
+            },
           ),
         ),
         const SizedBox(width: 16.0),

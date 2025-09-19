@@ -34,12 +34,6 @@ class _SelectTableContentState extends State<SelectTableContent> {
       'color': Palette.lightSuccess,
     },
     {
-      'name': 'Driver Reviews',
-      'icon': Icons.star_rate,
-      'description': 'Driver ratings and customer feedback',
-      'color': Palette.lightWarning,
-    },
-    {
       'name': 'Vehicle',
       'icon': Icons.directions_bus,
       'description': 'Fleet vehicles and specifications',
@@ -58,10 +52,16 @@ class _SelectTableContentState extends State<SelectTableContent> {
       'color': Palette.lightInfo,
     },
     {
-      'name': 'Payments',
-      'icon': Icons.payment,
-      'description': 'Payment transactions and records',
-      'color': Palette.lightSuccess,
+      'name': 'Driver Archives',
+      'icon': Icons.archive,
+      'description': 'Historical driver data and records',
+      'color': Palette.lightTextSecondary,
+    },
+    {
+      'name': 'Admin Archives',
+      'icon': Icons.archive,
+      'description': 'Historical admin data and records',
+      'color': Palette.lightTextSecondary,
     },
   ];
 

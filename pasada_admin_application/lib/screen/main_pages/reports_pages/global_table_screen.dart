@@ -22,7 +22,7 @@ class _GlobalTableScreenState extends State<GlobalTableScreen> {
   @override
   Widget build(BuildContext context) {
     // Get the table widget using the centralized system
-    final tableWidget = TableNavigationHelper.getTableWidget(widget.tableName);
+    final tableWidget = TableNavigationHelper.getTableWidget(widget.tableName, widget.onNavigateToPage);
 
     // If table widget exists, return it directly (TablePreviewWidget handles its own layout)
     if (tableWidget != null) {

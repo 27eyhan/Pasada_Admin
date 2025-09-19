@@ -6,21 +6,21 @@ class TableNavigationHelper {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
   // Map table names to their corresponding widget constructors using centralized preview system
-  static final Map<String, Widget Function()> _tableWidgets = {
-    'Admin': () => _createAdminTable(),
-    'Driver': () => _createDriverTable(),
-    'Vehicle': () => _createVehicleTable(),
-    'Passenger': () => _createPassengerTable(),
-    'Driver Reviews': () => _createDriverReviewsTable(),
-    'Route': () => _createRouteTable(),
-    'Bookings': () => _createBookingsTable(),
-    'Payments': () => _buildPlaceholderWidget('Payments'), // Placeholder for now
+  static final Map<String, Widget Function(Function(String, {Map<String, dynamic>? args})?)> _tableWidgets = {
+    'Admin': (onNavigateToPage) => _createAdminTable(onNavigateToPage),
+    'Driver': (onNavigateToPage) => _createDriverTable(onNavigateToPage),
+    'Vehicle': (onNavigateToPage) => _createVehicleTable(onNavigateToPage),
+    'Passenger': (onNavigateToPage) => _createPassengerTable(onNavigateToPage),
+    'Route': (onNavigateToPage) => _createRouteTable(onNavigateToPage),
+    'Bookings': (onNavigateToPage) => _createBookingsTable(onNavigateToPage),
+    'Driver Archives': (onNavigateToPage) => _createDriverArchivesTable(onNavigateToPage),
+    'Admin Archives': (onNavigateToPage) => _createAdminArchivesTable(onNavigateToPage),
   };
 
   // Get widget for a specific table name
-  static Widget? getTableWidget(String tableName) {
+  static Widget? getTableWidget(String tableName, Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     final widgetBuilder = _tableWidgets[tableName];
-    return widgetBuilder?.call();
+    return widgetBuilder?.call(onNavigateToPage);
   }
 
   // Check if a table name exists
@@ -34,7 +34,7 @@ class TableNavigationHelper {
   }
 
   // Factory methods for creating table widgets using the centralized system
-  static Widget _createAdminTable() {
+  static Widget _createAdminTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createAdminTable(
       dataFetcher: () async {
         final data = await _supabase.from('adminTable').select('*');
@@ -44,10 +44,15 @@ class TableNavigationHelper {
         print('Admin table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
     );
   }
 
-  static Widget _createDriverTable() {
+  static Widget _createDriverTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createDriverTable(
       dataFetcher: () async {
         final data = await _supabase.from('driverTable').select('*');
@@ -60,10 +65,15 @@ class TableNavigationHelper {
         print('Driver filter pressed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
     );
   }
 
-  static Widget _createVehicleTable() {
+  static Widget _createVehicleTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createVehicleTable(
       dataFetcher: () async {
         final data = await _supabase.from('vehicleTable').select('*');
@@ -73,10 +83,15 @@ class TableNavigationHelper {
         print('Vehicle table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
     );
   }
 
-  static Widget _createPassengerTable() {
+  static Widget _createPassengerTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createPassengerTable(
       dataFetcher: () async {
         final data = await _supabase.from('passenger').select('*');
@@ -86,10 +101,15 @@ class TableNavigationHelper {
         print('Passenger table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
     );
   }
 
-  static Widget _createRouteTable() {
+  static Widget _createRouteTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createRouteTable(
       dataFetcher: () async {
         final data = await _supabase.from('official_routes').select('*');
@@ -99,10 +119,15 @@ class TableNavigationHelper {
         print('Route table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
     );
   }
 
-  static Widget _createBookingsTable() {
+  static Widget _createBookingsTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createBookingsTable(
       dataFetcher: () async {
         final data = await _supabase.from('bookings').select('*');
@@ -112,70 +137,40 @@ class TableNavigationHelper {
         print('Bookings table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
     );
   }
 
-  static Widget _createDriverReviewsTable() {
-    return TablePreviewHelper.createDriverReviewsTable(
+  static Widget _createDriverArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createDriverArchivesTable(
       dataFetcher: () async {
-        final data = await _supabase.from('driverReviewsTable').select('*');
+        final data = await _supabase.from('driverArchives').select('*');
         return (data as List).cast<Map<String, dynamic>>();
       },
-      onRefresh: () {
-        print('Driver reviews table refreshed');
-      },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
     );
   }
 
-  // Build placeholder widget for tables not yet implemented
-  static Widget _buildPlaceholderWidget(String tableName) {
-    return Builder(
-      builder: (context) {
-        return Scaffold(
-          backgroundColor: Colors.white,
-          appBar: AppBar(
-            title: Text('$tableName Table'),
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.construction,
-                  size: 64,
-                  color: Colors.orange,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  '$tableName Table',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'This table is under construction',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    // Navigate back
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('Go Back'),
-                ),
-              ],
-            ),
-          ),
-        );
+  static Widget _createAdminArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createAdminArchivesTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('adminArchives').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
       },
     );
   }
