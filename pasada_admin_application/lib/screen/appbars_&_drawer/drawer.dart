@@ -4,7 +4,10 @@ import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 
 class MyDrawer extends StatefulWidget {
-  const MyDrawer({super.key});
+  final String? currentRoute;
+  final Function(String, {Map<String, dynamic>? args})? onNavigate;
+
+  const MyDrawer({super.key, this.currentRoute, this.onNavigate});
 
   @override
   _MyDrawerState createState() => _MyDrawerState();
@@ -29,7 +32,11 @@ class _MyDrawerState extends State<MyDrawer> {
     return InkWell(
       onTap: () {
         if (!selected) {
-          Navigator.pushReplacementNamed(context, routeName);
+          if (widget.onNavigate != null) {
+            widget.onNavigate!(routeName);
+          } else {
+            Navigator.pushReplacementNamed(context, routeName);
+          }
         }
       },
       child: AnimatedContainer(
@@ -66,7 +73,7 @@ class _MyDrawerState extends State<MyDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final String currentRoute = ModalRoute.of(context)?.settings.name ?? '';
+    final String currentRoute = widget.currentRoute ?? ModalRoute.of(context)?.settings.name ?? '';
     final bool reportsSelected =
         currentRoute == '/reports' || currentRoute == '/select_table';
     final bool expanded = reportsSelected ? true : _reportsExpanded;
@@ -150,7 +157,11 @@ class _MyDrawerState extends State<MyDrawer> {
                     setState(() {
                       _reportsExpanded = false;
                     });
-                    Navigator.pushReplacementNamed(context, '/reports');
+                    if (widget.onNavigate != null) {
+                      widget.onNavigate!('/reports');
+                    } else {
+                      Navigator.pushReplacementNamed(context, '/reports');
+                    }
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
