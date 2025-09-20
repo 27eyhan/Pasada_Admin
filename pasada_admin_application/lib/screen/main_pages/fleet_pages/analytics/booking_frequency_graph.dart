@@ -205,6 +205,21 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
                       },
                 icon: Icon(Icons.trending_up, size: 18, color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
               ),
+              // Synchronize button
+              IconButton(
+                tooltip: 'Synchronize data',
+                onPressed: _loading
+                    ? null
+                    : () async {
+                        // TODO: Implement synchronize function
+                        print('Synchronize booking frequency data');
+                      },
+                icon: Icon(
+                  Icons.sync,
+                  size: 18,
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12.0),

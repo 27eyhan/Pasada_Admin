@@ -300,6 +300,21 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                     },
                   ),
                 ),
+              // Synchronize button
+              IconButton(
+                tooltip: 'Synchronize data',
+                onPressed: _loading
+                    ? null
+                    : () async {
+                        // TODO: Implement synchronize function
+                        print('Synchronize traffic data for route: $_selectedRouteId');
+                      },
+                icon: Icon(
+                  Icons.sync,
+                  size: 18,
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                ),
+              ),
               // Metric dropdown removed (traffic-only)
             ],
           ),
