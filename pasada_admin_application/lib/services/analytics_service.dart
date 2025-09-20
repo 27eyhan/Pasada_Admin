@@ -93,6 +93,19 @@ class AnalyticsService {
   Future<http.Response> getLatestBookingFrequencyForecast() {
     return http.get(_u('/api/analytics/bookings/frequency/forecast/latest'));
   }
+
+  // Migration and synchronization endpoints
+  Future<http.Response> checkQuestDBStatus() {
+    return http.get(_u('/api/status/questdb'));
+  }
+
+  Future<http.Response> checkMigrationStatus() {
+    return http.get(_u('/api/admin/migration/status'));
+  }
+
+  Future<http.Response> executeMigration() {
+    return http.post(_u('/api/admin/migration/run'));
+  }
 }
 
  

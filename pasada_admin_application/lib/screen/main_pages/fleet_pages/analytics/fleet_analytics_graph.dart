@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
+import 'package:pasada_admin_application/widgets/sync_progress_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Resend-like compact analytics card with a dropdown and weekly line chart.
@@ -26,6 +27,11 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   List<Map<String, dynamic>> _routes = const [];
   String? _selectedRouteId; // local selection, defaults to widget.routeId
   bool _usingHybrid = true;
+  
+  // Synchronization state
+  bool _isSyncing = false;
+  String _syncStatus = '';
+  double _syncProgress = 0.0;
 
   @override
   void initState() {
@@ -250,6 +256,98 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     return sum / (series.length - 1);
   }
 
+  Future<void> _synchronizeData() async {
+    if (!_analyticsService.isConfigured) {
+      _showErrorSnackBar('API not configured');
+      return;
+    }
+
+    try {
+      // Step 1: Check QuestDB Status
+      setState(() {
+        _syncProgress = 0.2;
+        _syncStatus = 'Checking QuestDB connection...';
+      });
+      
+      final questDbStatus = await _analyticsService.checkQuestDBStatus();
+      if (questDbStatus.statusCode != 200) {
+        throw Exception('QuestDB is not available (${questDbStatus.statusCode})');
+      }
+
+      // Step 2: Check Migration Status
+      setState(() {
+        _syncProgress = 0.4;
+        _syncStatus = 'Verifying migration service...';
+      });
+      
+      final migrationStatus = await _analyticsService.checkMigrationStatus();
+      if (migrationStatus.statusCode != 200) {
+        throw Exception('Migration service is not ready (${migrationStatus.statusCode})');
+      }
+
+      // Step 3: Execute Migration
+      setState(() {
+        _syncProgress = 0.8;
+        _syncStatus = 'Executing data migration...';
+      });
+      
+      final migrationResult = await _analyticsService.executeMigration();
+      if (migrationResult.statusCode != 200) {
+        throw Exception('Migration failed: ${migrationResult.body}');
+      }
+
+      // Step 4: Refresh data after successful migration
+      setState(() {
+        _syncProgress = 0.9;
+        _syncStatus = 'Refreshing data...';
+      });
+      
+      await _fetchTraffic();
+      await _fetchPredictions();
+
+      setState(() {
+        _syncProgress = 1.0;
+        _syncStatus = 'Synchronization completed successfully!';
+      });
+
+      _showSuccessSnackBar('Data synchronized successfully');
+    } catch (e) {
+      setState(() {
+        _syncStatus = 'Synchronization failed: $e';
+        _syncProgress = 0.0;
+      });
+      _showErrorSnackBar('Synchronization failed: $e');
+    } finally {
+      setState(() {
+        _isSyncing = false;
+      });
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Palette.lightError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -300,6 +398,84 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                     },
                   ),
                 ),
+              // Synchronize button with status
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isSyncing || _syncStatus.isNotEmpty) ...[
+                    // Sync status text
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: Text(
+                        _syncStatus,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11.0,
+                          color: _syncProgress == 1.0 
+                              ? Colors.green
+                              : _syncProgress > 0.0 
+                                  ? Palette.lightPrimary
+                                  : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8.0),
+                    // Progress indicator
+                    if (_syncProgress > 0.0 && _syncProgress < 1.0)
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          value: _syncProgress,
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Palette.lightPrimary),
+                        ),
+                      ),
+                    const SizedBox(width: 8.0),
+                  ],
+                  // Sync button
+                  IconButton(
+                    tooltip: _isSyncing ? 'Synchronizing...' : 'Synchronize data',
+                    onPressed: (_loading || _isSyncing)
+                        ? null
+                        : () {
+                            setState(() {
+                              _isSyncing = true;
+                              _syncStatus = 'Starting synchronization...';
+                              _syncProgress = 0.0;
+                            });
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => SyncProgressDialog(
+                                title: 'Synchronizing Traffic Data',
+                                syncFunction: _synchronizeData,
+                                onComplete: () {
+                                  setState(() {
+                                    _isSyncing = false;
+                                    _syncStatus = 'Last synced: ${DateTime.now().toString().substring(11, 19)}';
+                                  });
+                                },
+                                onError: () {
+                                  setState(() {
+                                    _isSyncing = false;
+                                    _syncStatus = 'Sync failed';
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                    icon: Icon(
+                      _isSyncing ? Icons.sync : Icons.sync,
+                      size: 18,
+                      color: _isSyncing 
+                          ? Palette.lightPrimary
+                          : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
               // Metric dropdown removed (traffic-only)
             ],
           ),
