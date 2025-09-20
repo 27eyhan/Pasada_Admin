@@ -59,6 +59,12 @@ class MapsScreenState extends State<Mapscreen>
   String? _currentSelectedVehicleId;
   String? _currentSortOption;
 
+  // Map style state (for light/dark mode)
+  String? _appliedMapStyle;
+
+  // Compact dark style JSON for Google Maps
+  static const String _darkMapStyle = '[{"elementType":"geometry","stylers":[{"color":"#242f3e"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#746855"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#242f3e"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#263c3f"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#6b9a76"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#38414e"}]},{"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#212a37"}]},{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#9ca5b3"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#746855"}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#1f2835"}]},{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#f3d19c"}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#2f3948"}]},{"featureType":"transit.station","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#17263c"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]},{"featureType":"water","elementType":"labels.text.stroke","stylers":[{"color":"#17263c"}]}]';
+
   @override
   bool get wantKeepAlive => true;
 
@@ -203,6 +209,14 @@ class MapsScreenState extends State<Mapscreen>
     // _internalMapController = controller; // Remove if not used elsewhere
     debugPrint('[MapsScreenState] _onMapCreated called.');
 
+    // Apply initial map style based on current theme
+    try {
+      final isDark = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+      _applyMapStyleForTheme(isDark);
+    } catch (_) {
+      // Provider may not be available very early; safe to ignore
+    }
+
     if (_locationUpdateTimer == null || !_locationUpdateTimer!.isActive) {
       debugPrint(
           '[MapsScreenState] Map controller ready, starting location updates.');
@@ -224,6 +238,15 @@ class MapsScreenState extends State<Mapscreen>
         _updateDriverMarkers();
       }
     });
+  }
+
+  // Apply Google Map style based on theme, with simple deduping
+  Future<void> _applyMapStyleForTheme(bool isDarkMode) async {
+    if (mapController == null) return;
+    final desired = isDarkMode ? 'dark' : 'light';
+    if (_appliedMapStyle == desired) return;
+    await mapController!.setMapStyle(isDarkMode ? _darkMapStyle : null);
+    _appliedMapStyle = desired;
   }
 
   // Apply filters to driver data
@@ -394,18 +417,26 @@ class MapsScreenState extends State<Mapscreen>
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
-            onMapCreated: _onMapCreated,
-            initialCameraPosition: CameraPosition(
-              target: _center,
-              zoom: 15.0,
-            ),
-            markers: _markers,
-            polylines: _polylines,
-            myLocationEnabled: false,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            mapType: MapType.normal,
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              // Ensure map style follows theme changes
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _applyMapStyleForTheme(themeProvider.isDarkMode);
+              });
+              return GoogleMap(
+                onMapCreated: _onMapCreated,
+                initialCameraPosition: CameraPosition(
+                  target: _center,
+                  zoom: 15.0,
+                ),
+                markers: _markers,
+                polylines: _polylines,
+                myLocationEnabled: false,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                mapType: MapType.normal,
+              );
+            },
           ),
           Positioned(
             top: 16,

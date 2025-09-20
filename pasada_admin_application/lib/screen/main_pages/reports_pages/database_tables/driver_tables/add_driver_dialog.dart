@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/services.dart';
 
@@ -218,271 +220,395 @@ class _AddDriverDialogState extends State<AddDriverDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final double screenWidth = MediaQuery.of(context).size.width;
-    // Calculate width slightly smaller than drivers_info.dart (e.g., 50%)
-    final double dialogWidth = screenWidth * 0.35; // Made slightly wider
+    final double dialogWidth = screenWidth * 0.4;
+    final double dialogHeight = screenWidth * 0.28;
 
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
-        side:
-            BorderSide(color: Palette.greenColor, width: 2), // Changed to green
       ),
-      backgroundColor: Palette.whiteColor,
+      elevation: 0,
+      backgroundColor: Colors.transparent,
       child: Container(
         width: dialogWidth,
-        padding: const EdgeInsets.all(24.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              // Icon and title in a more prominent style
-              Icon(Icons.person_add,
-                  color: Palette.greenColor, size: 48), // Changed to green
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: Text(
-                  'Add New Driver',
-                  style: TextStyle(
-                    fontSize: 22.0,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.bold,
-                    color: Palette.greenColor, // Changed to green
+        height: dialogHeight,
+        decoration: BoxDecoration(
+          color: isDark ? Palette.darkCard : Palette.lightCard,
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(
+            color: isDark 
+                ? Palette.darkBorder.withValues(alpha: 77)
+                : Palette.lightBorder.withValues(alpha: 77),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.08)
+                  : Colors.grey.withValues(alpha: 0.08),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Modern header
+            Container(
+              padding: const EdgeInsets.all(20.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkCard : Palette.lightCard,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16.0),
+                  topRight: Radius.circular(16.0),
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark 
+                        ? Palette.darkBorder.withValues(alpha: 77)
+                        : Palette.lightBorder.withValues(alpha: 77),
+                    width: 1.0,
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ),
-
-              // Informative text
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  'Please fill in the details to add a new driver to the system.',
-                  style: TextStyle(fontSize: 14.0),
-                ),
-              ),
-
-              // Form with improved styling
-              Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    _buildFormField(
-                      controller: _fullNameController,
-                      label: 'Name',
-                      icon: Icons.person_outline,
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Please enter driver name'
-                          : null,
-                    ),
-                    _buildFormField(
-                      controller: _licenseNumberController,
-                      label: 'License Number',
-                      icon: Icons.credit_card,
-                      hintText: 'AXX-XX-XXXXXX',
-                      inputFormatters: [
-                        LicenseNumberFormatter(),
-                        LengthLimitingTextInputFormatter(
-                            13), // A00-00-000000 = 12 chars
-                      ],
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter driver license number';
-                        }
-
-                        // Regex pattern for Philippine license format "A00-00-000000"
-                        RegExp licenseFormat =
-                            RegExp(r'^[A-Z]\d{2}-\d{2}-\d{6}$');
-                        if (!licenseFormat.hasMatch(value)) {
-                          return 'Format should be A00-00-000000 (letter-numbers)';
-                        }
-
-                        return null;
-                      },
-                    ),
-                    _buildFormField(
-                      controller: _driverNumberController,
-                      label: 'Driver Number',
-                      icon: Icons.phone,
-                      keyboardType: TextInputType.phone,
-                      hintText: '+63',
-                      inputFormatters: [
-                        PhoneNumberFormatter(),
-                        LengthLimitingTextInputFormatter(13), // +63 + 10 digits
-                      ],
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter driver number';
-                        }
-
-                        // Check for proper Philippines phone format
-                        RegExp phoneFormat = RegExp(r'^\+63\d{10}$');
-                        if (!phoneFormat.hasMatch(value)) {
-                          return 'Format should be +63 followed by 10 digits';
-                        }
-
-                        return null;
-                      },
-                    ),
-                    _buildFormField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      obscureText: true,
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Please enter a password'
-                          : null,
-                    ),
-                    _buildFormField(
-                      controller: _vehicleIdController,
-                      label: 'Vehicle ID',
-                      icon: Icons.directions_car_outlined,
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter vehicle ID';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                    // _buildFormField(
-                    //   controller: _routeIdController,
-                    //   label: 'Route ID',
-                    //   icon: Icons.route,
-                    //   keyboardType: TextInputType.number,
-                    //   hintText: 'Enter Route ID',
-                    //   validator: (value) {
-                    //     if (value == null || value.isEmpty) {
-                    //       return 'Please enter route ID';
-                    //     }
-                    //     if (int.tryParse(value) == null) {
-                    //       return 'Please enter a valid number';
-                    //     }
-                    //     return null;
-                    //   },
-                    // ),
-                  ],
-                ),
-              ),
-
-              // Reduce the spacing before buttons
-              const SizedBox(height: 16.0),
-
-              // Actions with enhanced styling
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[200],
-                      foregroundColor: Colors.black,
-                      // Increase button size
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-                      elevation: 3,
-                      minimumSize: Size(140, 50), // Set minimum size
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        side: BorderSide(color: Colors.grey[400]!),
-                      ),
-                    ),
-                    onPressed:
-                        _isLoading ? null : () => Navigator.of(context).pop(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.cancel, size: 20), // Larger icon
-                        SizedBox(width: 8),
-                        Text('Cancel',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16)), // Larger text
-                      ],
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+                    child: Icon(
+                      Icons.person_add,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                      size: 18,
                     ),
                   ),
-                  const SizedBox(width: 15.0),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Palette.greenColor,
-                      foregroundColor: Palette.whiteColor,
-                      // Increase button size
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 30, vertical: 16),
-                      elevation: 3,
-                      minimumSize: Size(140, 50), // Set minimum size
-                      shadowColor: Palette.greenColor.withAlpha(128),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
+                  const SizedBox(width: 12.0),
+                  Text(
+                    "Add New Driver",
+                    style: TextStyle(
+                      fontSize: 20.0,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                      fontFamily: 'Inter',
                     ),
-                    onPressed: _isLoading ? null : _saveDriver,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Palette.whiteColor)) // Larger spinner
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.save, size: 20), // Larger icon
-                              SizedBox(width: 8),
-                              Text('Save Driver',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16)), // Larger text
-                            ],
+                  ),
+                  const Spacer(),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).pop(),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isDark ? Palette.darkCard : Palette.lightCard,
+                          border: Border.all(
+                            color: isDark 
+                                ? Palette.darkBorder.withValues(alpha: 77)
+                                : Palette.lightBorder.withValues(alpha: 77),
+                            width: 1.0,
                           ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+
+            // Content area
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Informative text
+                    Text(
+                      'Please fill in the details to add a new driver to the system.',
+                      style: TextStyle(
+                        fontSize: 12.0,
+                        color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 20.0),
+
+                    // Form with modern styling
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          _buildModernFormField(
+                            controller: _fullNameController,
+                            label: 'Name',
+                            icon: Icons.person_outline,
+                            isDark: isDark,
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Please enter driver name'
+                                : null,
+                          ),
+                          const SizedBox(height: 16.0),
+                          _buildModernFormField(
+                            controller: _licenseNumberController,
+                            label: 'License Number',
+                            icon: Icons.credit_card_outlined,
+                            isDark: isDark,
+                            hintText: 'AXX-XX-XXXXXX',
+                            inputFormatters: [
+                              LicenseNumberFormatter(),
+                              LengthLimitingTextInputFormatter(13),
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter driver license number';
+                              }
+                              RegExp licenseFormat = RegExp(r'^[A-Z]\d{2}-\d{2}-\d{6}$');
+                              if (!licenseFormat.hasMatch(value)) {
+                                return 'Format should be A00-00-000000 (letter-numbers)';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16.0),
+                          _buildModernFormField(
+                            controller: _driverNumberController,
+                            label: 'Driver Number',
+                            icon: Icons.phone_outlined,
+                            isDark: isDark,
+                            keyboardType: TextInputType.phone,
+                            hintText: '+63',
+                            inputFormatters: [
+                              PhoneNumberFormatter(),
+                              LengthLimitingTextInputFormatter(13),
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter driver number';
+                              }
+                              RegExp phoneFormat = RegExp(r'^\+63\d{10}$');
+                              if (!phoneFormat.hasMatch(value)) {
+                                return 'Format should be +63 followed by 10 digits';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16.0),
+                          _buildModernFormField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            icon: Icons.lock_outline,
+                            isDark: isDark,
+                            obscureText: true,
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Please enter a password'
+                                : null,
+                          ),
+                          const SizedBox(height: 16.0),
+                          _buildModernFormField(
+                            controller: _vehicleIdController,
+                            label: 'Vehicle ID',
+                            icon: Icons.directions_car_outlined,
+                            isDark: isDark,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter vehicle ID';
+                              }
+                              if (int.tryParse(value) == null) {
+                                return 'Please enter a valid number';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Action buttons
+            Container(
+              padding: const EdgeInsets.all(20.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkCard : Palette.lightCard,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16.0),
+                  bottomRight: Radius.circular(16.0),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark 
+                        ? Palette.darkBorder.withValues(alpha: 77)
+                        : Palette.lightBorder.withValues(alpha: 77),
+                    width: 1.0,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+                        foregroundColor: isDark ? Palette.darkText : Palette.lightText,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        side: BorderSide(
+                          color: isDark 
+                              ? Palette.darkBorder.withValues(alpha: 77)
+                              : Palette.lightBorder.withValues(alpha: 77),
+                          width: 1.0,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      ),
+                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.cancel, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12.0),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      ),
+                      onPressed: _isLoading ? null : _saveDriver,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.0,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Save Driver',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // Helper method to build standardized form fields
-  Widget _buildFormField({
+  // Modern form field with dark mode support
+  Widget _buildModernFormField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    required bool isDark,
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
-    required String? Function(String?) validator,
+    String? Function(String?)? validator,
     String? hintText,
     String? helperText,
     List<TextInputFormatter>? inputFormatters,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkSurface : Palette.lightSurface,
+        borderRadius: BorderRadius.circular(10.0),
+        border: Border.all(
+          color: isDark 
+              ? Palette.darkBorder.withValues(alpha: 77)
+              : Palette.lightBorder.withValues(alpha: 77),
+          width: 1.0,
+        ),
+      ),
       child: TextFormField(
         controller: controller,
+        style: TextStyle(
+          color: isDark ? Palette.darkText : Palette.lightText,
+          fontSize: 14.0,
+          fontFamily: 'Inter',
+        ),
         decoration: InputDecoration(
           labelText: label,
           hintText: hintText,
           helperText: helperText,
-          prefixIcon: Icon(icon, color: Palette.greenColor), // Changed to green
+          labelStyle: TextStyle(
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            fontSize: 12.0,
+            fontFamily: 'Inter',
+          ),
+          hintStyle: TextStyle(
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            fontSize: 12.0,
+            fontFamily: 'Inter',
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            size: 18,
+          ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0),
-            borderSide: BorderSide(color: Colors.grey),
+            borderRadius: BorderRadius.circular(10.0),
+            borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8.0),
+            borderRadius: BorderRadius.circular(10.0),
             borderSide: BorderSide(
-                color: Palette.greenColor, width: 2.0), // Changed to green
+              color: isDark ? Palette.darkPrimary : Palette.lightPrimary,
+              width: 2.0,
+            ),
           ),
           filled: true,
-          fillColor: Colors.grey[50],
-          contentPadding:
-              EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+          fillColor: Colors.transparent,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
         ),
         keyboardType: keyboardType,
         obscureText: obscureText,

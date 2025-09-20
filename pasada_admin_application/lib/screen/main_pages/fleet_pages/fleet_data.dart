@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/edit_vehicle_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
 class FleetData extends StatefulWidget {
   final Map<String, dynamic> vehicle;
@@ -22,170 +24,305 @@ class FleetData extends StatefulWidget {
 class _FleetDataState extends State<FleetData> {
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double dialogWidth = screenWidth * 0.35;
-    final double dialogHeight =
-        screenWidth * 0.38; // Reduced height from 0.45 to 0.38
+    final double dialogWidth = screenWidth * 0.5;
+    final double dialogHeight = screenWidth * 0.26;
     final vehicle = widget.vehicle;
 
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: Palette.greenColor, width: 2),
       ),
-      elevation: 8.0,
-      backgroundColor: Palette.whiteColor,
+      elevation: 0,
+      backgroundColor: Colors.transparent,
       child: Container(
         width: dialogWidth,
         height: dialogHeight,
-        padding: const EdgeInsets.all(24.0),
+        decoration: BoxDecoration(
+          color: isDark ? Palette.darkCard : Palette.lightCard,
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(
+            color: isDark 
+                ? Palette.darkBorder.withValues(alpha: 77)
+                : Palette.lightBorder.withValues(alpha: 77),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.08)
+                  : Colors.grey.withValues(alpha: 0.08),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Enhanced header with icon
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.directions_bus,
-                        color: Palette.greenColor, size: 28),
-                    SizedBox(width: 12.0),
-                    Text(
-                      "Fleet Details",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Palette.greenColor,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
+            // Compact header
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkCard : Palette.lightCard,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16.0),
+                  topRight: Radius.circular(16.0),
                 ),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(50),
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        size: 24,
-                        color: Palette.blackColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16.0),
-            Divider(color: Palette.greenColor.withAlpha(50), thickness: 1.5),
-            const SizedBox(height: 16.0),
-
-            // Vehicle ID badge - wrap in alignment to prevent stretching
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                margin: EdgeInsets.only(bottom: 16.0),
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Palette.greenColor.withAlpha(40),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Palette.greenColor.withAlpha(100)),
-                ),
-                child: Text(
-                  "Vehicle ID: ${vehicle['vehicle_id']?.toString() ?? 'N/A'}",
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Palette.greenColor,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark 
+                        ? Palette.darkBorder.withValues(alpha: 77)
+                        : Palette.lightBorder.withValues(alpha: 77),
+                    width: 1.0,
                   ),
                 ),
               ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
+                    child: Icon(
+                      Icons.directions_bus,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                      size: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 10.0),
+                  Text(
+                    "Fleet Details",
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  const Spacer(),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).pop(),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: isDark ? Palette.darkCard : Palette.lightCard,
+                          border: Border.all(
+                            color: isDark 
+                                ? Palette.darkBorder.withValues(alpha: 77)
+                                : Palette.lightBorder.withValues(alpha: 77),
+                            width: 1.0,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 14,
+                          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
-            // Improved detail rows
+            // Content area with two columns
             Expanded(
               child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildEnhancedDetailRow(
-                        "Plate Number:",
-                        vehicle['plate_number'] ?? 'N/A',
-                        Icons.credit_card_outlined),
-                    _buildEnhancedDetailRow(
-                        "Passenger Capacity:",
-                        vehicle['passenger_capacity']?.toString() ?? 'N/A',
-                        Icons.people_outline),
-                    _buildEnhancedDetailRow(
-                        "Route ID:",
-                        vehicle['route_id']?.toString() ?? 'N/A',
-                        Icons.map_outlined),
-                    _buildEnhancedDetailRow(
-                        "Vehicle Location:",
-                        vehicle['vehicle_location'] ?? 'N/A',
-                        Icons.location_on_outlined),
-                    // Display driver info if available
-                    if (vehicle['driverTable'] != null &&
-                        vehicle['driverTable'] is List &&
-                        vehicle['driverTable'].isNotEmpty)
-                      ..._buildDriverInfo(vehicle['driverTable'].first),
+                    // Vehicle ID badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark 
+                            ? Palette.darkPrimary.withValues(alpha: 0.1)
+                            : Palette.lightPrimary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark 
+                              ? Palette.darkPrimary.withValues(alpha: 0.3)
+                              : Palette.lightPrimary.withValues(alpha: 0.3),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Text(
+                        "Vehicle ID: ${vehicle['vehicle_id']?.toString() ?? 'N/A'}",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Palette.darkPrimary : Palette.lightPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16.0),
+
+                    // Two column layout
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left column - Vehicle Information
+                        Expanded(
+                          child: _buildUniformDetailCard(
+                            "Vehicle Information",
+                            [
+                              _buildCompactDetailRow(
+                                "Plate Number",
+                                vehicle['plate_number'] ?? 'N/A',
+                                Icons.credit_card_outlined,
+                                isDark,
+                              ),
+                              _buildCompactDetailRow(
+                                "Passenger Capacity",
+                                "${vehicle['passenger_capacity'] ?? 'N/A'} seats",
+                                Icons.people_outline,
+                                isDark,
+                              ),
+                              _buildCompactDetailRow(
+                                "Route ID",
+                                vehicle['route_id']?.toString() ?? 'N/A',
+                                Icons.map_outlined,
+                                isDark,
+                              ),
+                              _buildCompactDetailRow(
+                                "Location",
+                                vehicle['vehicle_location'] ?? 'N/A',
+                                Icons.location_on_outlined,
+                                isDark,
+                              ),
+                            ],
+                            isDark,
+                          ),
+                        ),
+
+                        const SizedBox(width: 12.0),
+
+                        // Right column - Driver Information
+                        Expanded(
+                          child: vehicle['driverTable'] != null &&
+                                  vehicle['driverTable'] is List &&
+                                  vehicle['driverTable'].isNotEmpty
+                              ? _buildUniformDetailCard(
+                                  "Assigned Driver",
+                                  [
+                                    _buildCompactDetailRow(
+                                      "Driver ID",
+                                      vehicle['driverTable'].first['driver_id']?.toString() ?? 'N/A',
+                                      Icons.badge_outlined,
+                                      isDark,
+                                    ),
+                                    _buildCompactDetailRow(
+                                      "Full Name",
+                                      vehicle['driverTable'].first['full_name'] ?? 'N/A',
+                                      Icons.person_outlined,
+                                      isDark,
+                                    ),
+                                    _buildCompactDetailRow(
+                                      "Status",
+                                      _capitalizeFirstLetter(vehicle['driverTable'].first['driving_status'] ?? 'N/A'),
+                                      Icons.local_taxi_outlined,
+                                      isDark,
+                                      statusColor: _getStatusColor(vehicle['driverTable'].first['driving_status'] ?? 'offline'),
+                                    ),
+                                  ],
+                                  isDark,
+                                )
+                              : _buildUniformDetailCard(
+                                  "Assigned Driver",
+                                  [
+                                    _buildCompactDetailRow(
+                                      "Status",
+                                      "No Driver Assigned",
+                                      Icons.person_off_outlined,
+                                      isDark,
+                                      statusColor: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                    ),
+                                  ],
+                                  isDark,
+                                ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ),
 
-            Align(
-              alignment: Alignment.center,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Palette.whiteColor,
-                  foregroundColor: Palette.blackColor,
-                  elevation: 4.0,
-                  shadowColor: Colors.grey.shade300,
-                  side: BorderSide(color: Colors.grey.shade400, width: 1.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+            // Action button
+            Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkCard : Palette.lightCard,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16.0),
+                  bottomRight: Radius.circular(16.0),
                 ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return EditVehicleDialog(
-                        supabase: widget.supabase,
-                        onVehicleActionComplete: widget.onVehicleActionComplete,
-                        vehicleData: widget.vehicle,
-                        openedFromFleetData: true,
-                      );
-                    },
-                  );
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.edit, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      "Manage Vehicle",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark 
+                        ? Palette.darkBorder.withValues(alpha: 77)
+                        : Palette.lightBorder.withValues(alpha: 77),
+                    width: 1.0,
+                  ),
+                ),
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
+                    foregroundColor: isDark ? Palette.darkText : Palette.lightText,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    side: BorderSide(
+                      color: isDark 
+                          ? Palette.darkBorder.withValues(alpha: 77)
+                          : Palette.lightBorder.withValues(alpha: 77),
+                      width: 1.0,
                     ),
-                  ],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return EditVehicleDialog(
+                          supabase: widget.supabase,
+                          onVehicleActionComplete: widget.onVehicleActionComplete,
+                          vehicleData: widget.vehicle,
+                          openedFromFleetData: true,
+                        );
+                      },
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.edit, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Manage Vehicle",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -195,19 +332,65 @@ class _FleetDataState extends State<FleetData> {
     );
   }
 
-  // Enhanced detail row with icon
-  Widget _buildEnhancedDetailRow(String label, String value, IconData icon) {
+  // Build uniform detail card with fixed height
+  Widget _buildUniformDetailCard(String title, List<Widget> children, bool isDark) {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkCard : Palette.lightCard,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(
+          color: isDark 
+              ? Palette.darkBorder.withValues(alpha: 77)
+              : Palette.lightBorder.withValues(alpha: 77),
+          width: 1.0,
+        ),
+      ),
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14.0,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Palette.darkText : Palette.lightText,
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: children,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build compact individual detail row
+  Widget _buildCompactDetailRow(
+    String label,
+    String value,
+    IconData icon,
+    bool isDark, {
+    Color? statusColor,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             icon,
-            size: 20,
-            color: Palette.greenColor.withAlpha(220),
+            size: 18,
+            color: statusColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,19 +399,20 @@ class _FleetDataState extends State<FleetData> {
                   label,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                    fontSize: 11.0,
                     fontWeight: FontWeight.w500,
+                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 16,
+                    fontSize: 14.0,
                     fontWeight: FontWeight.w600,
-                    color: Palette.blackColor,
+                    color: statusColor ?? (isDark ? Palette.darkText : Palette.lightText),
                   ),
                 ),
               ],
@@ -239,40 +423,18 @@ class _FleetDataState extends State<FleetData> {
     );
   }
 
-  // Helper to build driver info section if available
-  List<Widget> _buildDriverInfo(Map<String, dynamic> driverData) {
-    return [
-      Padding(
-        padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-        child: Divider(color: Colors.grey.withAlpha(100)),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
-        child: Row(
-          children: [
-            Icon(Icons.person, color: Palette.greenColor),
-            SizedBox(width: 8),
-            Text(
-              "Assigned Driver",
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Palette.greenColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-      _buildEnhancedDetailRow("Driver ID:",
-          driverData['driver_id']?.toString() ?? 'N/A', Icons.badge_outlined),
-      _buildEnhancedDetailRow("Full Name:",
-          driverData['full_name']?.toString() ?? 'N/A', Icons.person_outlined),
-      _buildEnhancedDetailRow(
-          "Status:",
-          _capitalizeFirstLetter(driverData['driving_status'] ?? 'N/A'),
-          Icons.local_taxi_outlined),
-    ];
+  // Get status color based on vehicle status
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'online':
+        return Palette.lightSuccess;
+      case 'driving':
+        return Palette.lightSuccess;
+      case 'idling':
+        return Palette.lightWarning;
+      default:
+        return Palette.lightError;
+    }
   }
 
   // Helper method to capitalize first letter
