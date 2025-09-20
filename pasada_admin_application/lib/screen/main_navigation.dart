@@ -61,7 +61,10 @@ class _MainNavigationState extends State<MainNavigation> {
           onNavigateToPage: navigateToPage,
         );
       case '/data_tables':
-        return DataTablesContent(onNavigateToPage: navigateToPage);
+        return DataTablesContent(
+          onNavigateToPage: navigateToPage,
+          initialArgs: _currentArgs,
+        );
       case '/select_table':
         return SelectTableContent(onNavigateToPage: navigateToPage);
       default:
@@ -88,13 +91,10 @@ class _MainNavigationState extends State<MainNavigation> {
       backgroundColor: isDark ? Palette.darkBackground : Palette.lightBackground,
       body: Row(
         children: [
-          // Fixed width sidebar drawer
-          SizedBox(
-            width: 280, // Fixed width for the sidebar
-            child: MyDrawer(
-              currentRoute: _currentPage,
-              onNavigate: navigateToPage,
-            ),
+          // Dynamic width sidebar drawer
+          MyDrawer(
+            currentRoute: _currentPage,
+            onNavigate: navigateToPage,
           ),
           // Main content area
           Expanded(

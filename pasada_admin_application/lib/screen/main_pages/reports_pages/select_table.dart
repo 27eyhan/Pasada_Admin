@@ -554,19 +554,6 @@ class _SelectTableState extends State<SelectTable> {
           ),
         );
         break;
-      case 'Driver Reviews':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TablePreviewHelper.createDriverReviewsTable(
-              dataFetcher: () async {
-                final data = await supabase.from('driverReviews').select('*');
-                return (data as List).cast<Map<String, dynamic>>();
-              },
-            ),
-          ),
-        );
-        break;
       case 'Vehicle':
         Navigator.push(
           context,
@@ -613,6 +600,19 @@ class _SelectTableState extends State<SelectTable> {
             builder: (context) => TablePreviewHelper.createDriverArchivesTable(
               dataFetcher: () async {
                 final data = await supabase.from('driverArchives').select('*');
+                return (data as List).cast<Map<String, dynamic>>();
+              },
+            ),
+          ),
+        );
+        break;
+      case 'Admin Archives':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TablePreviewHelper.createAdminArchivesTable(
+              dataFetcher: () async {
+                final data = await supabase.from('adminArchives').select('*');
                 return (data as List).cast<Map<String, dynamic>>();
               },
             ),
