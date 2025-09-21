@@ -106,6 +106,20 @@ class AnalyticsService {
   Future<http.Response> executeMigration() {
     return http.post(_u('/api/admin/migration/run'));
   }
+
+  // Daily traffic collection status
+  Future<http.Response> getDailyCollectionStatus() {
+    return http.get(_u('/api/analytics/admin/collection-status'));
+  }
+
+  // Weekly analytics processing
+  Future<http.Response> processWeeklyAnalytics() {
+    return http.post(_u('/api/analytics/admin/process-weekly'));
+  }
+
+  Future<http.Response> processWeeklyAnalyticsWithOffset(int weekOffset) {
+    return http.post(_u('/api/analytics/admin/process-weekly/$weekOffset'));
+  }
 }
 
  

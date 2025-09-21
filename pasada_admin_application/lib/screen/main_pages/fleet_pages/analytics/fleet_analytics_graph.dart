@@ -26,18 +26,27 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   List<double> _predictedSeries = const [];
   List<Map<String, dynamic>> _routes = const [];
   String? _selectedRouteId; // local selection, defaults to widget.routeId
-  bool _usingHybrid = true;
   
   // Synchronization state
   bool _isSyncing = false;
   String _syncStatus = '';
   double _syncProgress = 0.0;
+  
+  // Collection status state
+  bool _collectionStatusLoading = false;
+  Map<String, dynamic>? _collectionStatus;
+  String? _collectionError;
+  
+  // Weekly processing state
+  bool _isProcessingWeekly = false;
+  String _weeklyProcessingStatus = '';
 
   @override
   void initState() {
     super.initState();
     _fetchTraffic();
     _loadRoutes();
+    _fetchCollectionStatus();
   }
 
   @override
@@ -67,44 +76,90 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       _error = null;
     });
     try {
-      if (_usingHybrid) {
-        final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
-        if (hybrid.statusCode == 200) {
-          final decoded = jsonDecode(hybrid.body);
-          List<double> localSeries = [];
-          if (decoded is Map && decoded['data'] is Map) {
-            final data = decoded['data'] as Map;
-            // Parse from data.historicalData[].trafficDensity
-            if (data['historicalData'] is List) {
-              for (final item in (data['historicalData'] as List)) {
-                if (item is Map && item['trafficDensity'] is num) {
-                  localSeries.add((item['trafficDensity'] as num).toDouble());
+      // Try hybrid endpoint first (working with Bun migration)
+      final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
+      if (hybrid.statusCode == 200) {
+        final decoded = jsonDecode(hybrid.body);
+        List<double> localSeries = [];
+        if (decoded is Map && decoded['local'] is Map) {
+          final localData = decoded['local'] as Map;
+          // Parse from local.historicalData[].trafficDensity
+          if (localData['historicalData'] is List) {
+            for (final item in (localData['historicalData'] as List)) {
+              if (item is Map && item['trafficDensity'] is num) {
+                localSeries.add((item['trafficDensity'] as num).toDouble());
+              }
+            }
+          }
+        }
+        // Process historical data to get meaningful weekly representation
+        List<double> week = [];
+        if (localSeries.isNotEmpty) {
+          // Group data by actual day of week using timestamps
+          final dailyAverages = <int, List<double>>{};
+          if (decoded is Map && decoded['local'] is Map) {
+            final localData = decoded['local'] as Map;
+            if (localData['historicalData'] is List) {
+              final historicalData = localData['historicalData'] as List;
+              for (int i = 0; i < historicalData.length && i < localSeries.length; i++) {
+                final item = historicalData[i];
+                if (item is Map && item['timestamp'] is String) {
+                  try {
+                    final timestamp = DateTime.parse(item['timestamp']);
+                    final dayOfWeek = timestamp.weekday % 7; // Convert to 0-6 (Sunday=0)
+                    dailyAverages.putIfAbsent(dayOfWeek, () => []).add(localSeries[i]);
+                  } catch (e) {
+                    // Fallback to simple grouping if timestamp parsing fails
+                    final dayOfWeek = i % 7;
+                    dailyAverages.putIfAbsent(dayOfWeek, () => []).add(localSeries[i]);
+                  }
                 }
               }
             }
           }
-          // Use the last 7 points from historical data
-          final List<double> week = localSeries.length >= 7
-              ? localSeries.sublist(localSeries.length - 7)
-              : (localSeries.isNotEmpty ? localSeries : _generateWeeklyTraffic());
+          
+          // Calculate average for each day of the week (Sunday=0 to Saturday=6)
+          for (int day = 0; day < 7; day++) {
+            if (dailyAverages.containsKey(day) && dailyAverages[day]!.isNotEmpty) {
+              final avg = dailyAverages[day]!.reduce((a, b) => a + b) / dailyAverages[day]!.length;
+              week.add(avg);
+            } else {
+              // Use the last available data point or generate fallback
+              week.add(localSeries.isNotEmpty ? localSeries.last : 0.5);
+            }
+          }
+        } else {
+          week = _generateWeeklyTraffic(routeId);
+        }
+        setState(() {
+          _trafficSeries = week;
+          _loading = false;
+        });
+        return; // done
+      }
+
+      // Fallback: external traffic summary (also working with Bun)
+      final external = await _analyticsService.getExternalRouteTrafficSummary(routeId, days: 7);
+      if (external.statusCode == 200) {
+        final decoded = jsonDecode(external.body);
+        if (decoded is Map && decoded['data'] is Map) {
+          final data = decoded['data'] as Map;
+          // Generate mock weekly data based on average traffic density
+          final avgDensity = (data['avg_traffic_density'] as num?)?.toDouble() ?? 0.5;
+          final week = List.generate(7, (index) => avgDensity + (index % 2 == 0 ? 0.1 : -0.1));
           setState(() {
             _trafficSeries = week;
             _loading = false;
           });
-          return; // done
-        } else {
-          // fall back
-          setState(() {
-            _usingHybrid = false;
-          });
+          return;
         }
       }
 
-      // Fallback: local-only endpoint
+      // Final fallback: local-only endpoint (may fail with Bun migration)
       final local = await _analyticsService.getLocalRouteAnalytics(routeId);
       if (local.statusCode != 200) {
         setState(() {
-          _error = 'Failed to fetch route analytics (${local.statusCode})';
+          _error = 'Failed to fetch route analytics (${local.statusCode}). All endpoints unavailable.';
           _loading = false;
         });
         return;
@@ -120,7 +175,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       }
       final List<double> week = values.length >= 7
           ? values.sublist(values.length - 7)
-          : (values.isNotEmpty ? values : _generateWeeklyTraffic());
+          : (values.isNotEmpty ? values : _generateWeeklyTraffic(routeId));
       setState(() {
         _trafficSeries = week;
         _loading = false;
@@ -169,32 +224,34 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       _error = null;
     });
     try {
-      // Prefer hybrid predictions if available
-      if (_usingHybrid) {
-        final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
-        if (hybrid.statusCode == 200) {
-          final decoded = jsonDecode(hybrid.body);
-          List<double> preds = [];
-          if (decoded is Map && decoded['data'] is Map) {
-            final data = decoded['data'] as Map;
-            if (data['predictions'] is List) {
-              for (final item in (data['predictions'] as List)) {
-                if (item is Map && item['predictedDensity'] is num) {
-                  preds.add((item['predictedDensity'] as num).toDouble());
-                }
+      // Try hybrid predictions first (working with Bun migration)
+      final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
+      if (hybrid.statusCode == 200) {
+        final decoded = jsonDecode(hybrid.body);
+        List<double> preds = [];
+        if (decoded is Map) {
+          // Try local predictions first
+          if (decoded['local'] is Map && decoded['local']['predictions'] is List) {
+            for (final item in (decoded['local']['predictions'] as List)) {
+              if (item is Map && item['predictedDensity'] is num) {
+                preds.add((item['predictedDensity'] as num).toDouble());
               }
             }
           }
-          setState(() {
-            _predictedSeries = preds.take(7).toList();
-            _loading = false;
-          });
-          return;
-        } else {
-          setState(() {
-            _usingHybrid = false;
-          });
+          // Fallback to external predictions if local is empty
+          if (preds.isEmpty && decoded['external'] is Map && decoded['external']['predictions'] is List) {
+            for (final item in (decoded['external']['predictions'] as List)) {
+              if (item is Map && item['predictedDensity'] is num) {
+                preds.add((item['predictedDensity'] as num).toDouble());
+              }
+            }
+          }
         }
+        setState(() {
+          _predictedSeries = preds.take(7).toList();
+          _loading = false;
+        });
+        return;
       }
 
       // Fallback to external predictions endpoint
@@ -227,11 +284,26 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     }
   }
 
-  // Stub data generator for a week (Mon-Sun)
+  // Stub data generator for a week (Mon-Sun) - route-specific
 
-  List<double> _generateWeeklyTraffic() {
-    // Example base values representing traffic density on a route
-    return [35, 28, 40, 42, 38, 30, 25];
+  List<double> _generateWeeklyTraffic([String? routeId]) {
+    // Generate route-specific traffic patterns based on route ID
+    final int routeSeed = int.tryParse(routeId ?? '1') ?? 1;
+    final List<List<double>> basePatterns = [
+      [35.0, 28.0, 40.0, 42.0, 38.0, 30.0, 25.0], // Route 1: Peak on Thu
+      [42.0, 35.0, 38.0, 45.0, 40.0, 32.0, 28.0], // Route 2: Higher overall, peak on Thu
+      [28.0, 32.0, 35.0, 38.0, 42.0, 35.0, 30.0], // Route 3: Gradual increase, peak on Fri
+      [30.0, 25.0, 35.0, 40.0, 38.0, 32.0, 28.0], // Route 4: Mid-week peak
+      [38.0, 42.0, 35.0, 30.0, 45.0, 40.0, 35.0], // Route 5: Weekend heavy
+    ];
+    
+    // Use route ID to select pattern, cycling through available patterns
+    final int patternIndex = (routeSeed - 1) % basePatterns.length;
+    final List<double> basePattern = basePatterns[patternIndex];
+    
+    // Add some variation based on route ID to make each route unique
+    final double variation = (routeSeed % 10) * 0.5; // 0-4.5 variation
+    return basePattern.map((value) => (value + variation).clamp(0.0, 100.0)).toList();
   }
 
   // Very simple prediction: repeat last delta trend for next 7 days
@@ -348,12 +420,88 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     }
   }
 
+  Future<void> _fetchCollectionStatus() async {
+    if (!_analyticsService.isConfigured) {
+      return;
+    }
+    
+    setState(() {
+      _collectionStatusLoading = true;
+      _collectionError = null;
+    });
+    
+    try {
+      final response = await _analyticsService.getDailyCollectionStatus();
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        setState(() {
+          _collectionStatus = decoded;
+          _collectionStatusLoading = false;
+        });
+      } else {
+        setState(() {
+          _collectionError = 'Failed to fetch collection status (${response.statusCode})';
+          _collectionStatusLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _collectionError = 'Failed to fetch collection status: $e';
+        _collectionStatusLoading = false;
+      });
+    }
+  }
+
+  Future<void> _processWeeklyAnalytics({int? weekOffset}) async {
+    if (!_analyticsService.isConfigured) {
+      _showErrorSnackBar('API not configured');
+      return;
+    }
+
+    setState(() {
+      _isProcessingWeekly = true;
+      _weeklyProcessingStatus = 'Processing weekly analytics...';
+    });
+
+    try {
+      final response = weekOffset != null 
+          ? await _analyticsService.processWeeklyAnalyticsWithOffset(weekOffset)
+          : await _analyticsService.processWeeklyAnalytics();
+      
+      if (response.statusCode == 200) {
+        setState(() {
+          _weeklyProcessingStatus = 'Weekly analytics processed successfully!';
+        });
+        _showSuccessSnackBar('Weekly analytics processed successfully');
+        
+        // Refresh data after processing
+        await _fetchTraffic();
+        await _fetchPredictions();
+        await _fetchCollectionStatus();
+      } else {
+        setState(() {
+          _weeklyProcessingStatus = 'Failed to process weekly analytics (${response.statusCode})';
+        });
+        _showErrorSnackBar('Failed to process weekly analytics: ${response.body}');
+      }
+    } catch (e) {
+      setState(() {
+        _weeklyProcessingStatus = 'Failed to process weekly analytics: $e';
+      });
+      _showErrorSnackBar('Failed to process weekly analytics: $e');
+    } finally {
+      setState(() {
+        _isProcessingWeekly = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
-    final List<double> baseSeries = _trafficSeries.isNotEmpty ? _trafficSeries : _generateWeeklyTraffic();
+    final List<double> baseSeries = _trafficSeries.isNotEmpty ? _trafficSeries : _generateWeeklyTraffic(_selectedRouteId);
     final List<double> predictionSeries =
         _predictedSeries.isNotEmpty ? _predictedSeries : _predictNextWeek(baseSeries);
 
@@ -394,50 +542,85 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                       setState(() {
                         _selectedRouteId = val;
                       });
+                      _fetchTraffic();
                       _fetchPredictions();
                     },
                   ),
                 ),
-              // Synchronize button with status
+              // Collection status and sync controls
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_isSyncing || _syncStatus.isNotEmpty) ...[
-                    // Sync status text
+                  // Collection status indicator
+                  if (_collectionStatusLoading) ...[
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Palette.lightPrimary),
+                      ),
+                    ),
+                    const SizedBox(width: 8.0),
+                  ] else if (_collectionStatus != null) ...[
+                    _CollectionStatusIndicator(
+                      collectionStatus: _collectionStatus!,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 8.0),
+                  ],
+                  if (_isSyncing || _syncStatus.isNotEmpty || _isProcessingWeekly || _weeklyProcessingStatus.isNotEmpty) ...[
+                    // Status text (sync or weekly processing)
                     Container(
                       constraints: const BoxConstraints(maxWidth: 120),
                       child: Text(
-                        _syncStatus,
+                        _isProcessingWeekly ? _weeklyProcessingStatus : _syncStatus,
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 11.0,
-                          color: _syncProgress == 1.0 
-                              ? Colors.green
-                              : _syncProgress > 0.0 
-                                  ? Palette.lightPrimary
-                                  : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                          color: _isProcessingWeekly
+                              ? Palette.lightPrimary
+                              : _syncProgress == 1.0 
+                                  ? Colors.green
+                                  : _syncProgress > 0.0 
+                                      ? Palette.lightPrimary
+                                      : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8.0),
                     // Progress indicator
-                    if (_syncProgress > 0.0 && _syncProgress < 1.0)
+                    if ((_syncProgress > 0.0 && _syncProgress < 1.0) || _isProcessingWeekly)
                       SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                          value: _syncProgress,
+                          value: _isProcessingWeekly ? null : _syncProgress,
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(Palette.lightPrimary),
                         ),
                       ),
                     const SizedBox(width: 8.0),
                   ],
+                  // Weekly processing button
+                  IconButton(
+                    tooltip: _isProcessingWeekly ? 'Processing...' : 'Process weekly analytics',
+                    onPressed: (_loading || _isSyncing || _isProcessingWeekly)
+                        ? null
+                        : () => _processWeeklyAnalytics(),
+                    icon: Icon(
+                      _isProcessingWeekly ? Icons.hourglass_empty : Icons.analytics,
+                      size: 18,
+                      color: _isProcessingWeekly 
+                          ? Palette.lightPrimary
+                          : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    ),
+                  ),
                   // Sync button
                   IconButton(
                     tooltip: _isSyncing ? 'Synchronizing...' : 'Synchronize data',
-                    onPressed: (_loading || _isSyncing)
+                    onPressed: (_loading || _isSyncing || _isProcessingWeekly)
                         ? null
                         : () {
                             setState(() {
@@ -456,6 +639,8 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                                     _isSyncing = false;
                                     _syncStatus = 'Last synced: ${DateTime.now().toString().substring(11, 19)}';
                                   });
+                                  // Refresh collection status after sync
+                                  _fetchCollectionStatus();
                                 },
                                 onError: () {
                                   setState(() {
@@ -485,6 +670,18 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(
                 _error!,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.0,
+                  color: Palette.lightError,
+                ),
+              ),
+            ),
+          if (_collectionError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                'Collection Status: $_collectionError',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12.0,
@@ -805,6 +1002,82 @@ class _WeekAxis extends StatelessWidget {
         );
       }),
     );
+  }
+}
+
+class _CollectionStatusIndicator extends StatelessWidget {
+  final Map<String, dynamic> collectionStatus;
+  final bool isDark;
+  
+  const _CollectionStatusIndicator({
+    required this.collectionStatus,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Parse collection status
+    final bool isCollected = collectionStatus['isCollected'] ?? false;
+    final String? lastCollectionDate = collectionStatus['lastCollectionDate'];
+    final int routesWithData = collectionStatus['routesWithData'] ?? 0;
+    final int totalRoutes = collectionStatus['totalRoutes'] ?? 0;
+    
+    // Determine status color and icon
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+    
+    if (isCollected) {
+      statusColor = Colors.green;
+      statusIcon = Icons.check_circle;
+      statusText = 'Fresh';
+    } else {
+      statusColor = Palette.lightWarning;
+      statusIcon = Icons.warning;
+      statusText = 'Stale';
+    }
+    
+    return Tooltip(
+      message: _buildTooltipMessage(isCollected, lastCollectionDate, routesWithData, totalRoutes),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            statusIcon,
+            size: 14,
+            color: statusColor,
+          ),
+          const SizedBox(width: 4.0),
+          Text(
+            statusText,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 10.0,
+              color: statusColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  String _buildTooltipMessage(bool isCollected, String? lastCollectionDate, int routesWithData, int totalRoutes) {
+    final buffer = StringBuffer();
+    
+    if (isCollected) {
+      buffer.write('Data is fresh');
+    } else {
+      buffer.write('Data may be stale');
+    }
+    
+    if (lastCollectionDate != null) {
+      buffer.write('\nLast collection: $lastCollectionDate');
+    }
+    
+    buffer.write('\nRoutes with data: $routesWithData/$totalRoutes');
+    
+    return buffer.toString();
   }
 }
 
