@@ -13,6 +13,7 @@ class QuotaBentoGrid extends StatelessWidget {
   final double monthlyTarget;
   final double totalTarget;
   final VoidCallback onEdit;
+  final VoidCallback? onRefresh;
 
   const QuotaBentoGrid({
     super.key,
@@ -25,6 +26,7 @@ class QuotaBentoGrid extends StatelessWidget {
     required this.monthlyTarget,
     required this.totalTarget,
     required this.onEdit,
+    this.onRefresh,
   });
 
   @override
@@ -37,6 +39,13 @@ class QuotaBentoGrid extends StatelessWidget {
         Row(
           children: [
             const Spacer(),
+            if (onRefresh != null)
+              IconButton(
+                tooltip: 'Refresh',
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh, size: 18),
+                color: isDark ? Palette.darkText : Palette.lightText,
+              ),
             TextButton.icon(
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

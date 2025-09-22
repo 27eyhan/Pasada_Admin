@@ -187,8 +187,8 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Future<void> _fetchQuotaTargets() async {
-    // Sum per-driver quotas only, per period
-    final targets = await QuotaService.fetchDriverSumTargets(supabase);
+    // Prefer server-computed per-driver quota sums for accuracy
+    final targets = await QuotaService.fetchFleetTotalsFromDriverQuotas(supabase);
     if (!mounted) return;
     setState(() {
       dailyQuotaTarget = targets.daily;
@@ -289,31 +289,17 @@ class _ReportsContentState extends State<ReportsContent> {
                                     ),
                                     const SizedBox(height: 24.0),
                                     // Quota Bento Grid + edit
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: QuotaBentoGrid(
-                                            dailyEarnings: dailyEarnings,
-                                            weeklyEarnings: weeklyEarnings,
-                                            monthlyEarnings: monthlyEarnings,
-                                            totalEarnings: totalEarnings,
-                                            dailyTarget: dailyQuotaTarget,
-                                            weeklyTarget: weeklyQuotaTarget,
-                                            monthlyTarget: monthlyQuotaTarget,
-                                            totalTarget: overallQuotaTarget,
-                                            onEdit: _openEditQuotaDialog,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Tooltip(
-                                          message: 'Refresh quotas',
-                                          child: IconButton(
-                                            onPressed: _refreshQuotas,
-                                            icon: const Icon(Icons.refresh),
-                                            color: isDark ? Palette.darkText : Palette.lightText,
-                                          ),
-                                        ),
-                                      ],
+                                    QuotaBentoGrid(
+                                      dailyEarnings: dailyEarnings,
+                                      weeklyEarnings: weeklyEarnings,
+                                      monthlyEarnings: monthlyEarnings,
+                                      totalEarnings: totalEarnings,
+                                      dailyTarget: dailyQuotaTarget,
+                                      weeklyTarget: weeklyQuotaTarget,
+                                      monthlyTarget: monthlyQuotaTarget,
+                                      totalTarget: overallQuotaTarget,
+                                      onEdit: _openEditQuotaDialog,
+                                      onRefresh: _refreshQuotas,
                                     ),
                                     const SizedBox(height: 24.0),
                                     // Status metrics container with separators
@@ -472,13 +458,12 @@ class _ReportsContentState extends State<ReportsContent> {
     );
   }
 
-  Future<void> _refreshQuotas() async {
-    // Reload drivers to ensure driver count and earnings are fresh, then reload targets
-    await fetchData();
-    await _fetchQuotaTargets();
-  }
-
   // Removed: inline number field (moved to quota_edit_dialog.dart)
+
+  Future<void> _refreshQuotas() async {
+    await _fetchQuotaTargets();
+    if (mounted) setState(() {});
+  }
 
   Future<void> _saveQuotaTargets({
     required double daily,
@@ -488,6 +473,7 @@ class _ReportsContentState extends State<ReportsContent> {
     int? driverId,
   }) async {
     try {
+      debugPrint('[ReportsContent._saveQuotaTargets] saving for driverId=$driverId daily=$daily weekly=$weekly monthly=$monthly total=$total');
       final auth = AuthService();
       await auth.loadAdminID();
       await QuotaService.saveGlobalQuotaTargets(

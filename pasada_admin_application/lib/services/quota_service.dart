@@ -26,6 +26,7 @@ class QuotaTargets {
 
 class QuotaService {
   static const String tableName = 'adminQuotaTable';
+  static const String driverQuotasTable = 'driverQuotasTable';
 
   static Future<QuotaTargets> fetchGlobalQuotaTargets(SupabaseClient supabase) async {
     try {
@@ -90,17 +91,26 @@ class QuotaService {
     required int? createdByAdminId,
     int? driverId,
   }) async {
+    debugPrint('[QuotaService.saveGlobalQuotaTargets] driverId=$driverId daily=$daily weekly=$weekly monthly=$monthly total=$total');
     // Deactivate previous quotas for this scope (driver or global)
     final updateQuery = supabase
         .from(tableName)
         .update({'is_active': false, 'updated_at': DateTime.now().toIso8601String()})
         .eq('is_active', true);
     if (driverId == null) {
-      updateQuery.isFilter('driver_id', null);
+      // Use generic filter with 'is' operator for NULL
+      updateQuery.filter('driver_id', 'is', null);
     } else {
       updateQuery.eq('driver_id', driverId);
     }
-    await updateQuery;
+    try {
+      final res = await updateQuery;
+      if (kDebugMode) {
+        debugPrint('[QuotaService.saveGlobalQuotaTargets] deactivated rows result: $res');
+      }
+    } catch (e) {
+      debugPrint('[QuotaService.saveGlobalQuotaTargets] deactivate error: $e');
+    }
 
     final nowIso = DateTime.now().toIso8601String();
     final rows = <Map<String, dynamic>>[];
@@ -123,7 +133,43 @@ class QuotaService {
     addRow(total, 'total');
 
     if (rows.isNotEmpty) {
-      await supabase.from(tableName).insert(rows);
+      try {
+        final insertRes = await supabase.from(tableName).insert(rows);
+        if (kDebugMode) {
+          debugPrint('[QuotaService.saveGlobalQuotaTargets] inserted ${rows.length} rows: $insertRes');
+        }
+      } catch (e) {
+        debugPrint('[QuotaService.saveGlobalQuotaTargets] insert error: $e');
+      }
+    }
+
+    // Trigger server-side aggregation into driverQuotasTable
+    if (driverId != null) {
+      // Recompute for the specific driver
+      try {
+        final rpcRes = await supabase.rpc('update_driver_quotas', params: {'p_driver_id': driverId});
+        if (kDebugMode) debugPrint('[QuotaService.saveGlobalQuotaTargets] rpc update_driver_quotas result: $rpcRes');
+      } catch (e) {
+        debugPrint('[QuotaService.saveGlobalQuotaTargets] rpc update_driver_quotas error: $e');
+      }
+    } else {
+      // Global quotas changed: recompute for all drivers
+      try {
+        final idsRes = await supabase.from('driverTable').select('driver_id');
+        final List idsList = idsRes as List;
+        for (final row in idsList.cast<Map<String, dynamic>>()) {
+          final did = row['driver_id'];
+          if (did == null) continue;
+          try {
+            await supabase.rpc('update_driver_quotas', params: {'p_driver_id': did});
+          } catch (e) {
+            debugPrint('[QuotaService.saveGlobalQuotaTargets] rpc update_driver_quotas error for driver $did: $e');
+          }
+        }
+        if (kDebugMode) debugPrint('[QuotaService.saveGlobalQuotaTargets] recomputed quotas for ${idsList.length} drivers');
+      } catch (e) {
+        debugPrint('[QuotaService.saveGlobalQuotaTargets] fetch driver ids error: $e');
+      }
     }
   }
 
@@ -141,11 +187,13 @@ class QuotaService {
 
       double perDriverDaily = 0, perDriverWeekly = 0, perDriverMonthly = 0, perDriverTotal = 0;
 
+      int countedRows = 0;
       for (final row in rawList.cast<Map<String, dynamic>>()) {
         final isPerDriver = row['driver_id'] != null;
         final period = (row['period'] ?? '').toString().toLowerCase();
         final amount = double.tryParse(row['target_amount']?.toString() ?? '0') ?? 0;
         if (!isPerDriver) continue; // ignore global rows in sums
+        countedRows++;
         switch (period) {
           case 'daily':
             perDriverDaily += amount;
@@ -165,9 +213,39 @@ class QuotaService {
         }
       }
 
+      if (kDebugMode) {
+        debugPrint('[QuotaService.fetchDriverSumTargets] active per-driver rows counted: $countedRows');
+        debugPrint('[QuotaService.fetchDriverSumTargets] sums daily=$perDriverDaily weekly=$perDriverWeekly monthly=$perDriverMonthly total=$perDriverTotal');
+      }
       return QuotaTargets(daily: perDriverDaily, weekly: perDriverWeekly, monthly: perDriverMonthly, total: perDriverTotal);
     } catch (e) {
       debugPrint('QuotaService.fetchDriverSumTargets error: $e');
+      return const QuotaTargets(daily: 0, weekly: 0, monthly: 0, total: 0);
+    }
+  }
+
+  // Fleet totals by summing precomputed per-driver quotas (from driverQuotasTable)
+  static Future<QuotaTargets> fetchFleetTotalsFromDriverQuotas(
+    SupabaseClient supabase,
+  ) async {
+    try {
+      final response = await supabase
+          .from(driverQuotasTable)
+          .select('quota_daily, quota_weekly, quota_monthly, quota_total');
+      final List rawList = response as List;
+      double daily = 0, weekly = 0, monthly = 0, total = 0;
+      for (final row in rawList.cast<Map<String, dynamic>>()) {
+        daily += double.tryParse(row['quota_daily']?.toString() ?? '0') ?? 0;
+        weekly += double.tryParse(row['quota_weekly']?.toString() ?? '0') ?? 0;
+        monthly += double.tryParse(row['quota_monthly']?.toString() ?? '0') ?? 0;
+        total += double.tryParse(row['quota_total']?.toString() ?? '0') ?? 0;
+      }
+      if (kDebugMode) {
+        debugPrint('[QuotaService.fetchFleetTotalsFromDriverQuotas] sums daily=$daily weekly=$weekly monthly=$monthly total=$total rows=${rawList.length}');
+      }
+      return QuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total);
+    } catch (e) {
+      debugPrint('QuotaService.fetchFleetTotalsFromDriverQuotas error: $e');
       return const QuotaTargets(daily: 0, weekly: 0, monthly: 0, total: 0);
     }
   }
