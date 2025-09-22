@@ -46,6 +46,8 @@ class MapsScreenState extends State<Mapscreen>
   final DriverLocationService _driverLocationService =
       DriverLocationService(); // Instantiate the service
   Timer? _locationUpdateTimer; // Timer for periodic updates
+  bool _isRefreshing = false; // UI state for manual refresh
+  DateTime? _lastAutoSnackAt; // throttle automatic snackbars
 
   // Custom pin icons cache
   final Map<String, BitmapDescriptor> _customPinIcons = {};
@@ -231,11 +233,24 @@ class MapsScreenState extends State<Mapscreen>
 
     // Start periodic updates (e.g., every 15 seconds)
     _locationUpdateTimer?.cancel(); // Cancel existing timer just in case
-    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
       debugPrint('[MapsScreenState] Timer fired. Requesting marker update.');
-      if (mounted) {
-        // Check if the widget is still mounted
-        _updateDriverMarkers();
+      if (!mounted) return;
+      final ok = await _updateDriverMarkers();
+      if (!mounted) return;
+      if (ok) {
+        // Throttle auto snackbars to once per 60 seconds
+        final now = DateTime.now();
+        if (_lastAutoSnackAt == null || now.difference(_lastAutoSnackAt!).inSeconds >= 60) {
+          _lastAutoSnackAt = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Locations refreshed'),
+              backgroundColor: Palette.greenColor,
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
       }
     });
   }
@@ -310,10 +325,15 @@ class MapsScreenState extends State<Mapscreen>
     return filteredDrivers;
   }
 
-  Future<void> _updateDriverMarkers() async {
+  Future<bool> _updateDriverMarkers() async {
     debugPrint('[MapsScreenState] _updateDriverMarkers called.');
-    List<Map<String, dynamic>> driverLocations =
-        await _driverLocationService.fetchDriverLocations();
+    List<Map<String, dynamic>> driverLocations = [];
+    try {
+      driverLocations = await _driverLocationService.fetchDriverLocations();
+    } catch (e) {
+      debugPrint('[MapsScreenState] fetchDriverLocations error: $e');
+      return false;
+    }
     debugPrint(
         '[MapsScreenState] Received driver locations: ${driverLocations.length} drivers.');
 
@@ -399,6 +419,7 @@ class MapsScreenState extends State<Mapscreen>
         }
       });
     }
+    return true;
   }
 
   @override
@@ -441,14 +462,61 @@ class MapsScreenState extends State<Mapscreen>
           Positioned(
             top: 16,
             right: 16,
-            child: FloatingActionButton(
-              onPressed: () {
-                // Center on focused driver if available, otherwise use default center
-                mapController?.animateCamera(
-                  CameraUpdate.newLatLng(_driverLocation ?? _center),
-                );
-              },
-              child: Icon(Icons.center_focus_strong),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Manual refresh button (matched size)
+                FloatingActionButton(
+                  heroTag: 'refreshFab',
+                  onPressed: _isRefreshing
+                      ? null
+                      : () async {
+                          setState(() { _isRefreshing = true; });
+                          try {
+                            final ok = await _updateDriverMarkers();
+                            if (ok && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Locations refreshed'),
+                                  backgroundColor: Palette.greenColor,
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                            // brief debounce to communicate action
+                            await Future.delayed(const Duration(milliseconds: 500));
+                          } finally {
+                            if (mounted) setState(() { _isRefreshing = false; });
+                          }
+                        },
+                  backgroundColor: Palette.blackColor,
+                  tooltip: _isRefreshing ? 'Refreshing…' : 'Refresh locations',
+                  child: _isRefreshing
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.refresh, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                // Center/redirect button (green)
+                FloatingActionButton(
+                  heroTag: 'centerFab',
+                  backgroundColor: Palette.greenColor,
+                  onPressed: () {
+                    // Center on focused driver if available, otherwise use default center
+                    mapController?.animateCamera(
+                      CameraUpdate.newLatLng(_driverLocation ?? _center),
+                    );
+                  },
+                  tooltip: 'Center map',
+                  child: const Icon(Icons.center_focus_strong, color: Colors.white),
+                ),
+              ],
             ),
           ),
           if (mounted && _showDriverOverlay && _selectedDriverInfo != null)
