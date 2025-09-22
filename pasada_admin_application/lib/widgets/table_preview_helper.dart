@@ -310,6 +310,112 @@ class TablePreviewHelper {
     );
   }
 
+  static Widget createAdminQuotaTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'Admin Quotas',
+      tableDescription: 'Configured quota targets per period (global or per-driver)',
+      tableIcon: Icons.flag,
+      tableColor: Palette.lightWarning,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('ID')),
+        DataColumn(label: Text('Driver ID')),
+        DataColumn(label: Text('Target Amount')),
+        DataColumn(label: Text('Period')),
+        DataColumn(label: Text('Start At')),
+        DataColumn(label: Text('End At')),
+        DataColumn(label: Text('Is Active')),
+        DataColumn(label: Text('Created By')),
+        DataColumn(label: Text('Created At')),
+        DataColumn(label: Text('Updated At')),
+      ],
+      rowBuilder: (data) => data.map((row) {
+        return DataRow(
+          cells: [
+            DataCell(Text(row['id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['driver_id']?.toString() ?? '—')),
+            DataCell(Text(row['target_amount']?.toString() ?? '0')),
+            DataCell(Text(row['period']?.toString() ?? 'N/A')),
+            DataCell(Text(row['start_at']?.toString() ?? '—')),
+            DataCell(Text(row['end_at']?.toString() ?? '—')),
+            DataCell(Text((row['is_active'] == true) ? 'true' : 'false')),
+            DataCell(Text(row['created_by']?.toString() ?? 'N/A')),
+            DataCell(Text(row['created_at']?.toString() ?? '—')),
+            DataCell(Text(row['updated_at']?.toString() ?? '—')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
+  static Widget createDriverQuotasTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'Driver Quotas',
+      tableDescription: 'Per-driver quota aggregates and current progress',
+      tableIcon: Icons.stacked_bar_chart,
+      tableColor: Palette.lightSuccess,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('Quota ID')),
+        DataColumn(label: Text('Driver ID')),
+        DataColumn(label: Text('Quota Daily')),
+        DataColumn(label: Text('Quota Weekly')),
+        DataColumn(label: Text('Quota Monthly')),
+        DataColumn(label: Text('Quota Total')),
+        DataColumn(label: Text('Current Daily')),
+        DataColumn(label: Text('Current Weekly')),
+        DataColumn(label: Text('Current Monthly')),
+        DataColumn(label: Text('Current Total')),
+        DataColumn(label: Text('Last Reset At')),
+        DataColumn(label: Text('Created At')),
+        DataColumn(label: Text('Updated At')),
+      ],
+      rowBuilder: (data) => data.map((row) {
+        return DataRow(
+          cells: [
+            DataCell(Text(row['quota_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['driver_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['quota_daily']?.toString() ?? '0')),
+            DataCell(Text(row['quota_weekly']?.toString() ?? '0')),
+            DataCell(Text(row['quota_monthly']?.toString() ?? '0')),
+            DataCell(Text(row['quota_total']?.toString() ?? '0')),
+            DataCell(Text(row['current_quota_daily']?.toString() ?? '—')),
+            DataCell(Text(row['current_quota_weekly']?.toString() ?? '—')),
+            DataCell(Text(row['current_quota_monthly']?.toString() ?? '—')),
+            DataCell(Text(row['current_quota_total']?.toString() ?? '—')),
+            DataCell(Text(row['last_reset_at']?.toString() ?? '—')),
+            DataCell(Text(row['created_at']?.toString() ?? '—')),
+            DataCell(Text(row['updated_at']?.toString() ?? '—')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
   static Widget createDriverReviewsTable({
     required Future<List<Map<String, dynamic>>> Function() dataFetcher,
     VoidCallback? onRefresh,

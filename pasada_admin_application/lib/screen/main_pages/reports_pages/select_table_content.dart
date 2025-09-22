@@ -52,6 +52,18 @@ class _SelectTableContentState extends State<SelectTableContent> {
       'color': Palette.lightInfo,
     },
     {
+      'name': 'Admin Quotas',
+      'icon': Icons.flag,
+      'description': 'Configured quota targets per period (global or per-driver)',
+      'color': Palette.lightWarning,
+    },
+    {
+      'name': 'Driver Quotas',
+      'icon': Icons.stacked_bar_chart,
+      'description': 'Per-driver quota aggregates and current progress',
+      'color': Palette.lightSuccess,
+    },
+    {
       'name': 'Driver Archives',
       'icon': Icons.archive,
       'description': 'Historical driver data and records',
