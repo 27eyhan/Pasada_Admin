@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/screen/main_navigation.dart';
-import 'package:pasada_admin_application/screen/login_set_up/login_signup.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pasada_admin_application/maps/google_maps_api.dart';
-import 'package:pasada_admin_application/services/auth_service.dart';
+// Removed authentication flow
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -13,9 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: "assets/.env");
 
-  // Initialize AuthService and load admin ID
-  final authService = AuthService();
-  await authService.loadAdminID();
+  // Skip authentication; go directly to main
 
   await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
@@ -35,12 +32,11 @@ Future<void> main() async {
     GoogleMapsApiInitializer.initialize();
   }
 
-  runApp(MainApp(initialRoute: authService.currentAdminID != null ? '/main' : '/login'));
+  runApp(const MainApp());
 }
 
 class MainApp extends StatelessWidget {
-  final String initialRoute;
-  const MainApp({super.key, required this.initialRoute});
+  const MainApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -52,10 +48,9 @@ class MainApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             title: 'Pasada',
             theme: themeProvider.currentTheme,
-            initialRoute: initialRoute,
+            initialRoute: '/main',
             routes: {
               '/main': (context) => MainNavigation(),
-              '/login': (context) => LoginSignup(),
             },
             onGenerateRoute: (settings) {
               if (settings.name == '/main') {

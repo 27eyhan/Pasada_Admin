@@ -12,12 +12,9 @@ class NotificationsContent extends StatefulWidget {
 }
 
 class _NotificationsContentState extends State<NotificationsContent> {
-  bool emailNotifications = true;
   bool pushNotifications = true;
-  bool smsNotifications = false;
   bool rideUpdates = true;
-  bool systemUpdates = false;
-  bool marketingNotifications = false;
+  
 
   @override
   Widget build(BuildContext context) {
@@ -48,26 +45,10 @@ class _NotificationsContentState extends State<NotificationsContent> {
               SizedBox(height: 16),
               
               SwitchTile(
-                title: "Email Notifications",
-                subtitle: "Receive notifications via email",
-                value: emailNotifications,
-                onChanged: (value) => setState(() => emailNotifications = value),
-                isDark: widget.isDark,
-              ),
-              
-              SwitchTile(
                 title: "Push Notifications",
                 subtitle: "Receive push notifications on device",
                 value: pushNotifications,
                 onChanged: (value) => setState(() => pushNotifications = value),
-                isDark: widget.isDark,
-              ),
-              
-              SwitchTile(
-                title: "SMS Notifications",
-                subtitle: "Receive notifications via SMS",
-                value: smsNotifications,
-                onChanged: (value) => setState(() => smsNotifications = value),
                 isDark: widget.isDark,
               ),
             ],
@@ -105,22 +86,6 @@ class _NotificationsContentState extends State<NotificationsContent> {
                 subtitle: "Real-time updates about rides and bookings",
                 value: rideUpdates,
                 onChanged: (value) => setState(() => rideUpdates = value),
-                isDark: widget.isDark,
-              ),
-              
-              SwitchTile(
-                title: "System Updates",
-                subtitle: "Important system maintenance notifications",
-                value: systemUpdates,
-                onChanged: (value) => setState(() => systemUpdates = value),
-                isDark: widget.isDark,
-              ),
-              
-              SwitchTile(
-                title: "Marketing",
-                subtitle: "Promotional and marketing communications",
-                value: marketingNotifications,
-                onChanged: (value) => setState(() => marketingNotifications = value),
                 isDark: widget.isDark,
               ),
             ],

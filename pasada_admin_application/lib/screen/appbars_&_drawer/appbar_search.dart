@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
-import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 typedef FilterCallback = void Function();
@@ -164,11 +163,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
           enabled: false,
           child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
         ),
-        PopupMenuItem<String>(
-          value: 'logout',
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text('Logout', style: TextStyle(color: Palette.lightError, fontSize: 14.0)),
-        ),
+        // Logout removed
       ],
     ).then((String? result) async {
       if (result != null) {
@@ -203,14 +198,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
                 widget.onSettingsTabRequested!(2);
               }
               break;
-          case 'logout':
-            await AuthService().clearAdminID();
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/login',
-              (Route<dynamic> route) => false,
-            );
-            break;
+          // No logout action
         }
       }
     });
