@@ -18,10 +18,14 @@ class AuthService {
   static const String _adminIdKey = 'adminID';
   static const String _sessionTokenKey = 'sessionToken';
   static const String _sessionExpiryKey = 'sessionExpiryMs';
+  static const String _sessionTimeoutMinutesKey = 'sessionTimeoutMinutes';
+  static const String _sessionTimeoutEnabledKey = 'sessionTimeoutEnabled';
   SharedPreferences? _prefs;
   int? _adminID;
   String? _sessionToken;
   int? _sessionExpiryMs; // epoch millis
+  int _timeoutMinutes = 30;
+  bool _timeoutEnabled = true;
 
   Future<void> _initPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -42,6 +46,8 @@ class AuthService {
     _adminID = _prefs?.getInt(_adminIdKey);
     _sessionToken = _prefs?.getString(_sessionTokenKey);
     _sessionExpiryMs = _prefs?.getInt(_sessionExpiryKey);
+    _timeoutMinutes = _prefs?.getInt(_sessionTimeoutMinutesKey) ?? 30;
+    _timeoutEnabled = _prefs?.getBool(_sessionTimeoutEnabledKey) ?? true;
     debugPrint('AuthService: Session loaded (adminID=$_adminID, hasToken=${_sessionToken != null}, expiryMs=$_sessionExpiryMs)');
   }
 
@@ -100,5 +106,18 @@ class AuthService {
     await _prefs?.remove(_sessionTokenKey);
     await _prefs?.remove(_sessionExpiryKey);
     debugPrint('AuthService: Session cleared');
+  }
+
+  // Session timeout preferences
+  int get sessionTimeoutMinutes => _timeoutMinutes;
+  bool get sessionTimeoutEnabled => _timeoutEnabled;
+
+  Future<void> setSessionTimeout({required int minutes, required bool enabled}) async {
+    await _initPrefs();
+    _timeoutMinutes = minutes;
+    _timeoutEnabled = enabled;
+    await _prefs?.setInt(_sessionTimeoutMinutesKey, minutes);
+    await _prefs?.setBool(_sessionTimeoutEnabledKey, enabled);
+    debugPrint('AuthService: Session timeout set minutes=$minutes enabled=$enabled');
   }
 } 

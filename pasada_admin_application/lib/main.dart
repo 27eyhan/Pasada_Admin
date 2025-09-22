@@ -8,6 +8,7 @@ import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/screen/login_set_up/login_signup.dart';
+import 'dart:async';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,7 +101,83 @@ class AuthGuard extends StatelessWidget {
       });
       return const SizedBox.shrink();
     }
-    return child;
+    return SessionWatcher(child: child);
+  }
+}
+
+class SessionWatcher extends StatefulWidget {
+  final Widget child;
+  const SessionWatcher({super.key, required this.child});
+
+  @override
+  State<SessionWatcher> createState() => _SessionWatcherState();
+}
+
+class _SessionWatcherState extends State<SessionWatcher> {
+  Timer? _timer;
+  DateTime _lastActivity = DateTime.now();
+
+  void _bumpActivity() {
+    _lastActivity = DateTime.now();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      final auth = AuthService();
+      final enabled = auth.sessionTimeoutEnabled;
+      final minutes = auth.sessionTimeoutMinutes;
+      if (!enabled) return;
+      final idleFor = DateTime.now().difference(_lastActivity);
+      if (idleFor.inMinutes >= minutes) {
+        _timer?.cancel();
+        // Show dialog then logout
+        if (!mounted) return;
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) {
+            return AlertDialog(
+              title: const Text('Session Ended'),
+              content: const Text('You have been logged out due to inactivity.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+        await AuthService().clearSession();
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        }
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _bumpActivity(),
+      onPointerMove: (_) => _bumpActivity(),
+      onPointerUp: (_) => _bumpActivity(),
+      child: widget.child,
+    );
   }
 }
 
