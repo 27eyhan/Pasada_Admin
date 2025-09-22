@@ -17,6 +17,7 @@ class SecurityContent extends StatefulWidget {
 class _SecurityContentState extends State<SecurityContent> {
   bool sessionTimeout = true;
   int sessionTimeoutMinutes = 30;
+  bool _savingTimeout = false;
   
   // Password change variables
   bool isChangingPassword = false;
@@ -196,6 +197,37 @@ class _SecurityContentState extends State<SecurityContent> {
                   divisions: 23,
                   activeColor: Palette.greenColor,
                   onChanged: (value) => setState(() => sessionTimeoutMinutes = value.round()),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ElevatedButton.icon(
+                    onPressed: _savingTimeout ? null : () async {
+                      setState(() { _savingTimeout = true; });
+                      try {
+                        await AuthService().setSessionTimeout(minutes: sessionTimeoutMinutes, enabled: sessionTimeout);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Session timeout saved'), backgroundColor: Palette.greenColor),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to save timeout'), backgroundColor: Colors.red),
+                        );
+                      } finally {
+                        if (mounted) setState(() { _savingTimeout = false; });
+                      }
+                    },
+                    icon: _savingTimeout 
+                      ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Icon(Icons.check, size: 18),
+                    label: Text(_savingTimeout ? 'Saving...' : 'Confirm'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Palette.greenColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                    ),
+                  ),
                 ),
               ],
             ],

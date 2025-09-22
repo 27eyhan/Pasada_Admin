@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/settings_pages/settings_utils.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 class UpdatesContent extends StatefulWidget {
   final bool isDark;
@@ -34,7 +35,7 @@ class _UpdatesContentState extends State<UpdatesContent> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Update Frequency",
+                "Real-time Updates",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -42,11 +43,20 @@ class _UpdatesContentState extends State<UpdatesContent> {
                   fontFamily: 'Inter',
                 ),
               ),
+              const SizedBox(height: 6),
+              Text(
+                "Control how often drivers' locations refresh.",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: widget.isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  fontFamily: 'Inter',
+                ),
+              ),
               SizedBox(height: 16),
               
               RadioListTile<String>(
                 title: Text("Real-time", style: TextStyle(fontFamily: 'Inter')),
-                subtitle: Text("Updates as they happen"),
+                subtitle: Text("Apply live updates when available"),
                 value: 'realtime',
                 groupValue: updateFrequency,
                 onChanged: (value) => setState(() => updateFrequency = value!),
@@ -55,7 +65,7 @@ class _UpdatesContentState extends State<UpdatesContent> {
               
               RadioListTile<String>(
                 title: Text("Every 5 minutes", style: TextStyle(fontFamily: 'Inter')),
-                subtitle: Text("Updates every 5 minutes"),
+                subtitle: Text("Refresh every 5 minutes"),
                 value: '5min',
                 groupValue: updateFrequency,
                 onChanged: (value) => setState(() => updateFrequency = value!),
@@ -64,7 +74,7 @@ class _UpdatesContentState extends State<UpdatesContent> {
               
               RadioListTile<String>(
                 title: Text("Every 15 minutes", style: TextStyle(fontFamily: 'Inter')),
-                subtitle: Text("Updates every 15 minutes"),
+                subtitle: Text("Refresh every 15 minutes"),
                 value: '15min',
                 groupValue: updateFrequency,
                 onChanged: (value) => setState(() => updateFrequency = value!),
@@ -72,9 +82,9 @@ class _UpdatesContentState extends State<UpdatesContent> {
               ),
               
               RadioListTile<String>(
-                title: Text("Manual", style: TextStyle(fontFamily: 'Inter')),
-                subtitle: Text("Updates only when requested"),
-                value: 'manual',
+                title: Text("Every 30 minutes", style: TextStyle(fontFamily: 'Inter')),
+                subtitle: Text("Refresh every 30 minutes"),
+                value: '30min',
                 groupValue: updateFrequency,
                 onChanged: (value) => setState(() => updateFrequency = value!),
                 activeColor: Palette.greenColor,
@@ -100,7 +110,7 @@ class _UpdatesContentState extends State<UpdatesContent> {
             children: [
               SwitchTile(
                 title: "Auto Refresh",
-                subtitle: "Automatically refresh data at specified intervals",
+                subtitle: "Automatically reload drivers' locations",
                 value: enableAutoRefresh,
                 onChanged: (value) => setState(() => enableAutoRefresh = value),
                 isDark: widget.isDark,
@@ -109,7 +119,7 @@ class _UpdatesContentState extends State<UpdatesContent> {
               if (enableAutoRefresh) ...[
                 SizedBox(height: 16),
                 Text(
-                  "Refresh Interval (seconds): $refreshInterval",
+                  "Interval (seconds): $refreshInterval",
                   style: TextStyle(
                     fontSize: 14,
                     color: widget.isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
@@ -133,11 +143,16 @@ class _UpdatesContentState extends State<UpdatesContent> {
         
         // Save Button
         ElevatedButton(
-          onPressed: () {
-            // Save update preferences
+          onPressed: () async {
+            // Persist settings to AuthService so app can apply to drivers' location updates
+            await AuthService().setRealtimeUpdateSettings(
+              frequency: updateFrequency,
+              autoRefresh: enableAutoRefresh,
+              intervalSeconds: refreshInterval,
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text("Update preferences saved!"),
+                content: Text("Real-time update settings saved."),
                 backgroundColor: Palette.greenColor,
               ),
             );
