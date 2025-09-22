@@ -65,6 +65,22 @@ class _ReportsContentState extends State<ReportsContent> {
       final List bookingsData = bookingsResponse as List;
       final bookings = bookingsData.cast<Map<String, dynamic>>();
       
+      // Fetch precomputed per-driver quotas
+      final quotasResponse = await supabase
+          .from('driverQuotasTable')
+          .select('driver_id, quota_daily, quota_weekly, quota_monthly, quota_total');
+      final Map<int, Map<String, double>> driverQuotas = {};
+      for (final row in (quotasResponse as List).cast<Map<String, dynamic>>()) {
+        final did = row['driver_id'];
+        if (did == null) continue;
+        driverQuotas[did is int ? did : int.tryParse(did.toString()) ?? -1] = {
+          'daily': double.tryParse(row['quota_daily']?.toString() ?? '0') ?? 0,
+          'weekly': double.tryParse(row['quota_weekly']?.toString() ?? '0') ?? 0,
+          'monthly': double.tryParse(row['quota_monthly']?.toString() ?? '0') ?? 0,
+          'total': double.tryParse(row['quota_total']?.toString() ?? '0') ?? 0,
+        };
+      }
+
       // Calculate total fares for each driver
       final driverFares = <int, double>{};
       final breakdownByDriver = <int, Map<String, dynamic>>{};
@@ -91,8 +107,10 @@ class _ReportsContentState extends State<ReportsContent> {
           // Initialize breakdown map if needed
           if (!breakdownByDriver.containsKey(driverId)) {
             breakdownByDriver[driverId] = {
+              'daily': 0.0,
               'weekly': 0.0,
               'monthly': 0.0,
+              'daily_bookings': [],
               'weekly_bookings': [],
               'monthly_bookings': [],
               'all_bookings': [],
@@ -120,6 +138,9 @@ class _ReportsContentState extends State<ReportsContent> {
               if (bookingDate.isAfter(startOfDay) ||
                   bookingDate.isAtSameMomentAs(startOfDay)) {
                 dailySum += fare;
+                breakdownByDriver[driverId]!['daily'] =
+                    (breakdownByDriver[driverId]!['daily'] as double) + fare;
+                breakdownByDriver[driverId]!['daily_bookings'].add(bookingDetail);
               }
 
               // Check if booking is within current week
@@ -149,6 +170,7 @@ class _ReportsContentState extends State<ReportsContent> {
       // Combine driver info with their total fares
       final result = drivers.map((driver) {
         final driverId = driver['driver_id'];
+        final quotas = driverQuotas[driverId is int ? driverId : int.tryParse(driverId.toString()) ?? -1] ?? {'daily': 0, 'weekly': 0, 'monthly': 0, 'total': 0};
         return {
           'driver_id': driverId,
           'full_name': driver['full_name'],
@@ -156,8 +178,13 @@ class _ReportsContentState extends State<ReportsContent> {
           'vehicle_id': driver['vehicle_id'],
           'driving_status': driver['driving_status'],
           'total_fare': driverFares[driverId] ?? 0.0,
+          'daily_earnings': breakdownByDriver[driverId]?['daily'] ?? 0.0,
           'weekly_earnings': breakdownByDriver[driverId]?['weekly'] ?? 0.0,
           'monthly_earnings': breakdownByDriver[driverId]?['monthly'] ?? 0.0,
+          'quota_daily': quotas['daily'] ?? 0.0,
+          'quota_weekly': quotas['weekly'] ?? 0.0,
+          'quota_monthly': quotas['monthly'] ?? 0.0,
+          'quota_total': quotas['total'] ?? 0.0,
         };
       }).toList();
       
@@ -635,9 +662,21 @@ class _ReportsContentState extends State<ReportsContent> {
                           textColor: statusColor,
                         ),
                         _buildDriverInfoRow(
-                          Icons.monetization_on, 
-                          "Total: ₱${driver['total_fare'].toStringAsFixed(2)}", 
-                          textColor: Palette.greenColor
+                          Icons.today,
+                          "Daily: ₱${(driver['daily_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                        ),
+                        _buildDriverInfoRow(
+                          Icons.date_range,
+                          "Weekly: ₱${(driver['weekly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                        ),
+                        _buildDriverInfoRow(
+                          Icons.calendar_month,
+                          "Monthly: ₱${(driver['monthly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                        ),
+                        _buildDriverInfoRow(
+                          Icons.monetization_on,
+                          "Total: ₱${(driver['total_fare'] as double).toStringAsFixed(2)} / ₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                          textColor: Palette.greenColor,
                         ),
                       ],
                     ),
@@ -775,7 +814,30 @@ class _ReportsContentState extends State<ReportsContent> {
                       ),
                     ),
                     
-                    // Weekly earnings
+                    // Daily earnings (Current / Target)
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDriverInfoRow(
+                            Icons.today,
+                            "₱${(driver['daily_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                            textColor: Palette.greenColor,
+                          ),
+                          Text(
+                            "Daily",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.0,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Weekly earnings (Current / Target)
                     Expanded(
                       flex: 2,
                       child: Column(
@@ -783,7 +845,7 @@ class _ReportsContentState extends State<ReportsContent> {
                         children: [
                           _buildDriverInfoRow(
                             Icons.date_range,
-                            "₱${driver['weekly_earnings'].toStringAsFixed(2)}",
+                            "₱${(driver['weekly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
                             textColor: Palette.greenColor,
                           ),
                           Text(
@@ -798,7 +860,30 @@ class _ReportsContentState extends State<ReportsContent> {
                       ),
                     ),
                     
-                    // Total earnings
+                    // Monthly earnings (Current / Target)
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDriverInfoRow(
+                            Icons.calendar_month,
+                            "₱${(driver['monthly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                            textColor: Palette.greenColor,
+                          ),
+                          Text(
+                            "Monthly",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.0,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Total earnings (Current / Target)
                     Expanded(
                       flex: 2,
                       child: Column(
@@ -806,7 +891,7 @@ class _ReportsContentState extends State<ReportsContent> {
                         children: [
                           _buildDriverInfoRow(
                             Icons.monetization_on,
-                            "₱${driver['total_fare'].toStringAsFixed(2)}",
+                            "₱${(driver['total_fare'] as double).toStringAsFixed(2)} / ₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
                             textColor: Palette.greenColor,
                           ),
                           Text(

@@ -24,9 +24,15 @@ class EarningsBreakdownDialog extends StatelessWidget {
     // Calculate column widths
     final double columnWidth = (dialogWidth - 80) / 2; // Account for padding and spacing
     
-    final weeklyEarnings = driver['weekly_earnings'] ?? 0.0;
-    final monthlyEarnings = driver['monthly_earnings'] ?? 0.0;
-    final totalEarnings = driver['total_fare'] ?? 0.0;
+    final dailyEarnings = (driver['daily_earnings'] ?? 0.0) as double;
+    final weeklyEarnings = (driver['weekly_earnings'] ?? 0.0) as double;
+    final monthlyEarnings = (driver['monthly_earnings'] ?? 0.0) as double;
+    final totalEarnings = (driver['total_fare'] ?? 0.0) as double;
+
+    final quotaDaily = (driver['quota_daily'] ?? 0.0) as double;
+    final quotaWeekly = (driver['quota_weekly'] ?? 0.0) as double;
+    final quotaMonthly = (driver['quota_monthly'] ?? 0.0) as double;
+    final quotaTotal = (driver['quota_total'] ?? 0.0) as double;
     
     final List weeklyBookings = breakdown?['weekly_bookings'] ?? [];
     final List monthlyBookings = breakdown?['monthly_bookings'] ?? [];
@@ -131,11 +137,13 @@ class EarningsBreakdownDialog extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildEarningsSummary('Weekly', weeklyEarnings, isDark),
+                  _buildEarningsSummary('Daily', dailyEarnings, quotaDaily, isDark),
                   _buildVerticalDivider(isDark),
-                  _buildEarningsSummary('Monthly', monthlyEarnings, isDark),
+                  _buildEarningsSummary('Weekly', weeklyEarnings, quotaWeekly, isDark),
                   _buildVerticalDivider(isDark),
-                  _buildEarningsSummary('All Time', totalEarnings, isDark),
+                  _buildEarningsSummary('Monthly', monthlyEarnings, quotaMonthly, isDark),
+                  _buildVerticalDivider(isDark),
+                  _buildEarningsSummary('All Time', totalEarnings, quotaTotal, isDark),
                 ],
               ),
             ),
@@ -239,7 +247,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
     );
   }
   
-  Widget _buildEarningsSummary(String period, double amount, bool isDark) {
+  Widget _buildEarningsSummary(String period, double amount, double target, bool isDark) {
     return Column(
       children: [
         Text(
@@ -252,13 +260,36 @@ class EarningsBreakdownDialog extends StatelessWidget {
           ),
         ),
         SizedBox(height: 8.0),
-        Text(
-          '₱${amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 18.0,
-            fontWeight: FontWeight.bold,
-            color: amount > 0 ? Palette.greenColor : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: '₱${amount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.w700,
+                  color: amount > 0 ? Palette.greenColor : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+                ),
+              ),
+              TextSpan(
+                text: ' / ',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16.0,
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                ),
+              ),
+              TextSpan(
+                text: '₱${target.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Palette.darkText : Palette.lightText,
+                ),
+              ),
+            ],
           ),
         ),
       ],
