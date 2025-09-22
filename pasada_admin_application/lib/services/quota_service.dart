@@ -42,7 +42,7 @@ class QuotaService {
       double totalSum = 0;
 
       for (final row in rawList.cast<Map<String, dynamic>>()) {
-        if (row['driver_id'] != null) continue; // only global
+        // Sum across ALL active quotas (global and per-driver)
 
         DateTime? startAt;
         DateTime? endAt;
@@ -88,20 +88,26 @@ class QuotaService {
     required double monthly,
     required double total,
     required int? createdByAdminId,
+    int? driverId,
   }) async {
-    // Deactivate previous global quotas, then insert new active ones
-    await supabase
+    // Deactivate previous quotas for this scope (driver or global)
+    final updateQuery = supabase
         .from(tableName)
         .update({'is_active': false, 'updated_at': DateTime.now().toIso8601String()})
-        .isFilter('driver_id', null)
         .eq('is_active', true);
+    if (driverId == null) {
+      updateQuery.isFilter('driver_id', null);
+    } else {
+      updateQuery.eq('driver_id', driverId);
+    }
+    await updateQuery;
 
     final nowIso = DateTime.now().toIso8601String();
     final rows = <Map<String, dynamic>>[];
     void addRow(double value, String period) {
       if (value <= 0) return;
       rows.add({
-        'driver_id': null,
+        'driver_id': driverId,
         'target_amount': value,
         'period': period,
         'is_active': true,
@@ -118,6 +124,80 @@ class QuotaService {
 
     if (rows.isNotEmpty) {
       await supabase.from(tableName).insert(rows);
+    }
+  }
+
+  // Compute totals for all drivers per period.
+  // Logic: If there are any per-driver quotas for a period, sum only those.
+  // Otherwise, multiply the global quota for that period by driversCount.
+  static Future<QuotaTargets> fetchSummedTargets(
+    SupabaseClient supabase, {
+    required int driversCount,
+  }) async {
+    try {
+      final response = await supabase
+          .from(tableName)
+          .select('period, target_amount, driver_id, is_active')
+          .eq('is_active', true);
+
+      final List rawList = response as List;
+
+      double perDriverDaily = 0, perDriverWeekly = 0, perDriverMonthly = 0, perDriverTotal = 0;
+      double globalDaily = 0, globalWeekly = 0, globalMonthly = 0, globalTotal = 0;
+      bool hasPerDriverDaily = false, hasPerDriverWeekly = false, hasPerDriverMonthly = false, hasPerDriverTotal = false;
+
+      for (final row in rawList.cast<Map<String, dynamic>>()) {
+        final isPerDriver = row['driver_id'] != null;
+        final period = (row['period'] ?? '').toString().toLowerCase();
+        final amount = double.tryParse(row['target_amount']?.toString() ?? '0') ?? 0;
+        switch (period) {
+          case 'daily':
+            if (isPerDriver) {
+              hasPerDriverDaily = true;
+              perDriverDaily += amount;
+            } else {
+              globalDaily += amount;
+            }
+            break;
+          case 'weekly':
+            if (isPerDriver) {
+              hasPerDriverWeekly = true;
+              perDriverWeekly += amount;
+            } else {
+              globalWeekly += amount;
+            }
+            break;
+          case 'monthly':
+            if (isPerDriver) {
+              hasPerDriverMonthly = true;
+              perDriverMonthly += amount;
+            } else {
+              globalMonthly += amount;
+            }
+            break;
+          case 'overall':
+          case 'total':
+            if (isPerDriver) {
+              hasPerDriverTotal = true;
+              perDriverTotal += amount;
+            } else {
+              globalTotal += amount;
+            }
+            break;
+          default:
+            break;
+        }
+      }
+
+      final daily = hasPerDriverDaily ? perDriverDaily : (globalDaily * driversCount);
+      final weekly = hasPerDriverWeekly ? perDriverWeekly : (globalWeekly * driversCount);
+      final monthly = hasPerDriverMonthly ? perDriverMonthly : (globalMonthly * driversCount);
+      final total = hasPerDriverTotal ? perDriverTotal : (globalTotal * driversCount);
+
+      return QuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total);
+    } catch (e) {
+      debugPrint('QuotaService.fetchSummedTargets error: $e');
+      return const QuotaTargets(daily: 0, weekly: 0, monthly: 0, total: 0);
     }
   }
 }

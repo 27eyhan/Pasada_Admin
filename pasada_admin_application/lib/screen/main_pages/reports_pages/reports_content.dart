@@ -187,7 +187,9 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Future<void> _fetchQuotaTargets() async {
-    final targets = await QuotaService.fetchGlobalQuotaTargets(supabase);
+    // driversWithFares is set in fetchData(); use its length
+    final int driverCount = driversWithFares.length;
+    final targets = await QuotaService.fetchSummedTargets(supabase, driversCount: driverCount);
     if (!mounted) return;
     setState(() {
       dailyQuotaTarget = targets.daily;
@@ -435,13 +437,23 @@ class _ReportsContentState extends State<ReportsContent> {
   // Removed inline Quota grid/card widgets in favor of dedicated widget
 
   void _openEditQuotaDialog() async {
+    // Prepare driver list for selector
+    final drivers = driversWithFares
+        .map((d) => {
+              'driver_id': d['driver_id'],
+              'full_name': d['full_name'] ?? 'Driver ${d['driver_id']}',
+            })
+        .toList();
+
     await showQuotaEditDialog(
       context: context,
       dailyInitial: dailyQuotaTarget,
       weeklyInitial: weeklyQuotaTarget,
       monthlyInitial: monthlyQuotaTarget,
-      onSave: ({required double daily, required double weekly, required double monthly, required double total}) async {
-        await _saveQuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total);
+      drivers: drivers,
+      initialDriverId: null,
+      onSave: ({required double daily, required double weekly, required double monthly, required double total, int? driverId}) async {
+        await _saveQuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total, driverId: driverId);
       },
     );
   }
@@ -453,6 +465,7 @@ class _ReportsContentState extends State<ReportsContent> {
     required double weekly,
     required double monthly,
     required double total,
+    int? driverId,
   }) async {
     try {
       final auth = AuthService();
@@ -464,6 +477,7 @@ class _ReportsContentState extends State<ReportsContent> {
         monthly: monthly,
         total: total,
         createdByAdminId: auth.currentAdminID,
+        driverId: driverId,
       );
 
       await _fetchQuotaTargets();
