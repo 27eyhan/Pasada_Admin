@@ -5,6 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/services/quota_service.dart';
+import 'package:pasada_admin_application/widgets/quota/quota_bento_grid.dart';
+import 'package:pasada_admin_application/widgets/quota/quota_edit_dialog.dart';
+import 'package:pasada_admin_application/widgets/quota/quota_update_dialog.dart';
 
 class ReportsContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -24,6 +29,16 @@ class _ReportsContentState extends State<ReportsContent> {
   // Summary statistics
   int totalDrivers = 0;
   double totalEarnings = 0;
+  // Aggregated earnings by period
+  double dailyEarnings = 0;
+  double weeklyEarnings = 0;
+  double monthlyEarnings = 0;
+
+  // Quota targets (loaded from adminQuotaTable; defaults to zero)
+  double dailyQuotaTarget = 0; // ₱
+  double weeklyQuotaTarget = 0; // ₱
+  double monthlyQuotaTarget = 0; // ₱
+  double overallQuotaTarget = 0; // ₱
   
   // View mode: grid or list
   bool isGridView = true;
@@ -32,6 +47,7 @@ class _ReportsContentState extends State<ReportsContent> {
   void initState() {
     super.initState();
     fetchData();
+    _fetchQuotaTargets();
   }
 
   Future<void> fetchData() async {
@@ -50,15 +66,35 @@ class _ReportsContentState extends State<ReportsContent> {
       final List bookingsData = bookingsResponse as List;
       final bookings = bookingsData.cast<Map<String, dynamic>>();
       
+      // Fetch precomputed per-driver quotas
+      final quotasResponse = await supabase
+          .from('driverQuotasTable')
+          .select('driver_id, quota_daily, quota_weekly, quota_monthly, quota_total');
+      final Map<int, Map<String, double>> driverQuotas = {};
+      for (final row in (quotasResponse as List).cast<Map<String, dynamic>>()) {
+        final did = row['driver_id'];
+        if (did == null) continue;
+        driverQuotas[did is int ? did : int.tryParse(did.toString()) ?? -1] = {
+          'daily': double.tryParse(row['quota_daily']?.toString() ?? '0') ?? 0,
+          'weekly': double.tryParse(row['quota_weekly']?.toString() ?? '0') ?? 0,
+          'monthly': double.tryParse(row['quota_monthly']?.toString() ?? '0') ?? 0,
+          'total': double.tryParse(row['quota_total']?.toString() ?? '0') ?? 0,
+        };
+      }
+
       // Calculate total fares for each driver
       final driverFares = <int, double>{};
       final breakdownByDriver = <int, Map<String, dynamic>>{};
       double sumTotal = 0;
       
-      // Get current date for weekly and monthly calculations
+      // Get current date for daily, weekly and monthly calculations
       final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
       final startOfMonth = DateTime(now.year, now.month, 1);
+      double dailySum = 0;
+      double weeklySum = 0;
+      double monthlySum = 0;
       
       for (var booking in bookings) {
         final driverId = booking['driver_id'];
@@ -72,8 +108,10 @@ class _ReportsContentState extends State<ReportsContent> {
           // Initialize breakdown map if needed
           if (!breakdownByDriver.containsKey(driverId)) {
             breakdownByDriver[driverId] = {
+              'daily': 0.0,
               'weekly': 0.0,
               'monthly': 0.0,
+              'daily_bookings': [],
               'weekly_bookings': [],
               'monthly_bookings': [],
               'all_bookings': [],
@@ -97,12 +135,22 @@ class _ReportsContentState extends State<ReportsContent> {
               
               breakdownByDriver[driverId]!['all_bookings'].add(bookingDetail);
               
+              // Aggregate totals by period (daily)
+              if (bookingDate.isAfter(startOfDay) ||
+                  bookingDate.isAtSameMomentAs(startOfDay)) {
+                dailySum += fare;
+                breakdownByDriver[driverId]!['daily'] =
+                    (breakdownByDriver[driverId]!['daily'] as double) + fare;
+                breakdownByDriver[driverId]!['daily_bookings'].add(bookingDetail);
+              }
+
               // Check if booking is within current week
               if (bookingDate.isAfter(startOfWeek) || 
                   bookingDate.isAtSameMomentAs(startOfWeek)) {
                 breakdownByDriver[driverId]!['weekly'] = 
                     (breakdownByDriver[driverId]!['weekly'] as double) + fare;
                 breakdownByDriver[driverId]!['weekly_bookings'].add(bookingDetail);
+                weeklySum += fare;
               }
               
               // Check if booking is within current month
@@ -111,6 +159,7 @@ class _ReportsContentState extends State<ReportsContent> {
                 breakdownByDriver[driverId]!['monthly'] = 
                     (breakdownByDriver[driverId]!['monthly'] as double) + fare;
                 breakdownByDriver[driverId]!['monthly_bookings'].add(bookingDetail);
+                monthlySum += fare;
               }
             } catch (e) {
               print('Error parsing date: $e');
@@ -122,6 +171,7 @@ class _ReportsContentState extends State<ReportsContent> {
       // Combine driver info with their total fares
       final result = drivers.map((driver) {
         final driverId = driver['driver_id'];
+        final quotas = driverQuotas[driverId is int ? driverId : int.tryParse(driverId.toString()) ?? -1] ?? {'daily': 0, 'weekly': 0, 'monthly': 0, 'total': 0};
         return {
           'driver_id': driverId,
           'full_name': driver['full_name'],
@@ -129,8 +179,13 @@ class _ReportsContentState extends State<ReportsContent> {
           'vehicle_id': driver['vehicle_id'],
           'driving_status': driver['driving_status'],
           'total_fare': driverFares[driverId] ?? 0.0,
+          'daily_earnings': breakdownByDriver[driverId]?['daily'] ?? 0.0,
           'weekly_earnings': breakdownByDriver[driverId]?['weekly'] ?? 0.0,
           'monthly_earnings': breakdownByDriver[driverId]?['monthly'] ?? 0.0,
+          'quota_daily': quotas['daily'] ?? 0.0,
+          'quota_weekly': quotas['weekly'] ?? 0.0,
+          'quota_monthly': quotas['monthly'] ?? 0.0,
+          'quota_total': quotas['total'] ?? 0.0,
         };
       }).toList();
       
@@ -146,6 +201,9 @@ class _ReportsContentState extends State<ReportsContent> {
         driverEarningsBreakdown = breakdownByDriver;
         totalDrivers = result.length;
         totalEarnings = sumTotal;
+        dailyEarnings = dailySum;
+        weeklyEarnings = weeklySum;
+        monthlyEarnings = monthlySum;
         isLoading = false;
       });
     } catch (e) {
@@ -154,6 +212,18 @@ class _ReportsContentState extends State<ReportsContent> {
         isLoading = false;
       });
     }
+  }
+
+  Future<void> _fetchQuotaTargets() async {
+    // Prefer server-computed per-driver quota sums for accuracy
+    final targets = await QuotaService.fetchFleetTotalsFromDriverQuotas(supabase);
+    if (!mounted) return;
+    setState(() {
+      dailyQuotaTarget = targets.daily;
+      weeklyQuotaTarget = targets.weekly;
+      monthlyQuotaTarget = targets.monthly;
+      overallQuotaTarget = targets.total;
+    });
   }
 
   void _showEarningsBreakdown(Map<String, dynamic> driver) {
@@ -244,6 +314,21 @@ class _ReportsContentState extends State<ReportsContent> {
                                         ),
                                         const Spacer(),
                                       ],
+                                    ),
+                                    const SizedBox(height: 24.0),
+                                    // Quota Bento Grid + edit
+                                    QuotaBentoGrid(
+                                      dailyEarnings: dailyEarnings,
+                                      weeklyEarnings: weeklyEarnings,
+                                      monthlyEarnings: monthlyEarnings,
+                                      totalEarnings: totalEarnings,
+                                      dailyTarget: dailyQuotaTarget,
+                                      weeklyTarget: weeklyQuotaTarget,
+                                      monthlyTarget: monthlyQuotaTarget,
+                                      totalTarget: overallQuotaTarget,
+                                      onEdit: _openEditQuotaDialog,
+                                      onRefresh: _refreshQuotas,
+                                      onUpdate: _openUpdateQuotaDialog,
                                     ),
                                     const SizedBox(height: 24.0),
                                     // Status metrics container with separators
@@ -378,6 +463,92 @@ class _ReportsContentState extends State<ReportsContent> {
     );
   }
   
+  // Removed inline Quota grid/card widgets in favor of dedicated widget
+
+  void _openEditQuotaDialog() async {
+    // Prepare driver list for selector
+    final drivers = driversWithFares
+        .map((d) => {
+              'driver_id': d['driver_id'],
+              'full_name': d['full_name'] ?? 'Driver ${d['driver_id']}',
+            })
+        .toList();
+
+    await showQuotaEditDialog(
+      context: context,
+      dailyInitial: dailyQuotaTarget,
+      weeklyInitial: weeklyQuotaTarget,
+      monthlyInitial: monthlyQuotaTarget,
+      drivers: drivers,
+      initialDriverId: null,
+      onSave: ({required double daily, required double weekly, required double monthly, required double total, int? driverId}) async {
+        await _saveQuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total, driverId: driverId);
+      },
+    );
+  }
+  void _openUpdateQuotaDialog() async {
+    final drivers = driversWithFares
+        .map((d) => {
+              'driver_id': d['driver_id'],
+              'full_name': d['full_name'] ?? 'Driver ${d['driver_id']}',
+            })
+        .toList();
+
+    await showQuotaUpdateDialog(
+      context: context,
+      dailyInitial: dailyQuotaTarget,
+      weeklyInitial: weeklyQuotaTarget,
+      monthlyInitial: monthlyQuotaTarget,
+      drivers: drivers,
+      initialDriverId: null,
+      onSave: ({required double daily, required double weekly, required double monthly, required double total, int? driverId}) async {
+        await _saveQuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total, driverId: driverId);
+      },
+    );
+  }
+
+  // Removed: inline number field (moved to quota_edit_dialog.dart)
+
+  Future<void> _refreshQuotas() async {
+    await _fetchQuotaTargets();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _saveQuotaTargets({
+    required double daily,
+    required double weekly,
+    required double monthly,
+    required double total,
+    int? driverId,
+  }) async {
+    try {
+      debugPrint('[ReportsContent._saveQuotaTargets] saving for driverId=$driverId daily=$daily weekly=$weekly monthly=$monthly total=$total');
+      final auth = AuthService();
+      await auth.loadAdminID();
+      await QuotaService.saveGlobalQuotaTargets(
+        supabase,
+        daily: daily,
+        weekly: weekly,
+        monthly: monthly,
+        total: total,
+        createdByAdminId: auth.currentAdminID,
+        driverId: driverId,
+      );
+
+      await _fetchQuotaTargets();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error saving quota targets: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save quotas')), 
+        );
+      }
+    }
+  }
+
   // Grid view implementation
   Widget _buildGridView() {
     return LayoutBuilder(
@@ -513,9 +684,21 @@ class _ReportsContentState extends State<ReportsContent> {
                           textColor: statusColor,
                         ),
                         _buildDriverInfoRow(
-                          Icons.monetization_on, 
-                          "Total: ₱${driver['total_fare'].toStringAsFixed(2)}", 
-                          textColor: Palette.greenColor
+                          Icons.today,
+                          "Daily: ₱${(driver['daily_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                        ),
+                        _buildDriverInfoRow(
+                          Icons.date_range,
+                          "Weekly: ₱${(driver['weekly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                        ),
+                        _buildDriverInfoRow(
+                          Icons.calendar_month,
+                          "Monthly: ₱${(driver['monthly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                        ),
+                        _buildDriverInfoRow(
+                          Icons.monetization_on,
+                          "Total: ₱${(driver['total_fare'] as double).toStringAsFixed(2)} / ₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                          textColor: Palette.greenColor,
                         ),
                       ],
                     ),
@@ -653,7 +836,30 @@ class _ReportsContentState extends State<ReportsContent> {
                       ),
                     ),
                     
-                    // Weekly earnings
+                    // Daily earnings (Current / Target)
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDriverInfoRow(
+                            Icons.today,
+                            "₱${(driver['daily_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                            textColor: Palette.greenColor,
+                          ),
+                          Text(
+                            "Daily",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.0,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Weekly earnings (Current / Target)
                     Expanded(
                       flex: 2,
                       child: Column(
@@ -661,7 +867,7 @@ class _ReportsContentState extends State<ReportsContent> {
                         children: [
                           _buildDriverInfoRow(
                             Icons.date_range,
-                            "₱${driver['weekly_earnings'].toStringAsFixed(2)}",
+                            "₱${(driver['weekly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
                             textColor: Palette.greenColor,
                           ),
                           Text(
@@ -676,7 +882,30 @@ class _ReportsContentState extends State<ReportsContent> {
                       ),
                     ),
                     
-                    // Total earnings
+                    // Monthly earnings (Current / Target)
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDriverInfoRow(
+                            Icons.calendar_month,
+                            "₱${(driver['monthly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                            textColor: Palette.greenColor,
+                          ),
+                          Text(
+                            "Monthly",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.0,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Total earnings (Current / Target)
                     Expanded(
                       flex: 2,
                       child: Column(
@@ -684,7 +913,7 @@ class _ReportsContentState extends State<ReportsContent> {
                         children: [
                           _buildDriverInfoRow(
                             Icons.monetization_on,
-                            "₱${driver['total_fare'].toStringAsFixed(2)}",
+                            "₱${(driver['total_fare'] as double).toStringAsFixed(2)} / ₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
                             textColor: Palette.greenColor,
                           ),
                           Text(
