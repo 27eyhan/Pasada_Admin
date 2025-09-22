@@ -7,7 +7,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/passenger_tables/passenger_dialog.dart';
 
 class PassengerTableScreen extends StatefulWidget {
-  const PassengerTableScreen({Key? key}) : super(key: key);
+  const PassengerTableScreen({super.key});
 
   @override
   _PassengerTableScreenState createState() => _PassengerTableScreenState();

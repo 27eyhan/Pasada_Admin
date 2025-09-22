@@ -4,6 +4,8 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class DataTables extends StatefulWidget {
+  const DataTables({super.key});
+
   @override
   _DataTablesState createState() => _DataTablesState();
 }
@@ -16,7 +18,7 @@ class _DataTablesState extends State<DataTables> {
       body: Row(
         children: [
           // Fixed width sidebar drawer
-          Container(
+          SizedBox(
             width: 280, // Fixed width for the sidebar
             child: MyDrawer(),
           ),

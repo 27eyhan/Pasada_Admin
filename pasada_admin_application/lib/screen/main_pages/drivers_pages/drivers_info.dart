@@ -941,7 +941,7 @@ class _DriverInfoState extends State<DriverInfo> {
                    Row(
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
-                       Container(
+                       SizedBox(
                          width: 100,
                          child: Text(
                            "License No.:",
@@ -984,7 +984,7 @@ class _DriverInfoState extends State<DriverInfo> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
+                      SizedBox(
                         width: 100,
                         child: Text(
                           "Status:",
@@ -1019,7 +1019,7 @@ class _DriverInfoState extends State<DriverInfo> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
+                      SizedBox(
                         width: 100,
                         child: Text(
                           "Last Online:",
@@ -1062,7 +1062,7 @@ class _DriverInfoState extends State<DriverInfo> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
+        SizedBox(
           width: 100,
           child: Text(
             label,

@@ -89,8 +89,8 @@ class _LoginSignupState extends State<LoginSignup> {
               duration: Duration(seconds: 2),
             ),
           );
-          // Store the adminID in the AuthService
-          await AuthService().setAdminID(adminID);
+          // Create secure session
+          await AuthService().createSession(adminID);
           // Navigate to main navigation with dashboard as initial page
           Navigator.pushReplacementNamed(context, '/main', arguments: {'page': '/dashboard'});
         } else {

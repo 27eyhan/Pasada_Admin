@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:math';
+import 'dart:convert';
 
 class AuthService {
   // Private constructor to prevent external instantiation
@@ -14,8 +16,12 @@ class AuthService {
   }
 
   static const String _adminIdKey = 'adminID';
+  static const String _sessionTokenKey = 'sessionToken';
+  static const String _sessionExpiryKey = 'sessionExpiryMs';
   SharedPreferences? _prefs;
   int? _adminID;
+  String? _sessionToken;
+  int? _sessionExpiryMs; // epoch millis
 
   Future<void> _initPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -29,6 +35,14 @@ class AuthService {
     } else {
       debugPrint("AuthService: No Admin ID found in prefs.");
     }
+  }
+
+  Future<void> loadSession() async {
+    await _initPrefs();
+    _adminID = _prefs?.getInt(_adminIdKey);
+    _sessionToken = _prefs?.getString(_sessionTokenKey);
+    _sessionExpiryMs = _prefs?.getInt(_sessionExpiryKey);
+    debugPrint('AuthService: Session loaded (adminID=$_adminID, hasToken=${_sessionToken != null}, expiryMs=$_sessionExpiryMs)');
   }
 
   // Getter to access the ID
@@ -52,5 +66,39 @@ class AuthService {
     _adminID = null;
     await _prefs?.remove(_adminIdKey);
     debugPrint("AuthService: Admin ID cleared from state and prefs.");
+  }
+
+  // Secure-ish session handling (token + expiry)
+  bool get isSessionValid {
+    if (_adminID == null || _sessionToken == null || _sessionExpiryMs == null) return false;
+    return DateTime.now().millisecondsSinceEpoch < (_sessionExpiryMs ?? 0);
+  }
+
+  String? get sessionToken => _sessionToken;
+
+  Future<void> createSession(int adminId, {Duration ttl = const Duration(hours: 12)}) async {
+    await _initPrefs();
+    _adminID = adminId;
+    // Generate a cryptographically secure random token
+    final secure = Random.secure();
+    final bytes = List<int>.generate(32, (_) => secure.nextInt(256));
+    _sessionToken = base64Url.encode(bytes);
+    _sessionExpiryMs = DateTime.now().add(ttl).millisecondsSinceEpoch;
+
+    await _prefs?.setInt(_adminIdKey, adminId);
+    await _prefs?.setString(_sessionTokenKey, _sessionToken!);
+    await _prefs?.setInt(_sessionExpiryKey, _sessionExpiryMs!);
+    debugPrint('AuthService: Session created for admin=$adminId exp=$_sessionExpiryMs');
+  }
+
+  Future<void> clearSession() async {
+    await _initPrefs();
+    _adminID = null;
+    _sessionToken = null;
+    _sessionExpiryMs = null;
+    await _prefs?.remove(_adminIdKey);
+    await _prefs?.remove(_sessionTokenKey);
+    await _prefs?.remove(_sessionExpiryKey);
+    debugPrint('AuthService: Session cleared');
   }
 } 

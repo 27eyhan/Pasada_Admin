@@ -52,6 +52,36 @@ class _SelectTableContentState extends State<SelectTableContent> {
       'color': Palette.lightInfo,
     },
     {
+      'name': 'Admin Quotas',
+      'icon': Icons.flag,
+      'description': 'Configured quota targets per period (global or per-driver)',
+      'color': Palette.lightWarning,
+    },
+    {
+      'name': 'Driver Quotas',
+      'icon': Icons.stacked_bar_chart,
+      'description': 'Per-driver quota aggregates and current progress',
+      'color': Palette.lightSuccess,
+    },
+    {
+      'name': 'Allowed Stops',
+      'icon': Icons.location_on,
+      'description': 'Stops allowed for each official route',
+      'color': Palette.lightPrimary,
+    },
+    {
+      'name': 'AI Chat History',
+      'icon': Icons.chat_bubble_outline,
+      'description': 'Saved AI chat conversations and metadata',
+      'color': Palette.lightInfo,
+    },
+    {
+      'name': 'Booking Archives',
+      'icon': Icons.inventory_2_outlined,
+      'description': 'Archived historical booking records',
+      'color': Palette.lightTextSecondary,
+    },
+    {
       'name': 'Driver Archives',
       'icon': Icons.archive,
       'description': 'Historical driver data and records',

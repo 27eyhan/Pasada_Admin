@@ -10,7 +10,7 @@ import 'package:pasada_admin_application/screen/main_pages/reports_pages/databas
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/edit_vehicle_dialog.dart';
 
 class VehicleTableScreen extends StatefulWidget {
-  const VehicleTableScreen({Key? key}) : super(key: key);
+  const VehicleTableScreen({super.key});
 
   @override
   _VehicleTableScreenState createState() => _VehicleTableScreenState();

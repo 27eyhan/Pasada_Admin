@@ -310,6 +310,112 @@ class TablePreviewHelper {
     );
   }
 
+  static Widget createAdminQuotaTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'Admin Quotas',
+      tableDescription: 'Configured quota targets per period (global or per-driver)',
+      tableIcon: Icons.flag,
+      tableColor: Palette.lightWarning,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('ID')),
+        DataColumn(label: Text('Driver ID')),
+        DataColumn(label: Text('Target Amount')),
+        DataColumn(label: Text('Period')),
+        DataColumn(label: Text('Start At')),
+        DataColumn(label: Text('End At')),
+        DataColumn(label: Text('Is Active')),
+        DataColumn(label: Text('Created By')),
+        DataColumn(label: Text('Created At')),
+        DataColumn(label: Text('Updated At')),
+      ],
+      rowBuilder: (data) => data.map((row) {
+        return DataRow(
+          cells: [
+            DataCell(Text(row['id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['driver_id']?.toString() ?? '—')),
+            DataCell(Text(row['target_amount']?.toString() ?? '0')),
+            DataCell(Text(row['period']?.toString() ?? 'N/A')),
+            DataCell(Text(row['start_at']?.toString() ?? '—')),
+            DataCell(Text(row['end_at']?.toString() ?? '—')),
+            DataCell(Text((row['is_active'] == true) ? 'true' : 'false')),
+            DataCell(Text(row['created_by']?.toString() ?? 'N/A')),
+            DataCell(Text(row['created_at']?.toString() ?? '—')),
+            DataCell(Text(row['updated_at']?.toString() ?? '—')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
+  static Widget createDriverQuotasTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'Driver Quotas',
+      tableDescription: 'Per-driver quota aggregates and current progress',
+      tableIcon: Icons.stacked_bar_chart,
+      tableColor: Palette.lightSuccess,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('Quota ID')),
+        DataColumn(label: Text('Driver ID')),
+        DataColumn(label: Text('Quota Daily')),
+        DataColumn(label: Text('Quota Weekly')),
+        DataColumn(label: Text('Quota Monthly')),
+        DataColumn(label: Text('Quota Total')),
+        DataColumn(label: Text('Current Daily')),
+        DataColumn(label: Text('Current Weekly')),
+        DataColumn(label: Text('Current Monthly')),
+        DataColumn(label: Text('Current Total')),
+        DataColumn(label: Text('Last Reset At')),
+        DataColumn(label: Text('Created At')),
+        DataColumn(label: Text('Updated At')),
+      ],
+      rowBuilder: (data) => data.map((row) {
+        return DataRow(
+          cells: [
+            DataCell(Text(row['quota_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['driver_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['quota_daily']?.toString() ?? '0')),
+            DataCell(Text(row['quota_weekly']?.toString() ?? '0')),
+            DataCell(Text(row['quota_monthly']?.toString() ?? '0')),
+            DataCell(Text(row['quota_total']?.toString() ?? '0')),
+            DataCell(Text(row['current_quota_daily']?.toString() ?? '—')),
+            DataCell(Text(row['current_quota_weekly']?.toString() ?? '—')),
+            DataCell(Text(row['current_quota_monthly']?.toString() ?? '—')),
+            DataCell(Text(row['current_quota_total']?.toString() ?? '—')),
+            DataCell(Text(row['last_reset_at']?.toString() ?? '—')),
+            DataCell(Text(row['created_at']?.toString() ?? '—')),
+            DataCell(Text(row['updated_at']?.toString() ?? '—')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
   static Widget createDriverReviewsTable({
     required Future<List<Map<String, dynamic>>> Function() dataFetcher,
     VoidCallback? onRefresh,
@@ -426,6 +532,164 @@ class TablePreviewHelper {
             DataCell(Text(archive['admin_mobile_number']?.toString() ?? 'N/A')),
             DataCell(Text(archive['admin_password']?.toString() ?? 'N/A')),
             DataCell(Text(archive['archived_at']?.toString() ?? 'N/A')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
+  static Widget createAllowedStopsTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'Allowed Stops',
+      tableDescription: 'Stops allowed for each official route',
+      tableIcon: Icons.location_on,
+      tableColor: Palette.lightPrimary,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('Allowed Stop ID')),
+        DataColumn(label: Text('Official Route ID')),
+        DataColumn(label: Text('Stop Name')),
+        DataColumn(label: Text('Stop Address')),
+        DataColumn(label: Text('Stop Lat')),
+        DataColumn(label: Text('Stop Lng')),
+        DataColumn(label: Text('Stop Order')),
+        DataColumn(label: Text('Is Active')),
+        DataColumn(label: Text('Created At')),
+      ],
+      rowBuilder: (data) => data.map((row) {
+        return DataRow(
+          cells: [
+            DataCell(Text(row['allowedstop_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['officialroute_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['stop_name']?.toString() ?? 'N/A')),
+            DataCell(Text(row['stop_address']?.toString() ?? 'N/A')),
+            DataCell(Text(row['stop_lat']?.toString() ?? 'N/A')),
+            DataCell(Text(row['stop_lng']?.toString() ?? 'N/A')),
+            DataCell(Text(row['stop_order']?.toString() ?? '—')),
+            DataCell(Text((row['is_active'] == true) ? 'true' : 'false')),
+            DataCell(Text(row['created_at']?.toString() ?? '—')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
+  static Widget createAiChatHistoryTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'AI Chat History',
+      tableDescription: 'Saved AI chat conversations and metadata',
+      tableIcon: Icons.chat_bubble_outline,
+      tableColor: Palette.lightInfo,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('History ID')),
+        DataColumn(label: Text('Admin ID')),
+        DataColumn(label: Text('Title')),
+        DataColumn(label: Text('Messages')),
+        DataColumn(label: Text('AI Messages')),
+        DataColumn(label: Text('Created At')),
+      ],
+      rowBuilder: (data) => data.map((row) {
+        return DataRow(
+          cells: [
+            DataCell(Text(row['history_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['admin_id']?.toString() ?? '—')),
+            DataCell(Text(row['title']?.toString() ?? 'N/A')),
+            DataCell(Text(row['messages']?.toString() ?? '—')),
+            DataCell(Text(row['ai_message']?.toString() ?? '—')),
+            DataCell(Text(row['created_at']?.toString() ?? '—')),
+          ],
+        );
+      }).toList(),
+      onRefresh: onRefresh,
+      onFilterPressed: onFilterPressed,
+      customActions: customActions,
+      includeNavigation: includeNavigation,
+      onBackPressed: onBackPressed,
+    );
+  }
+
+  static Widget createBookingArchivesTable({
+    required Future<List<Map<String, dynamic>>> Function() dataFetcher,
+    VoidCallback? onRefresh,
+    VoidCallback? onFilterPressed,
+    Widget? customActions,
+    bool includeNavigation = true,
+    VoidCallback? onBackPressed,
+  }) {
+    return TablePreviewWidget(
+      tableName: 'Booking Archives',
+      tableDescription: 'Archived historical booking records',
+      tableIcon: Icons.inventory_2_outlined,
+      tableColor: Palette.lightTextSecondary,
+      dataFetcher: dataFetcher,
+      columns: const [
+        DataColumn(label: Text('Archive ID')),
+        DataColumn(label: Text('Booking ID')),
+        DataColumn(label: Text('Driver ID')),
+        DataColumn(label: Text('Passenger ID')),
+        DataColumn(label: Text('Route ID')),
+        DataColumn(label: Text('Payment Method')),
+        DataColumn(label: Text('Fare')),
+        DataColumn(label: Text('Seat Type')),
+        DataColumn(label: Text('Ride Status')),
+        DataColumn(label: Text('Pickup Address')),
+        DataColumn(label: Text('Pickup Lat')),
+        DataColumn(label: Text('Pickup Lang')),
+        DataColumn(label: Text('Dropoff Address')),
+        DataColumn(label: Text('Dropoff Lat')),
+        DataColumn(label: Text('Dropoff Lang')),
+        DataColumn(label: Text('Start Time')),
+        DataColumn(label: Text('End Time')),
+        DataColumn(label: Text('Assigned At')),
+        DataColumn(label: Text('Archived At')),
+      ],
+      rowBuilder: (data) => data.map((row) {
+        return DataRow(
+          cells: [
+            DataCell(Text(row['booking_archives_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['booking_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['driver_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['passenger_id']?.toString() ?? '—')),
+            DataCell(Text(row['route_id']?.toString() ?? 'N/A')),
+            DataCell(Text(row['payment_method']?.toString() ?? '—')),
+            DataCell(Text(row['fare']?.toString() ?? '—')),
+            DataCell(Text(row['seat_type']?.toString() ?? '—')),
+            DataCell(Text(row['ride_status']?.toString() ?? '—')),
+            DataCell(Text(row['pickup_address']?.toString() ?? '—')),
+            DataCell(Text(row['pickup_lat']?.toString() ?? '—')),
+            DataCell(Text(row['pickup_lang']?.toString() ?? '—')),
+            DataCell(Text(row['dropoff_address']?.toString() ?? '—')),
+            DataCell(Text(row['dropoff_lat']?.toString() ?? '—')),
+            DataCell(Text(row['dropoff_lang']?.toString() ?? '—')),
+            DataCell(Text(row['start_time']?.toString() ?? '—')),
+            DataCell(Text(row['end_time']?.toString() ?? '—')),
+            DataCell(Text(row['assigned_at']?.toString() ?? '—')),
+            DataCell(Text(row['archived_at']?.toString() ?? '—')),
           ],
         );
       }).toList(),

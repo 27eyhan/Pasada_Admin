@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/services/quota_service.dart';
 import 'package:pasada_admin_application/widgets/quota/quota_bento_grid.dart';
 import 'package:pasada_admin_application/widgets/quota/quota_edit_dialog.dart';
@@ -162,7 +161,7 @@ class _ReportsContentState extends State<ReportsContent> {
                 monthlySum += fare;
               }
             } catch (e) {
-              print('Error parsing date: $e');
+              debugPrint('Error parsing date: $e');
             }
           }
         }
@@ -207,7 +206,7 @@ class _ReportsContentState extends State<ReportsContent> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error fetching data: $e');
+      debugPrint('Error fetching data: $e');
       setState(() {
         isLoading = false;
       });
@@ -523,15 +522,13 @@ class _ReportsContentState extends State<ReportsContent> {
   }) async {
     try {
       debugPrint('[ReportsContent._saveQuotaTargets] saving for driverId=$driverId daily=$daily weekly=$weekly monthly=$monthly total=$total');
-      final auth = AuthService();
-      await auth.loadAdminID();
       await QuotaService.saveGlobalQuotaTargets(
         supabase,
         daily: daily,
         weekly: weekly,
         monthly: monthly,
         total: total,
-        createdByAdminId: auth.currentAdminID,
+        createdByAdminId: null,
         driverId: driverId,
       );
 

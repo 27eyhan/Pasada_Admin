@@ -12,12 +12,12 @@ class EditVehicleDialog extends StatefulWidget {
   final bool openedFromFleetData; // Add flag
 
   const EditVehicleDialog({
-    Key? key,
+    super.key,
     required this.supabase,
     required this.onVehicleActionComplete,
     required this.vehicleData,
     this.openedFromFleetData = false, // Default to false
-  }) : super(key: key);
+  });
 
   @override
   _EditVehicleDialogState createState() => _EditVehicleDialogState();
@@ -294,10 +294,12 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                             isDark: isDark,
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
+                              if (value == null || value.isEmpty) {
                                 return 'Please enter route ID';
-                              if (int.tryParse(value) == null)
+                              }
+                              if (int.tryParse(value) == null) {
                                 return 'Please enter a valid number';
+                              }
                               return null;
                             },
                           ),
@@ -309,10 +311,12 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                             isDark: isDark,
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
+                              if (value == null || value.isEmpty) {
                                 return 'Please enter capacity';
-                              if (int.tryParse(value) == null)
+                              }
+                              if (int.tryParse(value) == null) {
                                 return 'Please enter a valid number';
+                              }
                               return null;
                             },
                           ),

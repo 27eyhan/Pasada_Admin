@@ -15,8 +15,6 @@ class SecurityContent extends StatefulWidget {
 }
 
 class _SecurityContentState extends State<SecurityContent> {
-  bool twoFactorAuth = false;
-  bool biometricAuth = true;
   bool sessionTimeout = true;
   int sessionTimeoutMinutes = 30;
   
@@ -158,49 +156,6 @@ class _SecurityContentState extends State<SecurityContent> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Authentication Methods
-        Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: widget.isDark ? Palette.darkSurface : Palette.lightSurface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.isDark ? Palette.darkBorder : Palette.lightBorder,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Authentication Methods",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: widget.isDark ? Palette.darkText : Palette.lightText,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              SizedBox(height: 16),
-              
-              SwitchTile(
-                title: "Two-Factor Authentication",
-                subtitle: "Add an extra layer of security to your account",
-                value: twoFactorAuth,
-                onChanged: (value) => setState(() => twoFactorAuth = value),
-                isDark: widget.isDark,
-              ),
-              
-              SwitchTile(
-                title: "Biometric Authentication",
-                subtitle: "Use fingerprint or face recognition",
-                value: biometricAuth,
-                onChanged: (value) => setState(() => biometricAuth = value),
-                isDark: widget.isDark,
-              ),
-            ],
-          ),
-        ),
-        
         SizedBox(height: 20),
         
         // Session Management
@@ -295,7 +250,7 @@ class _SecurityContentState extends State<SecurityContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
+                      SizedBox(
                         width: 300,
                         child: _buildPasswordField(
                           controller: _currentPasswordController,
@@ -309,7 +264,7 @@ class _SecurityContentState extends State<SecurityContent> {
                         ),
                       ),
                       SizedBox(height: 16),
-                      Container(
+                      SizedBox(
                         width: 300,
                         child: _buildPasswordField(
                           controller: _newPasswordController,
@@ -326,7 +281,7 @@ class _SecurityContentState extends State<SecurityContent> {
                         ),
                       ),
                       SizedBox(height: 16),
-                      Container(
+                      SizedBox(
                         width: 300,
                         child: _buildPasswordField(
                           controller: _confirmPasswordController,

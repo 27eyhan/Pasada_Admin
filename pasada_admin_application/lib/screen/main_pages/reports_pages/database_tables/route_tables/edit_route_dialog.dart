@@ -9,11 +9,11 @@ class EditRouteDialog extends StatefulWidget {
   final Map<String, dynamic> routeData; // Required data for editing
 
   const EditRouteDialog({
-    Key? key,
+    super.key,
     required this.supabase,
     required this.onRouteActionComplete,
     required this.routeData,
-  }) : super(key: key);
+  });
 
   @override
   _EditRouteDialogState createState() => _EditRouteDialogState();

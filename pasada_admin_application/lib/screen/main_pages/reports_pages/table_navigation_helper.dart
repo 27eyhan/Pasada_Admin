@@ -13,6 +13,11 @@ class TableNavigationHelper {
     'Passenger': (onNavigateToPage) => _createPassengerTable(onNavigateToPage),
     'Route': (onNavigateToPage) => _createRouteTable(onNavigateToPage),
     'Bookings': (onNavigateToPage) => _createBookingsTable(onNavigateToPage),
+    'Admin Quotas': (onNavigateToPage) => _createAdminQuotaTable(onNavigateToPage),
+    'Driver Quotas': (onNavigateToPage) => _createDriverQuotasTable(onNavigateToPage),
+    'Allowed Stops': (onNavigateToPage) => _createAllowedStopsTable(onNavigateToPage),
+    'AI Chat History': (onNavigateToPage) => _createAiChatHistoryTable(onNavigateToPage),
+    'Booking Archives': (onNavigateToPage) => _createBookingArchivesTable(onNavigateToPage),
     'Driver Archives': (onNavigateToPage) => _createDriverArchivesTable(onNavigateToPage),
     'Admin Archives': (onNavigateToPage) => _createAdminArchivesTable(onNavigateToPage),
   };
@@ -41,7 +46,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Admin table refreshed');
+        debugPrint('Admin table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -59,10 +64,10 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Driver table refreshed');
+        debugPrint('Driver table refreshed');
       },
       onFilterPressed: () {
-        print('Driver filter pressed');
+        debugPrint('Driver filter pressed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -80,7 +85,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Vehicle table refreshed');
+        debugPrint('Vehicle table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -98,7 +103,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Passenger table refreshed');
+        debugPrint('Passenger table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -116,7 +121,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Route table refreshed');
+        debugPrint('Route table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -134,9 +139,99 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Bookings table refreshed');
+        debugPrint('Bookings table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createAdminQuotaTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createAdminQuotaTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('adminQuotaTable').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        debugPrint('Admin quotas table refreshed');
+      },
+      includeNavigation: false,
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createDriverQuotasTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createDriverQuotasTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('driverQuotasTable').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        debugPrint('Driver quotas table refreshed');
+      },
+      includeNavigation: false,
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createAllowedStopsTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createAllowedStopsTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('allowed_stops').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        debugPrint('Allowed stops table refreshed');
+      },
+      includeNavigation: false,
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createAiChatHistoryTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createAiChatHistoryTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('aiChat_history').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        debugPrint('AI chat history table refreshed');
+      },
+      includeNavigation: false,
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createBookingArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createBookingArchivesTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('booking_archives').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        debugPrint('Booking archives table refreshed');
+      },
+      includeNavigation: false,
       onBackPressed: () {
         if (onNavigateToPage != null) {
           onNavigateToPage('/select_table');

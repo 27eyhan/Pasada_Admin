@@ -16,7 +16,7 @@ class AdminTableScreenNew extends StatelessWidget {
       },
       onRefresh: () {
         // Custom refresh logic can be added here
-        print('Admin table refreshed');
+        debugPrint('Admin table refreshed');
       },
     );
   }

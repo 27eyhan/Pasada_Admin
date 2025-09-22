@@ -9,12 +9,12 @@ class PassengerDialog extends StatefulWidget {
   final bool isEditMode;
 
   const PassengerDialog({
-    Key? key,
+    super.key,
     required this.supabase,
     required this.onPassengerActionComplete,
     this.passengerData,
     this.isEditMode = false,
-  }) : super(key: key);
+  });
 
   @override
   _PassengerDialogState createState() => _PassengerDialogState();

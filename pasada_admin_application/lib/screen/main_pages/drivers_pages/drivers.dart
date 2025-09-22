@@ -204,7 +204,7 @@ class _DriversState extends State<Drivers> {
                 child: Row(
                   children: [
                     // Fixed width sidebar drawer
-                    Container(
+                    SizedBox(
                       width: 280, // Fixed width for the sidebar
                       child: MyDrawer(),
                     ),

@@ -71,7 +71,7 @@ class _SettingsState extends State<Settings> with SingleTickerProviderStateMixin
       body: Row(
         children: [
           // Fixed width sidebar drawer
-          Container(
+          SizedBox(
             width: 280,
             child: MyDrawer(),
           ),
@@ -179,8 +179,8 @@ class _SettingsState extends State<Settings> with SingleTickerProviderStateMixin
           boxShadow: [
             BoxShadow(
               color: isDark 
-                ? Colors.black.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
+                ? Colors.black.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 10,
               offset: Offset(0, 2),
@@ -303,8 +303,8 @@ class _SettingsState extends State<Settings> with SingleTickerProviderStateMixin
           boxShadow: [
             BoxShadow(
               color: isDark 
-                ? Colors.black.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
+                ? Colors.black.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 10,
               offset: Offset(0, 2),

@@ -149,11 +149,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
                         child: Column(
                           children: [
                             // App bar in the main content area
-                            AppBarSearch(
-                              onFilterPressed: widget.showFilterButton 
-                                  ? widget.onFilterPressed 
-                                  : null,
-                            ),
+                            AppBarSearch(),
                             // Main content
                             Expanded(
                               child: _buildMainContent(isDark, horizontalPadding),
@@ -364,26 +360,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           ),
         ),
         
-        // Filter button (if enabled)
-        if (widget.showFilterButton)
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? Palette.darkCard : Palette.lightCard,
-              border: Border.all(
-                color: isDark ? Palette.darkBorder : Palette.lightBorder,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: IconButton(
-              icon: Icon(
-                Icons.filter_list,
-                size: 18,
-                color: isDark ? Palette.darkText : Palette.lightText,
-              ),
-              onPressed: widget.onFilterPressed,
-              tooltip: 'Filter Data',
-            ),
-          ),
+        // Filter button removed
       ],
     );
   }
