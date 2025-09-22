@@ -225,7 +225,7 @@ class _FleetState extends State<Fleet> {
                 width: effectiveWidth,
                 child: Row(
                   children: [
-                    Container(
+                    SizedBox(
                       width: 280,
                       child: MyDrawer(),
                     ),

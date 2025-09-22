@@ -9,10 +9,10 @@ class AddVehicleDialog extends StatefulWidget {
   final VoidCallback onVehicleActionComplete;
 
   const AddVehicleDialog({
-    Key? key,
+    super.key,
     required this.supabase,
     required this.onVehicleActionComplete,
-  }) : super(key: key);
+  });
 
   @override
   _AddVehicleDialogState createState() => _AddVehicleDialogState();
@@ -281,10 +281,12 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
                             isDark: isDark,
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
+                              if (value == null || value.isEmpty) {
                                 return 'Please enter route ID';
-                              if (int.tryParse(value) == null)
+                              }
+                              if (int.tryParse(value) == null) {
                                 return 'Please enter a valid number';
+                              }
                               return null;
                             },
                           ),
@@ -296,10 +298,12 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
                             isDark: isDark,
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.isEmpty)
+                              if (value == null || value.isEmpty) {
                                 return 'Please enter capacity';
-                              if (int.tryParse(value) == null)
+                              }
+                              if (int.tryParse(value) == null) {
                                 return 'Please enter a valid number';
+                              }
                               return null;
                             },
                           ),

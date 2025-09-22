@@ -7,10 +7,10 @@ class AddRouteDialog extends StatefulWidget {
   final VoidCallback onRouteActionComplete;
 
   const AddRouteDialog({
-    Key? key,
+    super.key,
     required this.supabase,
     required this.onRouteActionComplete,
-  }) : super(key: key);
+  });
 
   @override
   _AddRouteDialogState createState() => _AddRouteDialogState();

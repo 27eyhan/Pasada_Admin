@@ -183,11 +183,11 @@ class _AppBarSearchState extends State<AppBarSearch> {
               }
               break;
           case 'logout':
-            try { await AuthService().clearAdminID(); } catch (_) {}
+            try { await AuthService().clearSession(); } catch (_) {}
             if (context.mounted) {
               Navigator.pushNamedAndRemoveUntil(
                 context,
-                '/main',
+                '/login',
                 (Route<dynamic> route) => false,
               );
             }

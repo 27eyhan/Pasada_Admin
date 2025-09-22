@@ -46,7 +46,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Admin table refreshed');
+        debugPrint('Admin table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -64,10 +64,10 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Driver table refreshed');
+        debugPrint('Driver table refreshed');
       },
       onFilterPressed: () {
-        print('Driver filter pressed');
+        debugPrint('Driver filter pressed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -85,7 +85,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Vehicle table refreshed');
+        debugPrint('Vehicle table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -103,7 +103,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Passenger table refreshed');
+        debugPrint('Passenger table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -121,7 +121,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Route table refreshed');
+        debugPrint('Route table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -139,7 +139,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Bookings table refreshed');
+        debugPrint('Bookings table refreshed');
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -157,7 +157,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Admin quotas table refreshed');
+        debugPrint('Admin quotas table refreshed');
       },
       includeNavigation: false,
       onBackPressed: () {
@@ -175,7 +175,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Driver quotas table refreshed');
+        debugPrint('Driver quotas table refreshed');
       },
       includeNavigation: false,
       onBackPressed: () {
@@ -193,7 +193,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Allowed stops table refreshed');
+        debugPrint('Allowed stops table refreshed');
       },
       includeNavigation: false,
       onBackPressed: () {
@@ -211,7 +211,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('AI chat history table refreshed');
+        debugPrint('AI chat history table refreshed');
       },
       includeNavigation: false,
       onBackPressed: () {
@@ -229,7 +229,7 @@ class TableNavigationHelper {
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
-        print('Booking archives table refreshed');
+        debugPrint('Booking archives table refreshed');
       },
       includeNavigation: false,
       onBackPressed: () {

@@ -161,7 +161,7 @@ class _ReportsContentState extends State<ReportsContent> {
                 monthlySum += fare;
               }
             } catch (e) {
-              print('Error parsing date: $e');
+              debugPrint('Error parsing date: $e');
             }
           }
         }
@@ -206,7 +206,7 @@ class _ReportsContentState extends State<ReportsContent> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error fetching data: $e');
+      debugPrint('Error fetching data: $e');
       setState(() {
         isLoading = false;
       });

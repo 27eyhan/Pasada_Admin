@@ -9,7 +9,7 @@ import 'package:pasada_admin_application/screen/main_pages/reports_pages/databas
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/route_tables/edit_route_dialog.dart';
 
 class DriverRouteTableScreen extends StatefulWidget {
-  const DriverRouteTableScreen({Key? key}) : super(key: key);
+  const DriverRouteTableScreen({super.key});
 
   @override
   _DriverRouteTableScreenState createState() => _DriverRouteTableScreenState();

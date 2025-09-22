@@ -6,7 +6,7 @@ import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.d
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 
 class DriverReviewsTableScreen extends StatefulWidget {
-  const DriverReviewsTableScreen({Key? key}) : super(key: key);
+  const DriverReviewsTableScreen({super.key});
 
   @override
   _DriverReviewsTableScreenState createState() => _DriverReviewsTableScreenState();
@@ -93,7 +93,7 @@ class _DriverReviewsTableScreenState extends State<DriverReviewsTableScreen> {
           }
         } catch (bookingError) {
           // If bookings table doesn't exist or there's an error, continue with driver but no ratings/reviews
-          print('Error fetching bookings for driver $driverId: $bookingError');
+          debugPrint('Error fetching bookings for driver $driverId: $bookingError');
         }
 
         // Add driver data regardless of whether they have bookings or not
@@ -114,10 +114,10 @@ class _DriverReviewsTableScreenState extends State<DriverReviewsTableScreen> {
           isLoading = false;
         });
         // Debug information
-        print('Loaded ${compiledData.length} drivers');
+        debugPrint('Loaded ${compiledData.length} drivers');
       }
     } catch (e) {
-      print('Error fetching driver data: $e');
+      debugPrint('Error fetching driver data: $e');
       if (mounted) {
         setState(() {
           isLoading = false;

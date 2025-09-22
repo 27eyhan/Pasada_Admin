@@ -250,7 +250,7 @@ class _SecurityContentState extends State<SecurityContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
+                      SizedBox(
                         width: 300,
                         child: _buildPasswordField(
                           controller: _currentPasswordController,
@@ -264,7 +264,7 @@ class _SecurityContentState extends State<SecurityContent> {
                         ),
                       ),
                       SizedBox(height: 16),
-                      Container(
+                      SizedBox(
                         width: 300,
                         child: _buildPasswordField(
                           controller: _newPasswordController,
@@ -281,7 +281,7 @@ class _SecurityContentState extends State<SecurityContent> {
                         ),
                       ),
                       SizedBox(height: 16),
-                      Container(
+                      SizedBox(
                         width: 300,
                         child: _buildPasswordField(
                           controller: _confirmPasswordController,

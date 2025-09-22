@@ -371,8 +371,8 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
                     ),
                     const PopupMenuItem<String>(
                       value: 'delete_permanent',
-                      child: Text('Delete Permanently'),
                       textStyle: TextStyle(color: Colors.red),
+                      child: Text('Delete Permanently'),
                     ),
                   ],
                 ),

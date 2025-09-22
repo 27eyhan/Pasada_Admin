@@ -5,7 +5,7 @@ import 'package:pasada_admin_application/screen/settings_pages/settings_utils.da
 class NotificationsContent extends StatefulWidget {
   final bool isDark;
   
-  const NotificationsContent({Key? key, required this.isDark}) : super(key: key);
+  const NotificationsContent({super.key, required this.isDark});
 
   @override
   _NotificationsContentState createState() => _NotificationsContentState();

@@ -8,7 +8,7 @@ import 'package:pasada_admin_application/screen/settings_pages/settings_utils.da
 class ProfileContent extends StatefulWidget {
   final bool isDark;
   
-  const ProfileContent({Key? key, required this.isDark}) : super(key: key);
+  const ProfileContent({super.key, required this.isDark});
 
   @override
   _ProfileContentState createState() => _ProfileContentState();
@@ -48,7 +48,7 @@ class _ProfileContentState extends State<ProfileContent> {
     final currentAdminID = AuthService().currentAdminID;
 
     if (currentAdminID == null) {
-      print("Error in ProfileContent: Admin ID not found in AuthService.");
+      debugPrint("Error in ProfileContent: Admin ID not found in AuthService.");
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -76,7 +76,7 @@ class _ProfileContentState extends State<ProfileContent> {
         _mobileNumberController.text = adminData?['admin_mobile_number']?.toString() ?? '';
       }
     } catch (e) {
-      print('Error fetching admin data: $e');
+      debugPrint('Error fetching admin data: $e');
       if (mounted) {
         setState(() {
           isLoading = false;

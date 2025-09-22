@@ -8,10 +8,10 @@ class EarningsBreakdownDialog extends StatelessWidget {
   final Map<String, dynamic>? breakdown;
   
   const EarningsBreakdownDialog({
-    Key? key,
+    super.key,
     required this.driver,
     this.breakdown,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +158,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Left column - Weekly Bookings
-                    Container(
+                    SizedBox(
                       width: columnWidth,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +178,7 @@ class EarningsBreakdownDialog extends StatelessWidget {
                     const SizedBox(width: 24.0),
                     
                     // Right column - Monthly Bookings
-                    Container(
+                    SizedBox(
                       width: columnWidth,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
