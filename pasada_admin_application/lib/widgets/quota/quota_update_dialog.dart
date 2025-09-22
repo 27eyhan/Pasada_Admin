@@ -2,23 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/widgets/quota/quota_edit_dialog.dart' show QuotaSaveCallback; 
 import 'package:provider/provider.dart';
 
-typedef QuotaSaveCallback = Future<void> Function({
-  required double daily,
-  required double weekly,
-  required double monthly,
-  required double total,
-  int? driverId,
-});
-
-Future<void> showQuotaEditDialog({
+Future<void> showQuotaUpdateDialog({
   required BuildContext context,
   required double dailyInitial,
   required double weeklyInitial,
   required double monthlyInitial,
-  required List<Map<String, dynamic>> drivers, // expects [{driver_id, full_name}, ...]
-  int? initialDriverId, // null means global
+  required List<Map<String, dynamic>> drivers, // [{driver_id, full_name}]
+  int? initialDriverId,
   required QuotaSaveCallback onSave,
 }) async {
   final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
@@ -37,6 +30,7 @@ Future<void> showQuotaEditDialog({
       return StatefulBuilder(builder: (ctx, setLocalState) {
         final double screenWidth = MediaQuery.of(ctx).size.width;
         final double dialogMaxWidth = screenWidth * 0.6 < 480 ? 480 : (screenWidth * 0.6 > 900 ? 900 : screenWidth * 0.6);
+
         Future<void> doSave() async {
           setLocalState(() => isSaving = true);
           await onSave(
@@ -61,11 +55,11 @@ Future<void> showQuotaEditDialog({
               CircleAvatar(
                 radius: 16,
                 backgroundColor: (isDark ? Colors.white12 : Colors.black12),
-                child: Icon(Icons.edit_note, color: isDark ? Palette.darkText : Palette.lightText, size: 18),
+                child: Icon(Icons.manage_accounts, color: isDark ? Palette.darkText : Palette.lightText, size: 18),
               ),
               const SizedBox(width: 10),
               Text(
-                'New Quota',
+                'Edit Quota',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
@@ -83,7 +77,7 @@ Future<void> showQuotaEditDialog({
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Assign to',
+                    'Apply to',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
@@ -95,7 +89,7 @@ Future<void> showQuotaEditDialog({
                     value: selectedDriverId,
                     items: [
                       const DropdownMenuItem<int?>(value: null, child: Text('All drivers (Global)')),
-                      ...drivers.map((d) => DropdownMenuItem<int?>(
+                      ...drivers.map((d) => DropdownMenuItem<int?> (
                             value: d['driver_id'] as int?,
                             child: Text(d['full_name']?.toString() ?? 'Driver ${d['driver_id']}'),
                           )),
@@ -186,7 +180,7 @@ Future<void> showQuotaEditDialog({
               icon: isSaving
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.save),
-              label: Text(isSaving ? 'Saving...' : 'Save'),
+              label: Text(isSaving ? 'Saving...' : 'Save Changes'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               ),

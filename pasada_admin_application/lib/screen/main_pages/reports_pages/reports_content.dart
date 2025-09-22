@@ -9,6 +9,7 @@ import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/services/quota_service.dart';
 import 'package:pasada_admin_application/widgets/quota/quota_bento_grid.dart';
 import 'package:pasada_admin_application/widgets/quota/quota_edit_dialog.dart';
+import 'package:pasada_admin_application/widgets/quota/quota_update_dialog.dart';
 
 class ReportsContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -327,6 +328,7 @@ class _ReportsContentState extends State<ReportsContent> {
                                       totalTarget: overallQuotaTarget,
                                       onEdit: _openEditQuotaDialog,
                                       onRefresh: _refreshQuotas,
+                                      onUpdate: _openUpdateQuotaDialog,
                                     ),
                                     const SizedBox(height: 24.0),
                                     // Status metrics container with separators
@@ -473,6 +475,26 @@ class _ReportsContentState extends State<ReportsContent> {
         .toList();
 
     await showQuotaEditDialog(
+      context: context,
+      dailyInitial: dailyQuotaTarget,
+      weeklyInitial: weeklyQuotaTarget,
+      monthlyInitial: monthlyQuotaTarget,
+      drivers: drivers,
+      initialDriverId: null,
+      onSave: ({required double daily, required double weekly, required double monthly, required double total, int? driverId}) async {
+        await _saveQuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total, driverId: driverId);
+      },
+    );
+  }
+  void _openUpdateQuotaDialog() async {
+    final drivers = driversWithFares
+        .map((d) => {
+              'driver_id': d['driver_id'],
+              'full_name': d['full_name'] ?? 'Driver ${d['driver_id']}',
+            })
+        .toList();
+
+    await showQuotaUpdateDialog(
       context: context,
       dailyInitial: dailyQuotaTarget,
       weeklyInitial: weeklyQuotaTarget,

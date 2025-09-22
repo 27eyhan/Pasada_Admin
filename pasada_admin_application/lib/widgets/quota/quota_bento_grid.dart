@@ -14,6 +14,7 @@ class QuotaBentoGrid extends StatelessWidget {
   final double totalTarget;
   final VoidCallback onEdit;
   final VoidCallback? onRefresh;
+  final VoidCallback? onUpdate;
 
   const QuotaBentoGrid({
     super.key,
@@ -27,6 +28,7 @@ class QuotaBentoGrid extends StatelessWidget {
     required this.totalTarget,
     required this.onEdit,
     this.onRefresh,
+    this.onUpdate,
   });
 
   @override
@@ -53,8 +55,20 @@ class QuotaBentoGrid extends StatelessWidget {
               ),
               onPressed: onEdit,
               icon: const Icon(Icons.edit, size: 16),
-              label: const Text('Edit Quota'),
+              label: const Text('New Quota'),
             ),
+            if (onUpdate != null)
+              const SizedBox(width: 8),
+            if (onUpdate != null)
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  foregroundColor: isDark ? Palette.darkText : Palette.lightText,
+                ),
+                onPressed: onUpdate,
+                icon: const Icon(Icons.manage_accounts, size: 16),
+                label: const Text('Edit Quota'),
+              ),
           ],
         ),
         const SizedBox(height: 12),
