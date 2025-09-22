@@ -187,7 +187,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
             if (context.mounted) {
               Navigator.pushNamedAndRemoveUntil(
                 context,
-                '/login',
+                '/',
                 (Route<dynamic> route) => false,
               );
             }

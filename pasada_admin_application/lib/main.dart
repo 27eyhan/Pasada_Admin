@@ -35,7 +35,7 @@ Future<void> main() async {
     GoogleMapsApiInitializer.initialize();
   }
 
-  runApp(MainApp(initialRoute: authService.isSessionValid ? '/main' : '/login'));
+  runApp(MainApp(initialRoute: authService.isSessionValid ? '/main' : '/'));
 }
 
 class MainApp extends StatelessWidget {
@@ -54,11 +54,17 @@ class MainApp extends StatelessWidget {
             theme: themeProvider.currentTheme,
             initialRoute: initialRoute,
             routes: {
-              '/main': (context) => MainNavigation(),
+              '/': (context) => const LoginSignup(),
               '/login': (context) => const LoginSignup(),
+              '/main': (context) => AuthGuard(child: MainNavigation()),
             },
             onGenerateRoute: (settings) {
               if (settings.name == '/main') {
+                // Route-level guard for deep links
+                final auth = AuthService();
+                if (!auth.isSessionValid) {
+                  return MaterialPageRoute(builder: (_) => const LoginSignup());
+                }
                 final args = settings.arguments as Map<String, dynamic>?;
                 return MaterialPageRoute(
                   builder: (context) => MainNavigation(
@@ -74,6 +80,27 @@ class MainApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class AuthGuard extends StatelessWidget {
+  final Widget child;
+  const AuthGuard({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = AuthService();
+    if (!auth.isSessionValid) {
+      // Replace current route with login/root to ensure base URL
+      // Using addPostFrameCallback to avoid build-time navigation
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        }
+      });
+      return const SizedBox.shrink();
+    }
+    return child;
   }
 }
 
