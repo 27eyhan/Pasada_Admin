@@ -5,6 +5,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/services/quota_service.dart';
+import 'package:pasada_admin_application/widgets/quota/quota_bento_grid.dart';
+import 'package:pasada_admin_application/widgets/quota/quota_edit_dialog.dart';
 
 class ReportsContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -24,6 +28,16 @@ class _ReportsContentState extends State<ReportsContent> {
   // Summary statistics
   int totalDrivers = 0;
   double totalEarnings = 0;
+  // Aggregated earnings by period
+  double dailyEarnings = 0;
+  double weeklyEarnings = 0;
+  double monthlyEarnings = 0;
+
+  // Quota targets (loaded from adminQuotaTable; defaults to zero)
+  double dailyQuotaTarget = 0; // ₱
+  double weeklyQuotaTarget = 0; // ₱
+  double monthlyQuotaTarget = 0; // ₱
+  double overallQuotaTarget = 0; // ₱
   
   // View mode: grid or list
   bool isGridView = true;
@@ -32,6 +46,7 @@ class _ReportsContentState extends State<ReportsContent> {
   void initState() {
     super.initState();
     fetchData();
+    _fetchQuotaTargets();
   }
 
   Future<void> fetchData() async {
@@ -55,10 +70,14 @@ class _ReportsContentState extends State<ReportsContent> {
       final breakdownByDriver = <int, Map<String, dynamic>>{};
       double sumTotal = 0;
       
-      // Get current date for weekly and monthly calculations
+      // Get current date for daily, weekly and monthly calculations
       final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
       final startOfMonth = DateTime(now.year, now.month, 1);
+      double dailySum = 0;
+      double weeklySum = 0;
+      double monthlySum = 0;
       
       for (var booking in bookings) {
         final driverId = booking['driver_id'];
@@ -97,12 +116,19 @@ class _ReportsContentState extends State<ReportsContent> {
               
               breakdownByDriver[driverId]!['all_bookings'].add(bookingDetail);
               
+              // Aggregate totals by period (daily)
+              if (bookingDate.isAfter(startOfDay) ||
+                  bookingDate.isAtSameMomentAs(startOfDay)) {
+                dailySum += fare;
+              }
+
               // Check if booking is within current week
               if (bookingDate.isAfter(startOfWeek) || 
                   bookingDate.isAtSameMomentAs(startOfWeek)) {
                 breakdownByDriver[driverId]!['weekly'] = 
                     (breakdownByDriver[driverId]!['weekly'] as double) + fare;
                 breakdownByDriver[driverId]!['weekly_bookings'].add(bookingDetail);
+                weeklySum += fare;
               }
               
               // Check if booking is within current month
@@ -111,6 +137,7 @@ class _ReportsContentState extends State<ReportsContent> {
                 breakdownByDriver[driverId]!['monthly'] = 
                     (breakdownByDriver[driverId]!['monthly'] as double) + fare;
                 breakdownByDriver[driverId]!['monthly_bookings'].add(bookingDetail);
+                monthlySum += fare;
               }
             } catch (e) {
               print('Error parsing date: $e');
@@ -146,6 +173,9 @@ class _ReportsContentState extends State<ReportsContent> {
         driverEarningsBreakdown = breakdownByDriver;
         totalDrivers = result.length;
         totalEarnings = sumTotal;
+        dailyEarnings = dailySum;
+        weeklyEarnings = weeklySum;
+        monthlyEarnings = monthlySum;
         isLoading = false;
       });
     } catch (e) {
@@ -154,6 +184,17 @@ class _ReportsContentState extends State<ReportsContent> {
         isLoading = false;
       });
     }
+  }
+
+  Future<void> _fetchQuotaTargets() async {
+    final targets = await QuotaService.fetchGlobalQuotaTargets(supabase);
+    if (!mounted) return;
+    setState(() {
+      dailyQuotaTarget = targets.daily;
+      weeklyQuotaTarget = targets.weekly;
+      monthlyQuotaTarget = targets.monthly;
+      overallQuotaTarget = targets.total;
+    });
   }
 
   void _showEarningsBreakdown(Map<String, dynamic> driver) {
@@ -244,6 +285,19 @@ class _ReportsContentState extends State<ReportsContent> {
                                         ),
                                         const Spacer(),
                                       ],
+                                    ),
+                                    const SizedBox(height: 24.0),
+                                    // Quota Bento Grid + edit
+                                    QuotaBentoGrid(
+                                      dailyEarnings: dailyEarnings,
+                                      weeklyEarnings: weeklyEarnings,
+                                      monthlyEarnings: monthlyEarnings,
+                                      totalEarnings: totalEarnings,
+                                      dailyTarget: dailyQuotaTarget,
+                                      weeklyTarget: weeklyQuotaTarget,
+                                      monthlyTarget: monthlyQuotaTarget,
+                                      totalTarget: overallQuotaTarget,
+                                      onEdit: _openEditQuotaDialog,
                                     ),
                                     const SizedBox(height: 24.0),
                                     // Status metrics container with separators
@@ -378,6 +432,54 @@ class _ReportsContentState extends State<ReportsContent> {
     );
   }
   
+  // Removed inline Quota grid/card widgets in favor of dedicated widget
+
+  void _openEditQuotaDialog() async {
+    await showQuotaEditDialog(
+      context: context,
+      dailyInitial: dailyQuotaTarget,
+      weeklyInitial: weeklyQuotaTarget,
+      monthlyInitial: monthlyQuotaTarget,
+      onSave: ({required double daily, required double weekly, required double monthly, required double total}) async {
+        await _saveQuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total);
+      },
+    );
+  }
+
+  // Removed: inline number field (moved to quota_edit_dialog.dart)
+
+  Future<void> _saveQuotaTargets({
+    required double daily,
+    required double weekly,
+    required double monthly,
+    required double total,
+  }) async {
+    try {
+      final auth = AuthService();
+      await auth.loadAdminID();
+      await QuotaService.saveGlobalQuotaTargets(
+        supabase,
+        daily: daily,
+        weekly: weekly,
+        monthly: monthly,
+        total: total,
+        createdByAdminId: auth.currentAdminID,
+      );
+
+      await _fetchQuotaTargets();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error saving quota targets: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save quotas')), 
+        );
+      }
+    }
+  }
+
   // Grid view implementation
   Widget _buildGridView() {
     return LayoutBuilder(

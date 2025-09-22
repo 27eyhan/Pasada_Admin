@@ -7,9 +7,6 @@ import 'package:pasada_admin_application/services/analytics_service.dart';
 import 'package:pasada_admin_application/widgets/sync_progress_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Resend-like compact analytics card with a dropdown and weekly line chart.
-/// - Modes: Traffic and Bookings
-/// - Shows a 7-day week series with simple predictive extension for next week (dashed)
 class FleetAnalyticsGraph extends StatefulWidget {
   final String? routeId;
   const FleetAnalyticsGraph({super.key, this.routeId});
