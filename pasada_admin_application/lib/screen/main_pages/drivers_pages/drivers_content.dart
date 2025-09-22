@@ -5,6 +5,7 @@ import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 class DriversContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -39,9 +40,7 @@ class _DriversContentState extends State<DriversContent> {
   void initState() {
     super.initState();
     fetchDriverData();
-    _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
-      fetchDriverData();
-    });
+    _configureAutoRefresh();
   }
 
   @override
@@ -49,6 +48,33 @@ class _DriversContentState extends State<DriversContent> {
     _refreshTimer?.cancel();
     super.dispose();
   }
+  void _configureAutoRefresh() {
+    _refreshTimer?.cancel();
+    final auth = AuthService();
+    final freq = auth.updateFrequency; // 'realtime' | '5min' | '15min' | 'manual'
+    final auto = auth.autoRefreshEnabled;
+    final intervalSec = auth.refreshIntervalSeconds;
+
+    Duration? period;
+    if (!auto && freq == 'manual') {
+      period = null;
+    } else if (freq == 'realtime') {
+      period = Duration(seconds: intervalSec.clamp(5, 120));
+    } else if (freq == '5min') {
+      period = const Duration(minutes: 5);
+    } else if (freq == '15min') {
+      period = const Duration(minutes: 15);
+    } else if (freq == '30min') {
+      period = const Duration(minutes: 30);
+    } else {
+      period = auto ? Duration(seconds: intervalSec.clamp(10, 600)) : null;
+    }
+
+    if (period != null) {
+      _refreshTimer = Timer.periodic(period, (_) => fetchDriverData());
+    }
+  }
+
 
 
   void _applyFilters() {

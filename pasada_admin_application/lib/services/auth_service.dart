@@ -20,12 +20,18 @@ class AuthService {
   static const String _sessionExpiryKey = 'sessionExpiryMs';
   static const String _sessionTimeoutMinutesKey = 'sessionTimeoutMinutes';
   static const String _sessionTimeoutEnabledKey = 'sessionTimeoutEnabled';
+  static const String _rtUpdateFrequencyKey = 'rtUpdateFrequency'; // 'realtime' | '5min' | '15min' | 'manual'
+  static const String _rtAutoRefreshEnabledKey = 'rtAutoRefreshEnabled';
+  static const String _rtRefreshIntervalSecondsKey = 'rtRefreshIntervalSeconds';
   SharedPreferences? _prefs;
   int? _adminID;
   String? _sessionToken;
   int? _sessionExpiryMs; // epoch millis
   int _timeoutMinutes = 30;
   bool _timeoutEnabled = true;
+  String _updateFrequency = 'realtime';
+  bool _autoRefreshEnabled = true;
+  int _refreshIntervalSeconds = 30;
 
   Future<void> _initPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -48,6 +54,9 @@ class AuthService {
     _sessionExpiryMs = _prefs?.getInt(_sessionExpiryKey);
     _timeoutMinutes = _prefs?.getInt(_sessionTimeoutMinutesKey) ?? 30;
     _timeoutEnabled = _prefs?.getBool(_sessionTimeoutEnabledKey) ?? true;
+    _updateFrequency = _prefs?.getString(_rtUpdateFrequencyKey) ?? 'realtime';
+    _autoRefreshEnabled = _prefs?.getBool(_rtAutoRefreshEnabledKey) ?? true;
+    _refreshIntervalSeconds = _prefs?.getInt(_rtRefreshIntervalSecondsKey) ?? 30;
     debugPrint('AuthService: Session loaded (adminID=$_adminID, hasToken=${_sessionToken != null}, expiryMs=$_sessionExpiryMs)');
   }
 
@@ -119,5 +128,25 @@ class AuthService {
     await _prefs?.setInt(_sessionTimeoutMinutesKey, minutes);
     await _prefs?.setBool(_sessionTimeoutEnabledKey, enabled);
     debugPrint('AuthService: Session timeout set minutes=$minutes enabled=$enabled');
+  }
+
+  // Real-time updates settings
+  String get updateFrequency => _updateFrequency; // 'realtime' | '5min' | '15min' | '30min'
+  bool get autoRefreshEnabled => _autoRefreshEnabled;
+  int get refreshIntervalSeconds => _refreshIntervalSeconds;
+
+  Future<void> setRealtimeUpdateSettings({
+    required String frequency,
+    required bool autoRefresh,
+    required int intervalSeconds,
+  }) async {
+    await _initPrefs();
+    _updateFrequency = frequency;
+    _autoRefreshEnabled = autoRefresh;
+    _refreshIntervalSeconds = intervalSeconds;
+    await _prefs?.setString(_rtUpdateFrequencyKey, frequency);
+    await _prefs?.setBool(_rtAutoRefreshEnabledKey, autoRefresh);
+    await _prefs?.setInt(_rtRefreshIntervalSecondsKey, intervalSeconds);
+    debugPrint('AuthService: Realtime settings frequency=$frequency autoRefresh=$autoRefresh interval=$intervalSeconds');
   }
 } 
