@@ -187,9 +187,8 @@ class _ReportsContentState extends State<ReportsContent> {
   }
 
   Future<void> _fetchQuotaTargets() async {
-    // driversWithFares is set in fetchData(); use its length
-    final int driverCount = driversWithFares.length;
-    final targets = await QuotaService.fetchSummedTargets(supabase, driversCount: driverCount);
+    // Sum per-driver quotas only, per period
+    final targets = await QuotaService.fetchDriverSumTargets(supabase);
     if (!mounted) return;
     setState(() {
       dailyQuotaTarget = targets.daily;
@@ -290,16 +289,31 @@ class _ReportsContentState extends State<ReportsContent> {
                                     ),
                                     const SizedBox(height: 24.0),
                                     // Quota Bento Grid + edit
-                                    QuotaBentoGrid(
-                                      dailyEarnings: dailyEarnings,
-                                      weeklyEarnings: weeklyEarnings,
-                                      monthlyEarnings: monthlyEarnings,
-                                      totalEarnings: totalEarnings,
-                                      dailyTarget: dailyQuotaTarget,
-                                      weeklyTarget: weeklyQuotaTarget,
-                                      monthlyTarget: monthlyQuotaTarget,
-                                      totalTarget: overallQuotaTarget,
-                                      onEdit: _openEditQuotaDialog,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: QuotaBentoGrid(
+                                            dailyEarnings: dailyEarnings,
+                                            weeklyEarnings: weeklyEarnings,
+                                            monthlyEarnings: monthlyEarnings,
+                                            totalEarnings: totalEarnings,
+                                            dailyTarget: dailyQuotaTarget,
+                                            weeklyTarget: weeklyQuotaTarget,
+                                            monthlyTarget: monthlyQuotaTarget,
+                                            totalTarget: overallQuotaTarget,
+                                            onEdit: _openEditQuotaDialog,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Tooltip(
+                                          message: 'Refresh quotas',
+                                          child: IconButton(
+                                            onPressed: _refreshQuotas,
+                                            icon: const Icon(Icons.refresh),
+                                            color: isDark ? Palette.darkText : Palette.lightText,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 24.0),
                                     // Status metrics container with separators
@@ -456,6 +470,12 @@ class _ReportsContentState extends State<ReportsContent> {
         await _saveQuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total, driverId: driverId);
       },
     );
+  }
+
+  Future<void> _refreshQuotas() async {
+    // Reload drivers to ensure driver count and earnings are fresh, then reload targets
+    await fetchData();
+    await _fetchQuotaTargets();
   }
 
   // Removed: inline number field (moved to quota_edit_dialog.dart)

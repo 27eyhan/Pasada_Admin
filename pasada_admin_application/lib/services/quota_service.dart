@@ -127,13 +127,10 @@ class QuotaService {
     }
   }
 
-  // Compute totals for all drivers per period.
-  // Logic: If there are any per-driver quotas for a period, sum only those.
-  // Otherwise, multiply the global quota for that period by driversCount.
-  static Future<QuotaTargets> fetchSummedTargets(
-    SupabaseClient supabase, {
-    required int driversCount,
-  }) async {
+  // Sum per-driver quotas by period (ignores global rows).
+  static Future<QuotaTargets> fetchDriverSumTargets(
+    SupabaseClient supabase,
+  ) async {
     try {
       final response = await supabase
           .from(tableName)
@@ -143,60 +140,34 @@ class QuotaService {
       final List rawList = response as List;
 
       double perDriverDaily = 0, perDriverWeekly = 0, perDriverMonthly = 0, perDriverTotal = 0;
-      double globalDaily = 0, globalWeekly = 0, globalMonthly = 0, globalTotal = 0;
-      bool hasPerDriverDaily = false, hasPerDriverWeekly = false, hasPerDriverMonthly = false, hasPerDriverTotal = false;
 
       for (final row in rawList.cast<Map<String, dynamic>>()) {
         final isPerDriver = row['driver_id'] != null;
         final period = (row['period'] ?? '').toString().toLowerCase();
         final amount = double.tryParse(row['target_amount']?.toString() ?? '0') ?? 0;
+        if (!isPerDriver) continue; // ignore global rows in sums
         switch (period) {
           case 'daily':
-            if (isPerDriver) {
-              hasPerDriverDaily = true;
-              perDriverDaily += amount;
-            } else {
-              globalDaily += amount;
-            }
+            perDriverDaily += amount;
             break;
           case 'weekly':
-            if (isPerDriver) {
-              hasPerDriverWeekly = true;
-              perDriverWeekly += amount;
-            } else {
-              globalWeekly += amount;
-            }
+            perDriverWeekly += amount;
             break;
           case 'monthly':
-            if (isPerDriver) {
-              hasPerDriverMonthly = true;
-              perDriverMonthly += amount;
-            } else {
-              globalMonthly += amount;
-            }
+            perDriverMonthly += amount;
             break;
           case 'overall':
           case 'total':
-            if (isPerDriver) {
-              hasPerDriverTotal = true;
-              perDriverTotal += amount;
-            } else {
-              globalTotal += amount;
-            }
+            perDriverTotal += amount;
             break;
           default:
             break;
         }
       }
 
-      final daily = hasPerDriverDaily ? perDriverDaily : (globalDaily * driversCount);
-      final weekly = hasPerDriverWeekly ? perDriverWeekly : (globalWeekly * driversCount);
-      final monthly = hasPerDriverMonthly ? perDriverMonthly : (globalMonthly * driversCount);
-      final total = hasPerDriverTotal ? perDriverTotal : (globalTotal * driversCount);
-
-      return QuotaTargets(daily: daily, weekly: weekly, monthly: monthly, total: total);
+      return QuotaTargets(daily: perDriverDaily, weekly: perDriverWeekly, monthly: perDriverMonthly, total: perDriverTotal);
     } catch (e) {
-      debugPrint('QuotaService.fetchSummedTargets error: $e');
+      debugPrint('QuotaService.fetchDriverSumTargets error: $e');
       return const QuotaTargets(daily: 0, weekly: 0, monthly: 0, total: 0);
     }
   }
