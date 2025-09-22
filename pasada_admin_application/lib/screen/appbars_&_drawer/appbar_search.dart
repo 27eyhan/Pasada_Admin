@@ -45,28 +45,7 @@ class _AppBarSearchState extends State<AppBarSearch> {
         child: Row(
           children: [
             const Spacer(),
-            TextButton(
-              onPressed: widget.onFilterPressed,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                foregroundColor: isDark ? Palette.darkText : Palette.lightText,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.filter_list, size: 18.0, color: isDark ? Palette.darkText : Palette.lightText),
-                  const SizedBox(width: 6.0),
-                  Text(
-                    'Filter',
-                    style: TextStyle(
-                      color: isDark ? Palette.darkText : Palette.lightText,
-                      fontSize: 14.0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12.0),
+            // Filter button removed
             // Profile button styled like "Docs" link
             TextButton(
               onPressed: () {

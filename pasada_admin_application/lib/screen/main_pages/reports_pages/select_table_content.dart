@@ -64,6 +64,24 @@ class _SelectTableContentState extends State<SelectTableContent> {
       'color': Palette.lightSuccess,
     },
     {
+      'name': 'Allowed Stops',
+      'icon': Icons.location_on,
+      'description': 'Stops allowed for each official route',
+      'color': Palette.lightPrimary,
+    },
+    {
+      'name': 'AI Chat History',
+      'icon': Icons.chat_bubble_outline,
+      'description': 'Saved AI chat conversations and metadata',
+      'color': Palette.lightInfo,
+    },
+    {
+      'name': 'Booking Archives',
+      'icon': Icons.inventory_2_outlined,
+      'description': 'Archived historical booking records',
+      'color': Palette.lightTextSecondary,
+    },
+    {
       'name': 'Driver Archives',
       'icon': Icons.archive,
       'description': 'Historical driver data and records',

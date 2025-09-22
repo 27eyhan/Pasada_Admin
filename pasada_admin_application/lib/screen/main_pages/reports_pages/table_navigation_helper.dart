@@ -15,6 +15,9 @@ class TableNavigationHelper {
     'Bookings': (onNavigateToPage) => _createBookingsTable(onNavigateToPage),
     'Admin Quotas': (onNavigateToPage) => _createAdminQuotaTable(onNavigateToPage),
     'Driver Quotas': (onNavigateToPage) => _createDriverQuotasTable(onNavigateToPage),
+    'Allowed Stops': (onNavigateToPage) => _createAllowedStopsTable(onNavigateToPage),
+    'AI Chat History': (onNavigateToPage) => _createAiChatHistoryTable(onNavigateToPage),
+    'Booking Archives': (onNavigateToPage) => _createBookingArchivesTable(onNavigateToPage),
     'Driver Archives': (onNavigateToPage) => _createDriverArchivesTable(onNavigateToPage),
     'Admin Archives': (onNavigateToPage) => _createAdminArchivesTable(onNavigateToPage),
   };
@@ -173,6 +176,60 @@ class TableNavigationHelper {
       },
       onRefresh: () {
         print('Driver quotas table refreshed');
+      },
+      includeNavigation: false,
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createAllowedStopsTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createAllowedStopsTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('allowed_stops').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        print('Allowed stops table refreshed');
+      },
+      includeNavigation: false,
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createAiChatHistoryTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createAiChatHistoryTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('aiChat_history').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        print('AI chat history table refreshed');
+      },
+      includeNavigation: false,
+      onBackPressed: () {
+        if (onNavigateToPage != null) {
+          onNavigateToPage('/select_table');
+        }
+      },
+    );
+  }
+
+  static Widget _createBookingArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    return TablePreviewHelper.createBookingArchivesTable(
+      dataFetcher: () async {
+        final data = await _supabase.from('booking_archives').select('*');
+        return (data as List).cast<Map<String, dynamic>>();
+      },
+      onRefresh: () {
+        print('Booking archives table refreshed');
       },
       includeNavigation: false,
       onBackPressed: () {
