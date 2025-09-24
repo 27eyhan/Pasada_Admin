@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
@@ -183,45 +185,26 @@ class _DriversContentState extends State<DriversContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context)
-        .size
-        .width
-        .clamp(600.0, double.infinity)
-        .toDouble();
-    final double horizontalPadding = screenWidth * 0.05;
     
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const double minBodyWidth = 900;
-          final double effectiveWidth = constraints.maxWidth < minBodyWidth
-              ? minBodyWidth
-              : constraints.maxWidth;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: minBodyWidth),
-              child: SizedBox(
-                width: effectiveWidth,
-                child: Column(
-                  children: [
-                    // Main content
-                    Expanded(
-                      child: isLoading
-                          ? Center(child: CircularProgressIndicator())
-                          : SingleChildScrollView(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 24.0,
-                                  horizontal: horizontalPadding,
-                                ),
-                                child: Column(
-                                  children: [
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: Column(
+          children: [
+            // Main content
+            Expanded(
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      child: ResponsivePadding(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Row(
                               children: [
                                 CircleAvatar(
-                                  radius: 20,
+                                  radius: ResponsiveHelper.getResponsiveAvatarRadius(context),
                                   backgroundColor: isDark
                                       ? Palette.darkSurface
                                       : Palette.lightSurface,
@@ -230,19 +213,17 @@ class _DriversContentState extends State<DriversContent> {
                                     color: isDark
                                         ? Palette.darkText
                                         : Palette.lightText,
+                                    size: ResponsiveHelper.getResponsiveIconSize(context),
                                   ),
                                 ),
                                 const SizedBox(width: 12.0),
-                                Text(
+                                ResponsiveText(
                                   "Drivers",
-                                  style: TextStyle(
-                                    fontSize: 28.0,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? Palette.darkText
-                                        : Palette.lightText,
-                                    fontFamily: 'Inter',
-                                  ),
+                                  mobileFontSize: 24.0,
+                                  tabletFontSize: 26.0,
+                                  desktopFontSize: 28.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Palette.darkText : Palette.lightText,
                                 ),
                                 const Spacer(),
                               ],
@@ -350,53 +331,34 @@ class _DriversContentState extends State<DriversContent> {
 
                             // Driver list with conditional rendering based on view mode
                             isGridView ? _buildGridView() : _buildListView(),
-                                  ],
-                                ),
-                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          );
-        },
-      ),
+                ),
+              
     );
   }
 
   // Grid view implementation
   Widget _buildGridView() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount;
-        if (constraints.maxWidth >= 1200) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth >= 800) {
-          crossAxisCount = 2;
-        } else {
-          crossAxisCount = 1;
-        }
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 24.0,
-          mainAxisSpacing: 24.0,
-          childAspectRatio: 2.2,
-          children: List.generate(filteredDriverData.length, (index) {
-            final driver = filteredDriverData[index];
-            final status =
-                driver["driving_status"]?.toString().toLowerCase() ?? "";
-            final isActive = status == "driving" ||
-                status == "online" ||
-                status == "idling" ||
-                status == "active";
-
-            return _buildDriverCard(driver, isActive);
-          }),
-        );
-      },
+    return ResponsiveGrid(
+      children: filteredDriverData.map((driver) {
+        final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
+        final isActive = status == "driving" ||
+            status == "online" ||
+            status == "idling" ||
+            status == "active";
+        return _buildDriverCard(driver, isActive);
+      }).toList(),
+      mobileColumns: 1,
+      tabletColumns: 2,
+      desktopColumns: 3,
+      largeDesktopColumns: 4,
+      childAspectRatio: 2.2,
     );
   }
 

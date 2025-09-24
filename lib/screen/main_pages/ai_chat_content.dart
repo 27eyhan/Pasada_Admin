@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/services/gemini_ai_service.dart';
@@ -168,23 +169,15 @@ class _AiChatContentState extends State<AiChatContent> {
     final padding = mediaQuery.padding;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context)
-        .size
-        .width
-        .clamp(600.0, double.infinity)
-        .toDouble();
-    final double horizontalPadding = screenWidth * 0.05;
 
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 24.0,
-          horizontal: horizontalPadding,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: ResponsivePadding(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -432,7 +425,8 @@ class _AiChatContentState extends State<AiChatContent> {
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

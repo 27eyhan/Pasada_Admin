@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/reports_chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
@@ -251,214 +253,178 @@ class _ReportsContentState extends State<ReportsContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context)
-        .size
-        .width
-        .clamp(600.0, double.infinity)
-        .toDouble();
-    final double horizontalPadding = screenWidth * 0.05;
+    final isMobile = ResponsiveHelper.isMobile(context);
 
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const double minBodyWidth = 900;
-          final double effectiveWidth = constraints.maxWidth < minBodyWidth
-              ? minBodyWidth
-              : constraints.maxWidth;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: minBodyWidth),
-              child: SizedBox(
-                width: effectiveWidth,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: isLoading
-                          ? Center(child: CircularProgressIndicator())
-                          : SingleChildScrollView(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 24.0,
-                                  horizontal: horizontalPadding,
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: Column(
+          children: [
+            Expanded(
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      child: ResponsivePadding(
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: ResponsiveHelper.getResponsiveAvatarRadius(context),
+                                  backgroundColor: isDark
+                                      ? Palette.darkSurface
+                                      : Palette.lightSurface,
+                                  child: Icon(
+                                    Icons.bar_chart,
+                                    color: isDark
+                                        ? Palette.darkText
+                                        : Palette.lightText,
+                                    size: ResponsiveHelper.getResponsiveIconSize(context),
+                                  ),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 20,
-                                          backgroundColor: isDark
-                                              ? Palette.darkSurface
-                                              : Palette.lightSurface,
-                                          child: Icon(
-                                            Icons.bar_chart,
-                                            color: isDark
-                                                ? Palette.darkText
-                                                : Palette.lightText,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12.0),
-                                        Text(
-                                          "Reports",
-                                          style: TextStyle(
-                                            fontSize: 28.0,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDark
-                                                ? Palette.darkText
-                                                : Palette.lightText,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 24.0),
-                                    // Quota Bento Grid + edit
-                                    QuotaBentoGrid(
-                                      dailyEarnings: dailyEarnings,
-                                      weeklyEarnings: weeklyEarnings,
-                                      monthlyEarnings: monthlyEarnings,
-                                      totalEarnings: totalEarnings,
-                                      dailyTarget: dailyQuotaTarget,
-                                      weeklyTarget: weeklyQuotaTarget,
-                                      monthlyTarget: monthlyQuotaTarget,
-                                      totalTarget: overallQuotaTarget,
-                                      onEdit: _openEditQuotaDialog,
-                                      onRefresh: _refreshQuotas,
-                                      onUpdate: _openUpdateQuotaDialog,
-                                    ),
-                                    const SizedBox(height: 24.0),
-                                    // Status metrics container with separators
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Palette.darkCard : Palette.lightCard,
-                                        borderRadius: BorderRadius.circular(12.0),
-                                        border: Border.all(
-                                          color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: isDark
-                                                ? Colors.black.withValues(alpha: 0.08)
-                                                : Colors.grey.withValues(alpha: 0.08),
-                                            spreadRadius: 1,
-                                            blurRadius: 10,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      padding: const EdgeInsets.all(20.0),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Total Drivers',
-                                              totalDrivers,
-                                              isDark
-                                                  ? Palette.darkText
-                                                  : Palette.lightText,
-                                            ),
-                                          ),
-                                          _buildVerticalSeparator(isDark),
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Total Earnings',
-                                              totalEarnings.toInt(),
-                                              isDark
-                                                  ? Palette.darkText
-                                                  : Palette.lightText,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24.0),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.end,
-                                      children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? Palette.darkCard
-                                                : Palette.lightCard,
-                                            border: Border.all(
-                                              color: isDark
-                                                  ? Palette.darkBorder
-                                                  : Palette.lightBorder,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.grid_view,
-                                                  size: 18,
-                                                  color: isGridView
-                                                      ? (isDark
-                                                          ? Palette
-                                                              .darkText
-                                                          : Palette
-                                                              .lightText)
-                                                      : (isDark
-                                                          ? Palette
-                                                              .darkTextSecondary
-                                                          : Palette
-                                                              .lightTextSecondary),
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    isGridView = true;
-                                                  });
-                                                },
-                                              ),
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.view_list,
-                                                  size: 18,
-                                                  color: !isGridView
-                                                      ? (isDark
-                                                          ? Palette
-                                                              .darkText
-                                                          : Palette
-                                                              .lightText)
-                                                      : (isDark
-                                                          ? Palette
-                                                              .darkTextSecondary
-                                                          : Palette
-                                                              .lightTextSecondary),
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    isGridView = false;
-                                                  });
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16.0),
-                                    isGridView
-                                        ? _buildGridView()
-                                        : _buildListView(),
-                                  ],
+                                const SizedBox(width: 12.0),
+                                ResponsiveText(
+                                  "Reports",
+                                  mobileFontSize: 24.0,
+                                  tabletFontSize: 26.0,
+                                  desktopFontSize: 28.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Palette.darkText : Palette.lightText,
                                 ),
+                                const Spacer(),
+                              ],
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Quota Bento Grid + edit
+                            QuotaBentoGrid(
+                              dailyEarnings: dailyEarnings,
+                              weeklyEarnings: weeklyEarnings,
+                              monthlyEarnings: monthlyEarnings,
+                              totalEarnings: totalEarnings,
+                              dailyTarget: dailyQuotaTarget,
+                              weeklyTarget: weeklyQuotaTarget,
+                              monthlyTarget: monthlyQuotaTarget,
+                              totalTarget: overallQuotaTarget,
+                              onEdit: _openEditQuotaDialog,
+                              onRefresh: _refreshQuotas,
+                              onUpdate: _openUpdateQuotaDialog,
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Status metrics container with separators
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? Palette.darkCard : Palette.lightCard,
+                                borderRadius: BorderRadius.circular(12.0),
+                                border: Border.all(
+                                  color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark
+                                        ? Colors.black.withValues(alpha: 0.08)
+                                        : Colors.grey.withValues(alpha: 0.08),
+                                    spreadRadius: 1,
+                                    blurRadius: 10,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(20.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Total Drivers',
+                                      totalDrivers,
+                                      isDark
+                                          ? Palette.darkText
+                                          : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Total Earnings',
+                                      totalEarnings.toInt(),
+                                      isDark
+                                          ? Palette.darkText
+                                          : Palette.lightText,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            const SizedBox(height: 24.0),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? Palette.darkCard
+                                        : Palette.lightCard,
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Palette.darkBorder
+                                          : Palette.lightBorder,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.grid_view,
+                                          size: 18,
+                                          color: isGridView
+                                              ? (isDark
+                                                  ? Palette.darkText
+                                                  : Palette.lightText)
+                                              : (isDark
+                                                  ? Palette.darkTextSecondary
+                                                  : Palette.lightTextSecondary),
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            isGridView = true;
+                                          });
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.view_list,
+                                          size: 18,
+                                          color: !isGridView
+                                              ? (isDark
+                                                  ? Palette.darkText
+                                                  : Palette.lightText)
+                                              : (isDark
+                                                  ? Palette.darkTextSecondary
+                                                  : Palette.lightTextSecondary),
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            isGridView = false;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16.0),
+                            isGridView ? _buildGridView() : _buildListView(),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
+                  )
+                ],
                 ),
               ),
-            ),
-          );
-        },
-      ),
+  
     );
   }
   
@@ -548,28 +514,13 @@ class _ReportsContentState extends State<ReportsContent> {
 
   // Grid view implementation
   Widget _buildGridView() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount;
-        if (constraints.maxWidth >= 1200) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth >= 800) {
-          crossAxisCount = 2;
-        } else {
-          crossAxisCount = 1;
-        }
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 24.0,
-          mainAxisSpacing: 24.0,
-          childAspectRatio: 2.2,
-          children: driversWithFares.map((driver) {
-            return _buildDriverEarningsCard(driver);
-          }).toList(),
-        );
-      },
+    return ResponsiveGrid(
+      children: driversWithFares.map((driver) => _buildDriverEarningsCard(driver)).toList(),
+      mobileColumns: 1,
+      tabletColumns: 2,
+      desktopColumns: 3,
+      largeDesktopColumns: 4,
+      childAspectRatio: 2.2,
     );
   }
   

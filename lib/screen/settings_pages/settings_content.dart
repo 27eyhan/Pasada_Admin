@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/screen/settings_pages/profile_content.dart';
 import 'package:pasada_admin_application/screen/settings_pages/notifications_content.dart';
@@ -60,34 +61,25 @@ class _SettingsContentState extends State<SettingsContent> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context)
-        .size
-        .width
-        .clamp(600.0, double.infinity)
-        .toDouble();
-    final double horizontalPadding = screenWidth * 0.08;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 24.0, 
-          horizontal: horizontalPadding
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: ResponsivePadding(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Page Title
-            Text(
+            ResponsiveText(
               "Settings",
-              style: TextStyle(
-                fontSize: 26.0,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Palette.darkText : Palette.lightText,
-                fontFamily: 'Inter',
-              ),
+              mobileFontSize: 24.0,
+              tabletFontSize: 26.0,
+              desktopFontSize: 28.0,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Palette.darkText : Palette.lightText,
             ),
             SizedBox(height: 32.0),
             
@@ -142,7 +134,8 @@ class _SettingsContentState extends State<SettingsContent> with SingleTickerProv
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

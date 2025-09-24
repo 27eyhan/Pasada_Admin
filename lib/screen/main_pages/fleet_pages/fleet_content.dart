@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
 import 'analytics/fleet_analytics_graph.dart';
@@ -180,234 +182,189 @@ class _FleetContentState extends State<FleetContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context)
-        .size
-        .width
-        .clamp(600.0, double.infinity)
-        .toDouble();
-    final double horizontalPadding = screenWidth * 0.05;
     
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const double minBodyWidth = 900;
-          final double effectiveWidth = constraints.maxWidth < minBodyWidth
-              ? minBodyWidth
-              : constraints.maxWidth;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: minBodyWidth),
-              child: SizedBox(
-                width: effectiveWidth,
-                child: Column(
-                  children: [
-                    // Main content
-                    Expanded(
-                      child: isLoading
-                          ? Center(child: CircularProgressIndicator())
-                          : SingleChildScrollView(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 24.0,
-                                  horizontal: horizontalPadding,
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: Column(
+          children: [
+            // Main content
+            Expanded(
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      child: ResponsivePadding(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: ResponsiveHelper.getResponsiveAvatarRadius(context),
+                                  backgroundColor: isDark
+                                      ? Palette.darkSurface
+                                      : Palette.lightSurface,
+                                  child: Icon(
+                                    Icons.directions_bus,
+                                    color: isDark
+                                        ? Palette.darkText
+                                        : Palette.lightText,
+                                    size: ResponsiveHelper.getResponsiveIconSize(context),
+                                  ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                const SizedBox(width: 12.0),
+                                ResponsiveText(
+                                  "Fleet",
+                                  mobileFontSize: 24.0,
+                                  tabletFontSize: 26.0,
+                                  desktopFontSize: 28.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Palette.darkText : Palette.lightText,
+                                ),
+                                const Spacer(),
+                              ],
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Booking frequency graph
+                            BookingFrequencyGraph(days: 14),
+                            const SizedBox(height: 24.0),
+                            // Traffic graph
+                            FleetAnalyticsGraph(routeId: selectedRouteId),
+                            const SizedBox(height: 24.0),
+                            // Status metrics container with separators
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? Palette.darkCard : Palette.lightCard,
+                                borderRadius: BorderRadius.circular(12.0),
+                                border: Border.all(
+                                  color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark
+                                        ? Colors.black.withValues(alpha: 0.08)
+                                        : Colors.grey.withValues(alpha: 0.08),
+                                    spreadRadius: 1,
+                                    blurRadius: 10,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(20.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'All Vehicles',
+                                      totalVehicles,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Online',
+                                      _onlineVehicles,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Idling',
+                                      _idlingVehicles,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Driving',
+                                      _drivingVehicles,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Offline',
+                                      _offlineVehicles,
+                                      isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24.0),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? Palette.darkCard : Palette.lightCard,
+                                  border: Border.all(
+                                    color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 20,
-                                          backgroundColor: isDark
-                                              ? Palette.darkSurface
-                                              : Palette.lightSurface,
-                                          child: Icon(
-                                            Icons.directions_bus,
-                                            color: isDark
-                                                ? Palette.darkText
-                                                : Palette.lightText,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12.0),
-                                        Text(
-                                          "Fleet",
-                                          style: TextStyle(
-                                            fontSize: 28.0,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDark
-                                                ? Palette.darkText
-                                                : Palette.lightText,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 24.0),
-                                    // Booking frequency graph
-                                    BookingFrequencyGraph(days: 14),
-                                    const SizedBox(height: 24.0),
-                                    // Traffic graph
-                                    FleetAnalyticsGraph(routeId: selectedRouteId),
-                                    const SizedBox(height: 24.0),
-                                    // Status metrics container with separators
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Palette.darkCard : Palette.lightCard,
-                                        borderRadius: BorderRadius.circular(12.0),
-                                        border: Border.all(
-                                          color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: isDark
-                                                ? Colors.black.withValues(alpha: 0.08)
-                                                : Colors.grey.withValues(alpha: 0.08),
-                                            spreadRadius: 1,
-                                            blurRadius: 10,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.grid_view,
+                                        size: 18,
+                                        color: isGridView
+                                            ? (isDark ? Palette.darkText : Palette.lightText)
+                                            : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
                                       ),
-                                      padding: const EdgeInsets.all(20.0),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'All Vehicles',
-                                              totalVehicles,
-                                              isDark ? Palette.darkText : Palette.lightText,
-                                            ),
-                                          ),
-                                          _buildVerticalSeparator(isDark),
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Online',
-                                              _onlineVehicles,
-                                              isDark ? Palette.darkText : Palette.lightText,
-                                            ),
-                                          ),
-                                          _buildVerticalSeparator(isDark),
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Idling',
-                                              _idlingVehicles,
-                                              isDark ? Palette.darkText : Palette.lightText,
-                                            ),
-                                          ),
-                                          _buildVerticalSeparator(isDark),
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Driving',
-                                              _drivingVehicles,
-                                              isDark ? Palette.darkText : Palette.lightText,
-                                            ),
-                                          ),
-                                          _buildVerticalSeparator(isDark),
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Offline',
-                                              _offlineVehicles,
-                                              isDark ? Palette.darkText : Palette.lightText,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          isGridView = true;
+                                        });
+                                      },
                                     ),
-                                    const SizedBox(height: 24.0),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: isDark ? Palette.darkCard : Palette.lightCard,
-                                          border: Border.all(
-                                            color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                                          ),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: Icon(
-                                                Icons.grid_view,
-                                                size: 18,
-                                                color: isGridView
-                                                    ? (isDark ? Palette.darkText : Palette.lightText)
-                                                    : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
-                                              ),
-                                              onPressed: () {
-                                                setState(() {
-                                                  isGridView = true;
-                                                });
-                                              },
-                                            ),
-                                            IconButton(
-                                              icon: Icon(
-                                                Icons.view_list,
-                                                size: 18,
-                                                color: !isGridView
-                                                    ? (isDark ? Palette.darkText : Palette.lightText)
-                                                    : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
-                                              ),
-                                              onPressed: () {
-                                                setState(() {
-                                                  isGridView = false;
-                                                });
-                                              },
-                                            ),
-                                          ],
-                                        ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.view_list,
+                                        size: 18,
+                                        color: !isGridView
+                                            ? (isDark ? Palette.darkText : Palette.lightText)
+                                            : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
                                       ),
+                                      onPressed: () {
+                                        setState(() {
+                                          isGridView = false;
+                                        });
+                                      },
                                     ),
-                                    const SizedBox(height: 16.0),
-                                    isGridView ? _buildGridView() : _buildListView(),
-                                    const SizedBox(height: 8.0),
                                   ],
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 16.0),
+                            isGridView ? _buildGridView() : _buildListView(),
+                            const SizedBox(height: 8.0),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
                 ),
-              ),
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+        ),
     );
   }
 
   // Grid view implementation
   Widget _buildGridView() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount;
-        if (constraints.maxWidth >= 900) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth >= 600) {
-          crossAxisCount = 2;
-        } else {
-          crossAxisCount = 1;
-        }
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 24.0,
-            mainAxisSpacing: 24.0,
-            childAspectRatio: 2.2,
-          ),
-          itemCount: filteredVehicleData.length,
-          itemBuilder: (context, index) {
-            final vehicle = filteredVehicleData[index];
-            return _buildVehicleCard(vehicle);
-          },
-        );
-      },
+    return ResponsiveGrid(
+      children: filteredVehicleData.map((vehicle) => _buildVehicleCard(vehicle)).toList(),
+      mobileColumns: 1,
+      tabletColumns: 2,
+      desktopColumns: 3,
+      largeDesktopColumns: 4,
+      childAspectRatio: 2.2,
     );
   }
 

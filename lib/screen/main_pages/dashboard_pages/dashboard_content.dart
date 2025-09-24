@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:pasada_admin_application/maps/map_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -74,7 +75,10 @@ class _DashboardContentState extends State<DashboardContent> {
 
     return Container(
       color: isDark ? Palette.darkBackground : Palette.lightBackground,
-      child: _mapscreenInstance,
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: _mapscreenInstance,
+      ),
     );
   }
 }

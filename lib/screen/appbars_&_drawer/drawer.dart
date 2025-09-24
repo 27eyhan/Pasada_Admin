@@ -6,8 +6,16 @@ import 'package:provider/provider.dart';
 class MyDrawer extends StatefulWidget {
   final String? currentRoute;
   final Function(String, {Map<String, dynamic>? args})? onNavigate;
+  final bool isCollapsed;
+  final bool isMobile;
 
-  const MyDrawer({super.key, this.currentRoute, this.onNavigate});
+  const MyDrawer({
+    super.key, 
+    this.currentRoute, 
+    this.onNavigate,
+    this.isCollapsed = false,
+    this.isMobile = false,
+  });
 
   @override
   _MyDrawerState createState() => _MyDrawerState();
@@ -22,6 +30,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _isCollapsed = widget.isCollapsed;
     _collapseController = AnimationController(
       duration: const Duration(milliseconds: 250),
       vsync: this,
@@ -33,6 +42,10 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
       parent: _collapseController,
       curve: Curves.easeInOutCubic,
     ));
+    
+    if (_isCollapsed) {
+      _collapseController.forward();
+    }
   }
 
   @override
@@ -69,6 +82,10 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                 widget.onNavigate!(routeName);
               } else {
                 Navigator.pushReplacementNamed(context, routeName);
+              }
+              // Close mobile drawer after navigation
+              if (widget.isMobile) {
+                Navigator.of(context).pop();
               }
             }
           },
@@ -175,7 +192,9 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOutCubic,
-          width: _isCollapsed ? 80.0 : 280.0,
+          width: widget.isMobile 
+              ? MediaQuery.of(context).size.width * 0.8
+              : (_isCollapsed ? 80.0 : 280.0),
           decoration: BoxDecoration(
             color: isDark ? Palette.darkSurface : Palette.lightSurface,
             border: Border(

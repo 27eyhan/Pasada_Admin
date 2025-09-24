@@ -12,11 +12,15 @@ class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
   final Size preferredSize;
   final FilterCallback? onFilterPressed;
   final SettingsTabCallback? onSettingsTabRequested;
+  final bool showMobileMenu;
+  final VoidCallback? onMobileMenuPressed;
 
   const AppBarSearch({
     super.key, 
     this.onFilterPressed,
     this.onSettingsTabRequested,
+    this.showMobileMenu = false,
+    this.onMobileMenuPressed,
   }) : preferredSize = const Size.fromHeight(55.0);
 
   @override
@@ -45,6 +49,18 @@ class _AppBarSearchState extends State<AppBarSearch> {
             top: 8.0, left: 8.0, bottom: 8.0, right: 26.0),
         child: Row(
           children: [
+            // Mobile menu button
+            if (widget.showMobileMenu) ...[
+              IconButton(
+                onPressed: widget.onMobileMenuPressed,
+                icon: Icon(
+                  Icons.menu,
+                  color: isDark ? Palette.darkText : Palette.lightText,
+                ),
+                tooltip: 'Menu',
+              ),
+              const SizedBox(width: 8.0),
+            ],
             const Spacer(),
             // Filter button removed
             // Profile button styled like "Docs" link
