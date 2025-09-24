@@ -346,6 +346,11 @@ class _DriversContentState extends State<DriversContent> {
   // Grid view implementation
   Widget _buildGridView() {
     return ResponsiveGrid(
+      mobileColumns: 1,
+      tabletColumns: 2,
+      desktopColumns: 3,
+      largeDesktopColumns: 4,
+      childAspectRatio: 2.2,
       children: filteredDriverData.map((driver) {
         final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
         final isActive = status == "driving" ||
@@ -354,11 +359,6 @@ class _DriversContentState extends State<DriversContent> {
             status == "active";
         return _buildDriverCard(driver, isActive);
       }).toList(),
-      mobileColumns: 1,
-      tabletColumns: 2,
-      desktopColumns: 3,
-      largeDesktopColumns: 4,
-      childAspectRatio: 2.2,
     );
   }
 

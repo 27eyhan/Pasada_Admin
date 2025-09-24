@@ -359,12 +359,12 @@ class _FleetContentState extends State<FleetContent> {
   // Grid view implementation
   Widget _buildGridView() {
     return ResponsiveGrid(
-      children: filteredVehicleData.map((vehicle) => _buildVehicleCard(vehicle)).toList(),
       mobileColumns: 1,
       tabletColumns: 2,
       desktopColumns: 3,
       largeDesktopColumns: 4,
       childAspectRatio: 2.2,
+      children: filteredVehicleData.map((vehicle) => _buildVehicleCard(vehicle)).toList(),
     );
   }
 

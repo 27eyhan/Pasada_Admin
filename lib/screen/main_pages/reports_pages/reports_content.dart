@@ -253,7 +253,6 @@ class _ReportsContentState extends State<ReportsContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final isMobile = ResponsiveHelper.isMobile(context);
 
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
@@ -514,18 +513,46 @@ class _ReportsContentState extends State<ReportsContent> {
 
   // Grid view implementation
   Widget _buildGridView() {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    final isLargeDesktop = ResponsiveHelper.isLargeDesktop(context);
+    
+    // Calculate dynamic aspect ratio based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    double dynamicAspectRatio;
+    
+    if (isMobile) {
+      dynamicAspectRatio = 1.6;
+    } else if (isTablet) {
+      // For tablets, adjust based on width
+      dynamicAspectRatio = screenWidth < 900 ? 1.6 : 1.8;
+    } else {
+      // For desktop, adjust based on width to prevent overlapping on larger screens
+      if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.8;
+      } else if (screenWidth < 1600) {
+        dynamicAspectRatio = 2.0;
+      } else {
+        dynamicAspectRatio = 2.2;
+      }
+    }
+    
     return ResponsiveGrid(
-      children: driversWithFares.map((driver) => _buildDriverEarningsCard(driver)).toList(),
       mobileColumns: 1,
-      tabletColumns: 2,
+      tabletColumns: isTablet ? 2 : 2,
       desktopColumns: 3,
-      largeDesktopColumns: 4,
-      childAspectRatio: 2.2,
+      largeDesktopColumns: isLargeDesktop ? 4 : 3,
+      crossAxisSpacing: isMobile ? 12.0 : 16.0,
+      mainAxisSpacing: isMobile ? 12.0 : 16.0,
+      childAspectRatio: dynamicAspectRatio,
+      children: driversWithFares.map((driver) => _buildDriverEarningsCard(driver)).toList(),
     );
   }
   
   // List view implementation
   Widget _buildListView() {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -533,8 +560,10 @@ class _ReportsContentState extends State<ReportsContent> {
       itemBuilder: (context, index) {
         final driver = driversWithFares[index];
         return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: _buildDriverEarningsListItem(driver),
+          padding: EdgeInsets.only(bottom: isMobile ? 12.0 : 16.0),
+          child: isMobile 
+              ? _buildMobileDriverListItem(driver)
+              : _buildDriverEarningsListItem(driver),
         );
       },
     );
@@ -544,6 +573,7 @@ class _ReportsContentState extends State<ReportsContent> {
   Widget _buildDriverEarningsCard(Map<String, dynamic> driver) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
     final status = driver['driving_status'] ?? 'Offline';
     final isActive = status.toLowerCase() == 'online' || 
                      status.toLowerCase() == 'driving' || 
@@ -567,16 +597,21 @@ class _ReportsContentState extends State<ReportsContent> {
             ),
             borderRadius: BorderRadius.circular(15.0),
           ),
-          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
+          padding: EdgeInsets.fromLTRB(
+            isMobile ? 16.0 : 20.0, 
+            isMobile ? 12.0 : 16.0, 
+            isMobile ? 12.0 : 16.0, 
+            isMobile ? 12.0 : 16.0
+          ),
           child: Stack(
             children: [
               // Status indicator dot
               Positioned(
-                top: 8,
-                right: 8,
+                top: isMobile ? 6 : 8,
+                right: isMobile ? 6 : 8,
                 child: Container(
-                  width: 12,
-                  height: 12,
+                  width: isMobile ? 10 : 12,
+                  height: isMobile ? 10 : 12,
                   decoration: BoxDecoration(
                     color: statusColor,
                     shape: BoxShape.circle,
@@ -584,71 +619,499 @@ class _ReportsContentState extends State<ReportsContent> {
                 ),
               ),
               
-              Row(
+              isMobile ? _buildMobileCardLayout(driver, isDark, status, statusColor, isActive) 
+                      : _buildDesktopCardLayout(driver, isDark, status, statusColor, isActive),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Mobile-optimized card layout
+  Widget _buildMobileCardLayout(Map<String, dynamic> driver, bool isDark, String status, Color statusColor, bool isActive) {
+    return Column(
+      children: [
+        // Header with avatar and basic info
+        Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: isDark 
+                      ? [Colors.grey.shade600, Colors.grey.shade800]
+                      : [Colors.grey.shade400, Colors.grey.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.transparent,
+                child: Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12.0),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Enhanced avatar with gradient background
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: isDark 
-                            ? [Colors.grey.shade600, Colors.grey.shade800]
-                            : [Colors.grey.shade400, Colors.grey.shade600],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                  Text(
+                    "${driver['full_name'] ?? 'Unknown Driver'}",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Palette.darkText : Palette.lightText,
                     ),
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.transparent,
-                      child: Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 28,
-                      ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4.0),
+                  Text(
+                    "ID: ${driver['driver_id']} • $status",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.0,
+                      color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                     ),
                   ),
-                  const SizedBox(width: 16.0),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12.0),
+        // Key metrics in a compact format
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactMetricCard(
+                "Daily",
+                "₱${(driver['daily_earnings'] as double).toStringAsFixed(0)}",
+                "₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                Icons.today,
+                isDark,
+              ),
+            ),
+            const SizedBox(width: 8.0),
+            Expanded(
+              child: _buildCompactMetricCard(
+                "Weekly",
+                "₱${(driver['weekly_earnings'] as double).toStringAsFixed(0)}",
+                "₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                Icons.date_range,
+                isDark,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8.0),
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactMetricCard(
+                "Monthly",
+                "₱${(driver['monthly_earnings'] as double).toStringAsFixed(0)}",
+                "₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                Icons.calendar_month,
+                isDark,
+              ),
+            ),
+            const SizedBox(width: 8.0),
+            Expanded(
+              child: _buildCompactMetricCard(
+                "Total",
+                "₱${(driver['total_fare'] as double).toStringAsFixed(0)}",
+                "₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                Icons.monetization_on,
+                isDark,
+                isHighlighted: true,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Desktop card layout (optimized to prevent overlapping)
+  Widget _buildDesktopCardLayout(Map<String, dynamic> driver, bool isDark, String status, Color statusColor, bool isActive) {
+    return Column(
+      children: [
+        // Header with avatar and basic info
+        Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: isDark 
+                      ? [Colors.grey.shade600, Colors.grey.shade800]
+                      : [Colors.grey.shade400, Colors.grey.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.transparent,
+                child: Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12.0),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${driver['full_name'] ?? 'Unknown Driver'}",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2.0),
+                  Text(
+                    "ID: ${driver['driver_id']} • $status",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.0,
+                      color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16.0),
+        // Metrics in a responsive layout
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Use different layouts based on available width
+              if (constraints.maxWidth > 200) {
+                // Wide enough for 2x2 grid
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildCompactMetricCard(
+                            "Daily",
+                            "₱${(driver['daily_earnings'] as double).toStringAsFixed(0)}",
+                            "₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                            Icons.today,
+                            isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: _buildCompactMetricCard(
+                            "Weekly",
+                            "₱${(driver['weekly_earnings'] as double).toStringAsFixed(0)}",
+                            "₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                            Icons.date_range,
+                            isDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12.0),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildCompactMetricCard(
+                            "Monthly",
+                            "₱${(driver['monthly_earnings'] as double).toStringAsFixed(0)}",
+                            "₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                            Icons.calendar_month,
+                            isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: _buildCompactMetricCard(
+                            "Total",
+                            "₱${(driver['total_fare'] as double).toStringAsFixed(0)}",
+                            "₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                            Icons.monetization_on,
+                            isDark,
+                            isHighlighted: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              } else {
+                // Narrower layout - single column
+                return Column(
+                  children: [
+                    _buildCompactMetricCard(
+                      "Daily",
+                      "₱${(driver['daily_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                      Icons.today,
+                      isDark,
+                    ),
+                    const SizedBox(height: 8.0),
+                    _buildCompactMetricCard(
+                      "Weekly",
+                      "₱${(driver['weekly_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                      Icons.date_range,
+                      isDark,
+                    ),
+                    const SizedBox(height: 8.0),
+                    _buildCompactMetricCard(
+                      "Monthly",
+                      "₱${(driver['monthly_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                      Icons.calendar_month,
+                      isDark,
+                    ),
+                    const SizedBox(height: 8.0),
+                    _buildCompactMetricCard(
+                      "Total",
+                      "₱${(driver['total_fare'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                      Icons.monetization_on,
+                      isDark,
+                      isHighlighted: true,
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Compact metric card for both mobile and desktop
+  Widget _buildCompactMetricCard(String label, String current, String target, IconData icon, bool isDark, {bool isHighlighted = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+      decoration: BoxDecoration(
+        color: isHighlighted 
+            ? (isDark ? Palette.darkSurface : Palette.lightSurface)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(6.0),
+        border: isHighlighted 
+            ? Border.all(color: Palette.greenColor.withValues(alpha: 0.3), width: 1.0)
+            : null,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 10,
+                color: isHighlighted ? Palette.greenColor : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+              ),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.0,
+                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2.0),
+          Text(
+            current,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.0,
+              fontWeight: FontWeight.bold,
+              color: isHighlighted ? Palette.greenColor : (isDark ? Palette.darkText : Palette.lightText),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            "/ $target",
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 9.0,
+              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Mobile-optimized list item
+  Widget _buildMobileDriverListItem(Map<String, dynamic> driver) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final status = driver['driving_status'] ?? 'Offline';
+    final isActive = status.toLowerCase() == 'online' || 
+                     status.toLowerCase() == 'driving' || 
+                     status.toLowerCase() == 'idling' || 
+                     status.toLowerCase() == 'active';
+    final statusColor = isActive ? Colors.green : Colors.red;
+    
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: () => _showEarningsBreakdown(driver),
+        borderRadius: BorderRadius.circular(12.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? Palette.darkCard : Palette.lightCard,
+            border: Border.all(
+              color: isDark
+                  ? Palette.darkBorder.withValues(alpha: 77)
+                  : Palette.lightBorder.withValues(alpha: 77),
+              width: 1.0,
+            ),
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              // Header row
+              Row(
+                children: [
+                  // Avatar with status
+                  Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: isDark 
+                                ? [Colors.grey.shade600, Colors.grey.shade800]
+                                : [Colors.grey.shade400, Colors.grey.shade600],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.transparent,
+                          child: Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 12.0),
                   Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           "${driver['full_name'] ?? 'Unknown Driver'}",
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 18.0,
+                            fontSize: 16.0,
                             fontWeight: FontWeight.bold,
                             color: isDark ? Palette.darkText : Palette.lightText,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 8.0),
-                        _buildDriverInfoRow(Icons.badge_outlined, "ID: ${driver['driver_id']}"),
-                        _buildDriverInfoRow(
-                          isActive ? Icons.play_circle_outline : Icons.pause_circle_outline,
-                          "Status: $status",
-                          textColor: statusColor,
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.today,
-                          "Daily: ₱${(driver['daily_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.date_range,
-                          "Weekly: ₱${(driver['weekly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.calendar_month,
-                          "Monthly: ₱${(driver['monthly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.monetization_on,
-                          "Total: ₱${(driver['total_fare'] as double).toStringAsFixed(2)} / ₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
-                          textColor: Palette.greenColor,
+                        const SizedBox(height: 2.0),
+                        Text(
+                          "ID: ${driver['driver_id']} • $status",
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.0,
+                            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                          ),
                         ),
                       ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12.0),
+              // Metrics in a 2x2 grid
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Daily",
+                      "₱${(driver['daily_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                      Icons.today,
+                      isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Weekly",
+                      "₱${(driver['weekly_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                      Icons.date_range,
+                      isDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8.0),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Monthly",
+                      "₱${(driver['monthly_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                      Icons.calendar_month,
+                      isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Total",
+                      "₱${(driver['total_fare'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                      Icons.monetization_on,
+                      isDark,
+                      isHighlighted: true,
                     ),
                   ),
                 ],
@@ -656,6 +1119,67 @@ class _ReportsContentState extends State<ReportsContent> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Mobile metric item for list view
+  Widget _buildMobileMetricItem(String label, String current, String target, IconData icon, bool isDark, {bool isHighlighted = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+      decoration: BoxDecoration(
+        color: isHighlighted 
+            ? (isDark ? Palette.darkSurface : Palette.lightSurface)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(6.0),
+        border: isHighlighted 
+            ? Border.all(color: Palette.greenColor.withValues(alpha: 0.3), width: 1.0)
+            : null,
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 12,
+                color: isHighlighted ? Palette.greenColor : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.0,
+                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2.0),
+          Text(
+            current,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.0,
+              fontWeight: FontWeight.bold,
+              color: isHighlighted ? Palette.greenColor : (isDark ? Palette.darkText : Palette.lightText),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            "/ $target",
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 9.0,
+              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
