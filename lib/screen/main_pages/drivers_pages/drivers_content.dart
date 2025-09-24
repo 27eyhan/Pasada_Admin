@@ -1,3 +1,5 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
@@ -345,12 +347,46 @@ class _DriversContentState extends State<DriversContent> {
 
   // Grid view implementation
   Widget _buildGridView() {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    
+    // Get screen dimensions to calculate zoom-aware aspect ratios
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Calculate dynamic aspect ratio based on screen size and zoom level
+    double dynamicAspectRatio;
+    if (isMobile) {
+      dynamicAspectRatio = 1.2; // More vertical space for mobile
+    } else if (isTablet) {
+      // For tablets, adjust based on actual screen width
+      if (screenWidth < 900) {
+        dynamicAspectRatio = 1.3;
+      } else if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.4;
+      } else {
+        dynamicAspectRatio = 1.5;
+      }
+    } else {
+      // For desktop, adjust based on screen width to handle zoom levels
+      if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.4; // 125% zoom range
+      } else if (screenWidth < 1400) {
+        dynamicAspectRatio = 1.5; // 133% zoom range
+      } else if (screenWidth < 1600) {
+        dynamicAspectRatio = 1.6; // 150% zoom range
+      } else if (screenWidth < 1800) {
+        dynamicAspectRatio = 1.7; // 175% zoom range
+      } else {
+        dynamicAspectRatio = 1.8; // Normal desktop
+      }
+    }
+    
     return ResponsiveGrid(
       mobileColumns: 1,
       tabletColumns: 2,
       desktopColumns: 3,
       largeDesktopColumns: 4,
-      childAspectRatio: 2.2,
+      childAspectRatio: dynamicAspectRatio,
       children: filteredDriverData.map((driver) {
         final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
         final isActive = status == "driving" ||
@@ -549,6 +585,8 @@ class _DriversContentState extends State<DriversContent> {
   Widget _buildDriverCard(Map<String, dynamic> driver, bool isActive) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
@@ -571,7 +609,12 @@ class _DriversContentState extends State<DriversContent> {
                 width: 1.0),
             borderRadius: BorderRadius.circular(15.0),
           ),
-          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
+          padding: EdgeInsets.fromLTRB(
+            isMobile ? 12.0 : _getResponsivePadding(screenWidth, isMobile), 
+            isMobile ? 8.0 : _getResponsivePadding(screenWidth, isMobile, isVertical: true), 
+            isMobile ? 8.0 : _getResponsivePadding(screenWidth, isMobile), 
+            isMobile ? 8.0 : _getResponsivePadding(screenWidth, isMobile, isVertical: true)
+          ),
           child: Stack(
             children: [
               // Status indicator dot
@@ -601,16 +644,16 @@ class _DriversContentState extends State<DriversContent> {
                       ),
                     ),
                     child: CircleAvatar(
-                      radius: 28,
+                      radius: _getResponsiveAvatarRadius(screenWidth, isMobile),
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
                         color: Palette.whiteColor,
-                        size: 28,
+                        size: _getResponsiveAvatarRadius(screenWidth, isMobile),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16.0),
+                  SizedBox(width: _getResponsiveSpacing(screenWidth, isMobile)),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -620,27 +663,35 @@ class _DriversContentState extends State<DriversContent> {
                           "${driver['full_name'] ?? 'Unknown Driver'}",
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 18.0,
+                            fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'name'),
                             fontWeight: FontWeight.bold,
                             color: isDark ? Palette.darkText : Palette.lightText,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 8.0),
-                        _buildDriverInfoRow(Icons.badge_outlined,
+                        SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true)),
+                        _buildResponsiveDriverInfoRow(Icons.badge_outlined,
                             "ID: ${driver['driver_id']}",
+                            _getResponsiveFontSize(screenWidth, isMobile, 'info'),
+                            _getResponsiveIconSize(screenWidth, isMobile),
                             textColor: isDark ? Palette.darkText : Palette.lightText),
-                        _buildDriverInfoRow(Icons.phone_android,
+                        _buildResponsiveDriverInfoRow(Icons.phone_android,
                             "${driver['driver_number']}",
+                            _getResponsiveFontSize(screenWidth, isMobile, 'info'),
+                            _getResponsiveIconSize(screenWidth, isMobile),
                             textColor: isDark ? Palette.darkText : Palette.lightText),
-                        _buildDriverInfoRow(Icons.directions_car_outlined,
+                        _buildResponsiveDriverInfoRow(Icons.directions_car_outlined,
                             "Vehicle: ${driver['vehicle_id']}",
+                            _getResponsiveFontSize(screenWidth, isMobile, 'info'),
+                            _getResponsiveIconSize(screenWidth, isMobile),
                             textColor: isDark ? Palette.darkText : Palette.lightText),
-                        _buildDriverInfoRow(
+                        _buildResponsiveDriverInfoRow(
                           isActive
                               ? Icons.play_circle_outline
                               : Icons.pause_circle_outline,
                           "Status: ${_capitalizeFirstLetter(driver['driving_status'] ?? 'Offline')}",
+                          _getResponsiveFontSize(screenWidth, isMobile, 'info'),
+                          _getResponsiveIconSize(screenWidth, isMobile),
                           textColor: isActive ? Colors.green : Colors.red,
                         ),
                       ],
@@ -776,6 +827,120 @@ class _DriversContentState extends State<DriversContent> {
       decoration: BoxDecoration(
         color: isDark ? Palette.darkDivider : Palette.lightDivider,
         borderRadius: BorderRadius.circular(0.5),
+      ),
+    );
+  }
+
+  // Helper method to calculate responsive padding based on screen width and zoom level
+  double _getResponsivePadding(double screenWidth, bool isMobile, {bool isVertical = false}) {
+    if (isMobile) {
+      return isVertical ? 8.0 : 12.0;
+    }
+    
+    // Adjust padding based on screen width to handle zoom levels
+    if (screenWidth < 1200) {
+      // 125% zoom range - reduce padding
+      return isVertical ? 12.0 : 16.0;
+    } else if (screenWidth < 1400) {
+      // 133% zoom range - slightly more padding
+      return isVertical ? 14.0 : 18.0;
+    } else if (screenWidth < 1600) {
+      // 150% zoom range - moderate padding
+      return isVertical ? 16.0 : 20.0;
+    } else if (screenWidth < 1800) {
+      // 175% zoom range - more padding
+      return isVertical ? 18.0 : 22.0;
+    } else {
+      // Normal desktop - standard padding
+      return isVertical ? 16.0 : 20.0;
+    }
+  }
+
+  // Helper method to calculate responsive font sizes based on screen width and zoom level
+  double _getResponsiveFontSize(double screenWidth, bool isMobile, String type) {
+    if (isMobile) {
+      return type == 'name' ? 16.0 : 11.0;
+    }
+    
+    // Adjust font sizes based on screen width to handle zoom levels
+    if (screenWidth < 1200) {
+      // 125% zoom range - smaller fonts
+      return type == 'name' ? 14.0 : 10.0;
+    } else if (screenWidth < 1400) {
+      // 133% zoom range - slightly larger fonts
+      return type == 'name' ? 15.0 : 10.5;
+    } else if (screenWidth < 1600) {
+      // 150% zoom range - moderate fonts
+      return type == 'name' ? 16.0 : 11.0;
+    } else if (screenWidth < 1800) {
+      // 175% zoom range - larger fonts
+      return type == 'name' ? 17.0 : 11.5;
+    } else {
+      // Normal desktop - standard fonts
+      return type == 'name' ? 16.0 : 11.0;
+    }
+  }
+
+  // Helper method to calculate responsive icon sizes
+  double _getResponsiveIconSize(double screenWidth, bool isMobile) {
+    if (isMobile) return 10.0;
+    
+    if (screenWidth < 1200) return 10.0;
+    else if (screenWidth < 1400) return 11.0;
+    else if (screenWidth < 1600) return 12.0;
+    else if (screenWidth < 1800) return 13.0;
+    else return 12.0;
+  }
+
+  // Helper method to calculate responsive avatar radius
+  double _getResponsiveAvatarRadius(double screenWidth, bool isMobile) {
+    if (isMobile) return 20.0;
+    
+    if (screenWidth < 1200) return 24.0;
+    else if (screenWidth < 1400) return 26.0;
+    else if (screenWidth < 1600) return 28.0;
+    else if (screenWidth < 1800) return 30.0;
+    else return 28.0;
+  }
+
+  // Helper method to calculate responsive spacing
+  double _getResponsiveSpacing(double screenWidth, bool isMobile, {bool isVertical = false}) {
+    if (isMobile) return isVertical ? 6.0 : 12.0;
+    
+    if (screenWidth < 1200) return isVertical ? 4.0 : 12.0;
+    else if (screenWidth < 1400) return isVertical ? 5.0 : 14.0;
+    else if (screenWidth < 1600) return isVertical ? 6.0 : 16.0;
+    else if (screenWidth < 1800) return isVertical ? 7.0 : 18.0;
+    else return isVertical ? 6.0 : 16.0;
+  }
+
+  // Responsive driver info row with dynamic sizing
+  Widget _buildResponsiveDriverInfoRow(IconData icon, String text, double fontSize, double iconSize, {Color? textColor}) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 1.0),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: iconSize,
+            color: textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+          ),
+          SizedBox(width: 2),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: fontSize,
+                color: textColor ?? (isDark ? Palette.darkText : Palette.lightText),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

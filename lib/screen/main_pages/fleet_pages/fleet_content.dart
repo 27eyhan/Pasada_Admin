@@ -358,12 +358,46 @@ class _FleetContentState extends State<FleetContent> {
 
   // Grid view implementation
   Widget _buildGridView() {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    
+    // Get screen dimensions to calculate zoom-aware aspect ratios
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Calculate dynamic aspect ratio based on screen size and zoom level
+    double dynamicAspectRatio;
+    if (isMobile) {
+      dynamicAspectRatio = 1.2; // More vertical space for mobile
+    } else if (isTablet) {
+      // For tablets, adjust based on actual screen width
+      if (screenWidth < 900) {
+        dynamicAspectRatio = 1.3;
+      } else if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.4;
+      } else {
+        dynamicAspectRatio = 1.5;
+      }
+    } else {
+      // For desktop, adjust based on screen width to handle zoom levels
+      if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.4; // 125% zoom range
+      } else if (screenWidth < 1400) {
+        dynamicAspectRatio = 1.5; // 133% zoom range
+      } else if (screenWidth < 1600) {
+        dynamicAspectRatio = 1.6; // 150% zoom range
+      } else if (screenWidth < 1800) {
+        dynamicAspectRatio = 1.7; // 175% zoom range
+      } else {
+        dynamicAspectRatio = 1.8; // Normal desktop
+      }
+    }
+    
     return ResponsiveGrid(
       mobileColumns: 1,
       tabletColumns: 2,
       desktopColumns: 3,
       largeDesktopColumns: 4,
-      childAspectRatio: 2.2,
+      childAspectRatio: dynamicAspectRatio,
       children: filteredVehicleData.map((vehicle) => _buildVehicleCard(vehicle)).toList(),
     );
   }
@@ -418,6 +452,8 @@ class _FleetContentState extends State<FleetContent> {
   Widget _buildVehicleCard(Map<String, dynamic> vehicle) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
     final status = _getVehicleStatus(vehicle);
     _isVehicleActive(status);
     final statusColor = _getStatusColor(status);
@@ -448,7 +484,7 @@ class _FleetContentState extends State<FleetContent> {
                 width: 1.0),
             borderRadius: BorderRadius.circular(8.0),
           ),
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.all(_getResponsivePadding(screenWidth, isMobile)),
           child: Stack(
             children: [
               Positioned(
@@ -467,58 +503,83 @@ class _FleetContentState extends State<FleetContent> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Plate number as large title
-                  Text(
-                    "${vehicle['plate_number'] ?? 'N/A'}",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Palette.darkText : Palette.lightText,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  // Vehicle icon and plate number row
+                  Row(
+                    children: [
+                      // Vehicle icon
+                      Container(
+                        padding: EdgeInsets.all(_getResponsiveSpacing(screenWidth, isMobile) * 0.5),
+                        decoration: BoxDecoration(
+                          color: isDark ? Palette.darkSurface : Palette.lightSurface,
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(
+                            color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.directions_bus,
+                          size: _getResponsiveFontSize(screenWidth, isMobile, 'title') * 0.8,
+                          color: isDark ? Palette.darkText : Palette.lightText,
+                        ),
+                      ),
+                      SizedBox(width: _getResponsiveSpacing(screenWidth, isMobile)),
+                      // Plate number as large title
+                      Expanded(
+                        child: Text(
+                          "${vehicle['plate_number'] ?? 'N/A'}",
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'title'),
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Palette.darkText : Palette.lightText,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 6.0),
+                  SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true)),
                   // vehicle_id
                   Text(
                     "Fleet ID:${vehicle['vehicle_id'] ?? 'N/A'}",
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12.0,
+                      fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'info'),
                       color: isDark
                           ? Palette.darkTextSecondary
                           : Palette.lightTextSecondary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4.0),
+                  SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true) * 0.7),
                   // route_id
                   Text(
                     "Route: ${vehicle['route_id'] ?? 'N/A'}",
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12.0,
+                      fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'info'),
                       color: isDark ? Palette.darkText : Palette.lightText,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4.0),
+                  SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true) * 0.7),
                   // passenger_capacity
                   Text(
                     "Seats: ${vehicle['passenger_capacity'] ?? 'N/A'}",
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12.0,
+                      fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'info'),
                       color: isDark ? Palette.darkText : Palette.lightText,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6.0),
+                  SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true)),
                   Text(
                     _capitalizeFirstLetter(status),
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13.0,
+                      fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'status'),
                       fontWeight: FontWeight.w700,
                       color: statusColor,
                     ),
@@ -571,7 +632,7 @@ class _FleetContentState extends State<FleetContent> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar with status indicator
+              // Vehicle icon with status indicator
               Stack(
                 children: [
                   Container(
@@ -587,7 +648,7 @@ class _FleetContentState extends State<FleetContent> {
                       radius: 22,
                       backgroundColor: Colors.transparent,
                       child: Icon(Icons.directions_bus,
-                          color: isDark ? Palette.darkText : Palette.lightText,
+                          color: Colors.white,
                           size: 20),
                     ),
                   ),
@@ -713,5 +774,96 @@ class _FleetContentState extends State<FleetContent> {
         borderRadius: BorderRadius.circular(0.5),
       ),
     );
+  }
+
+  // Helper method to calculate responsive padding based on screen width and zoom level
+  double _getResponsivePadding(double screenWidth, bool isMobile) {
+    if (isMobile) {
+      return 8.0;
+    }
+    
+    // Adjust padding based on screen width to handle zoom levels
+    if (screenWidth < 1200) {
+      // 125% zoom range - reduce padding
+      return 10.0;
+    } else if (screenWidth < 1400) {
+      // 133% zoom range - slightly more padding
+      return 12.0;
+    } else if (screenWidth < 1600) {
+      // 150% zoom range - moderate padding
+      return 14.0;
+    } else if (screenWidth < 1800) {
+      // 175% zoom range - more padding
+      return 16.0;
+    } else {
+      // Normal desktop - standard padding
+      return 12.0;
+    }
+  }
+
+  // Helper method to calculate responsive font sizes based on screen width and zoom level
+  double _getResponsiveFontSize(double screenWidth, bool isMobile, String type) {
+    if (isMobile) {
+      switch (type) {
+        case 'title': return 16.0;
+        case 'info': return 10.0;
+        case 'status': return 11.0;
+        default: return 12.0;
+      }
+    }
+    
+    // Adjust font sizes based on screen width to handle zoom levels
+    if (screenWidth < 1200) {
+      // 125% zoom range - smaller fonts
+      switch (type) {
+        case 'title': return 14.0;
+        case 'info': return 9.0;
+        case 'status': return 10.0;
+        default: return 10.0;
+      }
+    } else if (screenWidth < 1400) {
+      // 133% zoom range - slightly larger fonts
+      switch (type) {
+        case 'title': return 15.0;
+        case 'info': return 9.5;
+        case 'status': return 10.5;
+        default: return 10.5;
+      }
+    } else if (screenWidth < 1600) {
+      // 150% zoom range - moderate fonts
+      switch (type) {
+        case 'title': return 16.0;
+        case 'info': return 10.0;
+        case 'status': return 11.0;
+        default: return 11.0;
+      }
+    } else if (screenWidth < 1800) {
+      // 175% zoom range - larger fonts
+      switch (type) {
+        case 'title': return 17.0;
+        case 'info': return 10.5;
+        case 'status': return 11.5;
+        default: return 11.5;
+      }
+    } else {
+      // Normal desktop - standard fonts
+      switch (type) {
+        case 'title': return 18.0;
+        case 'info': return 12.0;
+        case 'status': return 13.0;
+        default: return 12.0;
+      }
+    }
+  }
+
+  // Helper method to calculate responsive spacing
+  double _getResponsiveSpacing(double screenWidth, bool isMobile, {bool isVertical = false}) {
+    if (isMobile) return isVertical ? 4.0 : 8.0;
+    
+    if (screenWidth < 1200) return isVertical ? 3.0 : 6.0;
+    else if (screenWidth < 1400) return isVertical ? 4.0 : 7.0;
+    else if (screenWidth < 1600) return isVertical ? 5.0 : 8.0;
+    else if (screenWidth < 1800) return isVertical ? 6.0 : 9.0;
+    else return isVertical ? 6.0 : 8.0;
   }
 }

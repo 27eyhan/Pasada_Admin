@@ -517,23 +517,34 @@ class _ReportsContentState extends State<ReportsContent> {
     final isTablet = ResponsiveHelper.isTablet(context);
     final isLargeDesktop = ResponsiveHelper.isLargeDesktop(context);
     
-    // Calculate dynamic aspect ratio based on screen width
+    // Get screen dimensions to calculate zoom-aware aspect ratios
     final screenWidth = MediaQuery.of(context).size.width;
-    double dynamicAspectRatio;
     
+    // Calculate dynamic aspect ratio based on screen size and zoom level
+    double dynamicAspectRatio;
     if (isMobile) {
-      dynamicAspectRatio = 1.6;
+      dynamicAspectRatio = 1.2; // More vertical space for mobile
     } else if (isTablet) {
-      // For tablets, adjust based on width
-      dynamicAspectRatio = screenWidth < 900 ? 1.6 : 1.8;
-    } else {
-      // For desktop, adjust based on width to prevent overlapping on larger screens
-      if (screenWidth < 1200) {
-        dynamicAspectRatio = 1.8;
-      } else if (screenWidth < 1600) {
-        dynamicAspectRatio = 2.0;
+      // For tablets, adjust based on actual screen width
+      if (screenWidth < 900) {
+        dynamicAspectRatio = 1.3;
+      } else if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.4;
       } else {
-        dynamicAspectRatio = 2.2;
+        dynamicAspectRatio = 1.5;
+      }
+    } else {
+      // For desktop, adjust based on screen width to handle zoom levels
+      if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.4; // 125% zoom range
+      } else if (screenWidth < 1400) {
+        dynamicAspectRatio = 1.5; // 133% zoom range
+      } else if (screenWidth < 1600) {
+        dynamicAspectRatio = 1.6; // 150% zoom range
+      } else if (screenWidth < 1800) {
+        dynamicAspectRatio = 1.7; // 175% zoom range
+      } else {
+        dynamicAspectRatio = 1.8; // Normal desktop
       }
     }
     
@@ -574,6 +585,7 @@ class _ReportsContentState extends State<ReportsContent> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
     final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
     final status = driver['driving_status'] ?? 'Offline';
     final isActive = status.toLowerCase() == 'online' || 
                      status.toLowerCase() == 'driving' || 
@@ -598,10 +610,10 @@ class _ReportsContentState extends State<ReportsContent> {
             borderRadius: BorderRadius.circular(15.0),
           ),
           padding: EdgeInsets.fromLTRB(
-            isMobile ? 16.0 : 20.0, 
-            isMobile ? 12.0 : 16.0, 
-            isMobile ? 12.0 : 16.0, 
-            isMobile ? 12.0 : 16.0
+            isMobile ? 12.0 : _getResponsivePadding(screenWidth, isMobile), 
+            isMobile ? 8.0 : _getResponsivePadding(screenWidth, isMobile, isVertical: true), 
+            isMobile ? 8.0 : _getResponsivePadding(screenWidth, isMobile), 
+            isMobile ? 8.0 : _getResponsivePadding(screenWidth, isMobile, isVertical: true)
           ),
           child: Stack(
             children: [
@@ -739,170 +751,99 @@ class _ReportsContentState extends State<ReportsContent> {
     );
   }
 
-  // Desktop card layout (optimized to prevent overlapping)
+  // Desktop card layout (zoom-aware layout)
   Widget _buildDesktopCardLayout(Map<String, dynamic> driver, bool isDark, String status, Color statusColor, bool isActive) {
-    return Column(
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    
+    // Calculate responsive font sizes based on screen width
+    final nameFontSize = _getResponsiveFontSize(screenWidth, isMobile, 'name');
+    final infoFontSize = _getResponsiveFontSize(screenWidth, isMobile, 'info');
+    final iconSize = _getResponsiveIconSize(screenWidth, isMobile);
+    final avatarRadius = _getResponsiveAvatarRadius(screenWidth, isMobile);
+    
+    return Row(
       children: [
-        // Header with avatar and basic info
-        Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: isDark 
-                      ? [Colors.grey.shade600, Colors.grey.shade800]
-                      : [Colors.grey.shade400, Colors.grey.shade600],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.transparent,
-                child: Icon(
-                  Icons.person,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
+        // Enhanced avatar with gradient background
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: isDark 
+                  ? [Colors.grey.shade600, Colors.grey.shade800]
+                  : [Colors.grey.shade400, Colors.grey.shade600],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 12.0),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "${driver['full_name'] ?? 'Unknown Driver'}",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Palette.darkText : Palette.lightText,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2.0),
-                  Text(
-                    "ID: ${driver['driver_id']} • $status",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.0,
-                      color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                    ),
-                  ),
-                ],
-              ),
+          ),
+          child: CircleAvatar(
+            radius: avatarRadius,
+            backgroundColor: Colors.transparent,
+            child: Icon(
+              Icons.person,
+              color: Colors.white,
+              size: avatarRadius,
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 16.0),
-        // Metrics in a responsive layout
+        SizedBox(width: _getResponsiveSpacing(screenWidth, isMobile)),
         Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Use different layouts based on available width
-              if (constraints.maxWidth > 200) {
-                // Wide enough for 2x2 grid
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildCompactMetricCard(
-                            "Daily",
-                            "₱${(driver['daily_earnings'] as double).toStringAsFixed(0)}",
-                            "₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
-                            Icons.today,
-                            isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 12.0),
-                        Expanded(
-                          child: _buildCompactMetricCard(
-                            "Weekly",
-                            "₱${(driver['weekly_earnings'] as double).toStringAsFixed(0)}",
-                            "₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
-                            Icons.date_range,
-                            isDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12.0),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildCompactMetricCard(
-                            "Monthly",
-                            "₱${(driver['monthly_earnings'] as double).toStringAsFixed(0)}",
-                            "₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
-                            Icons.calendar_month,
-                            isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 12.0),
-                        Expanded(
-                          child: _buildCompactMetricCard(
-                            "Total",
-                            "₱${(driver['total_fare'] as double).toStringAsFixed(0)}",
-                            "₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
-                            Icons.monetization_on,
-                            isDark,
-                            isHighlighted: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              } else {
-                // Narrower layout - single column
-                return Column(
-                  children: [
-                    _buildCompactMetricCard(
-                      "Daily",
-                      "₱${(driver['daily_earnings'] as double).toStringAsFixed(0)}",
-                      "₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
-                      Icons.today,
-                      isDark,
-                    ),
-                    const SizedBox(height: 8.0),
-                    _buildCompactMetricCard(
-                      "Weekly",
-                      "₱${(driver['weekly_earnings'] as double).toStringAsFixed(0)}",
-                      "₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
-                      Icons.date_range,
-                      isDark,
-                    ),
-                    const SizedBox(height: 8.0),
-                    _buildCompactMetricCard(
-                      "Monthly",
-                      "₱${(driver['monthly_earnings'] as double).toStringAsFixed(0)}",
-                      "₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
-                      Icons.calendar_month,
-                      isDark,
-                    ),
-                    const SizedBox(height: 8.0),
-                    _buildCompactMetricCard(
-                      "Total",
-                      "₱${(driver['total_fare'] as double).toStringAsFixed(0)}",
-                      "₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
-                      Icons.monetization_on,
-                      isDark,
-                      isHighlighted: true,
-                    ),
-                  ],
-                );
-              }
-            },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "${driver['full_name'] ?? 'Unknown Driver'}",
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: nameFontSize,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Palette.darkText : Palette.lightText,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true)),
+              _buildResponsiveDriverInfoRow(Icons.badge_outlined, "ID: ${driver['driver_id']}", infoFontSize, iconSize),
+              _buildResponsiveDriverInfoRow(
+                isActive ? Icons.play_circle_outline : Icons.pause_circle_outline,
+                "Status: $status",
+                infoFontSize,
+                iconSize,
+                textColor: statusColor,
+              ),
+              _buildResponsiveDriverInfoRow(
+                Icons.today,
+                "Daily: ₱${(driver['daily_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                infoFontSize,
+                iconSize,
+              ),
+              _buildResponsiveDriverInfoRow(
+                Icons.date_range,
+                "Weekly: ₱${(driver['weekly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                infoFontSize,
+                iconSize,
+              ),
+              _buildResponsiveDriverInfoRow(
+                Icons.calendar_month,
+                "Monthly: ₱${(driver['monthly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                infoFontSize,
+                iconSize,
+              ),
+              _buildResponsiveDriverInfoRow(
+                Icons.monetization_on,
+                "Total: ₱${(driver['total_fare'] as double).toStringAsFixed(2)} / ₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                infoFontSize,
+                iconSize,
+                textColor: Palette.greenColor,
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  // Compact metric card for both mobile and desktop
+  // Compact metric card for mobile
   Widget _buildCompactMetricCard(String label, String current, String target, IconData icon, bool isDark, {bool isHighlighted = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
@@ -916,18 +857,16 @@ class _ReportsContentState extends State<ReportsContent> {
             : null,
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                size: 10,
+                size: 12,
                 color: isHighlighted ? Palette.greenColor : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
               ),
-              const SizedBox(width: 3),
-              Flexible(
+              const SizedBox(width: 4),
+              Expanded(
                 child: Text(
                   label,
                   style: TextStyle(
@@ -1415,21 +1354,21 @@ class _ReportsContentState extends State<ReportsContent> {
     final isDark = themeProvider.isDarkMode;
     
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
+      padding: const EdgeInsets.only(bottom: 2.0),
       child: Row(
         children: [
           Icon(
             icon,
-            size: 14,
+            size: 12,
             color: textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
           ),
-          SizedBox(width: 4),
+          SizedBox(width: 3),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 13.0,
+                fontSize: 11.0,
                 color: textColor ?? (isDark ? Palette.darkText : Palette.lightText),
               ),
               overflow: TextOverflow.ellipsis,
@@ -1480,6 +1419,120 @@ class _ReportsContentState extends State<ReportsContent> {
       decoration: BoxDecoration(
         color: isDark ? Palette.darkDivider : Palette.lightDivider,
         borderRadius: BorderRadius.circular(0.5),
+      ),
+    );
+  }
+
+  // Helper method to calculate responsive padding based on screen width and zoom level
+  double _getResponsivePadding(double screenWidth, bool isMobile, {bool isVertical = false}) {
+    if (isMobile) {
+      return isVertical ? 8.0 : 12.0;
+    }
+    
+    // Adjust padding based on screen width to handle zoom levels
+    if (screenWidth < 1200) {
+      // 125% zoom range - reduce padding
+      return isVertical ? 12.0 : 16.0;
+    } else if (screenWidth < 1400) {
+      // 133% zoom range - slightly more padding
+      return isVertical ? 14.0 : 18.0;
+    } else if (screenWidth < 1600) {
+      // 150% zoom range - moderate padding
+      return isVertical ? 16.0 : 20.0;
+    } else if (screenWidth < 1800) {
+      // 175% zoom range - more padding
+      return isVertical ? 18.0 : 22.0;
+    } else {
+      // Normal desktop - standard padding
+      return isVertical ? 16.0 : 20.0;
+    }
+  }
+
+  // Helper method to calculate responsive font sizes based on screen width and zoom level
+  double _getResponsiveFontSize(double screenWidth, bool isMobile, String type) {
+    if (isMobile) {
+      return type == 'name' ? 16.0 : 11.0;
+    }
+    
+    // Adjust font sizes based on screen width to handle zoom levels
+    if (screenWidth < 1200) {
+      // 125% zoom range - smaller fonts
+      return type == 'name' ? 14.0 : 10.0;
+    } else if (screenWidth < 1400) {
+      // 133% zoom range - slightly larger fonts
+      return type == 'name' ? 15.0 : 10.5;
+    } else if (screenWidth < 1600) {
+      // 150% zoom range - moderate fonts
+      return type == 'name' ? 16.0 : 11.0;
+    } else if (screenWidth < 1800) {
+      // 175% zoom range - larger fonts
+      return type == 'name' ? 17.0 : 11.5;
+    } else {
+      // Normal desktop - standard fonts
+      return type == 'name' ? 16.0 : 11.0;
+    }
+  }
+
+  // Helper method to calculate responsive icon sizes
+  double _getResponsiveIconSize(double screenWidth, bool isMobile) {
+    if (isMobile) return 10.0;
+    
+    if (screenWidth < 1200) return 10.0;
+    else if (screenWidth < 1400) return 11.0;
+    else if (screenWidth < 1600) return 12.0;
+    else if (screenWidth < 1800) return 13.0;
+    else return 12.0;
+  }
+
+  // Helper method to calculate responsive avatar radius
+  double _getResponsiveAvatarRadius(double screenWidth, bool isMobile) {
+    if (isMobile) return 20.0;
+    
+    if (screenWidth < 1200) return 24.0;
+    else if (screenWidth < 1400) return 26.0;
+    else if (screenWidth < 1600) return 28.0;
+    else if (screenWidth < 1800) return 30.0;
+    else return 28.0;
+  }
+
+  // Helper method to calculate responsive spacing
+  double _getResponsiveSpacing(double screenWidth, bool isMobile, {bool isVertical = false}) {
+    if (isMobile) return isVertical ? 6.0 : 12.0;
+    
+    if (screenWidth < 1200) return isVertical ? 4.0 : 12.0;
+    else if (screenWidth < 1400) return isVertical ? 5.0 : 14.0;
+    else if (screenWidth < 1600) return isVertical ? 6.0 : 16.0;
+    else if (screenWidth < 1800) return isVertical ? 7.0 : 18.0;
+    else return isVertical ? 6.0 : 16.0;
+  }
+
+  // Responsive driver info row with dynamic sizing
+  Widget _buildResponsiveDriverInfoRow(IconData icon, String text, double fontSize, double iconSize, {Color? textColor}) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 1.0),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: iconSize,
+            color: textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+          ),
+          SizedBox(width: 2),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: fontSize,
+                color: textColor ?? (isDark ? Palette.darkText : Palette.lightText),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
