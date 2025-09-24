@@ -87,4 +87,34 @@ class ResponsiveHelper {
     if (isTablet(context)) return tablet;
     return desktop;
   }
+
+  static double getResponsiveCardPadding(BuildContext context, {
+    double mobile = 12.0,
+    double tablet = 16.0,
+    double desktop = 20.0,
+  }) {
+    if (isMobile(context)) return mobile;
+    if (isTablet(context)) return tablet;
+    return desktop;
+  }
+
+  static double getResponsiveSpacing(BuildContext context, {
+    double mobile = 8.0,
+    double tablet = 12.0,
+    double desktop = 16.0,
+  }) {
+    if (isMobile(context)) return mobile;
+    if (isTablet(context)) return tablet;
+    return desktop;
+  }
+
+  static double getResponsiveBorderRadius(BuildContext context, {
+    double mobile = 8.0,
+    double tablet = 10.0,
+    double desktop = 12.0,
+  }) {
+    if (isMobile(context)) return mobile;
+    if (isTablet(context)) return tablet;
+    return desktop;
+  }
 }
