@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'dart:convert';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
 import 'package:pasada_admin_application/widgets/sync_progress_dialog.dart';
@@ -716,22 +717,66 @@ class _RouteDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 400;
+    
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Palette.lightBorder.withValues(alpha: 77)),
+        color: isDark ? Palette.darkCard : Palette.lightCard,
+        border: Border.all(
+          color: isDark ? Palette.darkBorder : Palette.lightBorder,
+          width: 1.0,
+        ),
         borderRadius: BorderRadius.circular(8.0),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallMobile ? 8.0 : (isMobile ? 10.0 : 12.0),
+        vertical: isSmallMobile ? 4.0 : (isMobile ? 6.0 : 8.0),
+      ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          hint: const Text('Route'),
+          hint: Text(
+            'Route',
+            style: TextStyle(
+              fontSize: isSmallMobile ? 12.0 : (isMobile ? 13.0 : 14.0),
+              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+              fontFamily: 'Inter',
+            ),
+          ),
+          style: TextStyle(
+            fontSize: isSmallMobile ? 12.0 : (isMobile ? 13.0 : 14.0),
+            color: isDark ? Palette.darkText : Palette.lightText,
+            fontFamily: 'Inter',
+          ),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            size: isSmallMobile ? 16.0 : (isMobile ? 18.0 : 20.0),
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          ),
+          dropdownColor: isDark ? Palette.darkCard : Palette.lightCard,
           items: routes.map((r) {
             final String id = r['officialroute_id']?.toString() ?? '';
             final String name = r['route_name']?.toString() ?? 'Route $id';
             return DropdownMenuItem<String>(
               value: id,
-              child: Text('$name (ID: $id)'),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  vertical: isSmallMobile ? 4.0 : (isMobile ? 6.0 : 8.0),
+                ),
+                child: Text(
+                  isSmallMobile ? name : '$name (ID: $id)',
+                  style: TextStyle(
+                    fontSize: isSmallMobile ? 11.0 : (isMobile ? 12.0 : 13.0),
+                    color: isDark ? Palette.darkText : Palette.lightText,
+                    fontFamily: 'Inter',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             );
           }).toList(),
           onChanged: onChanged,

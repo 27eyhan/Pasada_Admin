@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:provider/provider.dart';
 
 class SelectTableContent extends StatefulWidget {
@@ -99,69 +101,55 @@ class _SelectTableContentState extends State<SelectTableContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context)
-        .size
-        .width
-        .clamp(600.0, double.infinity)
-        .toDouble();
-    final double horizontalPadding = screenWidth * 0.05;
 
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 24.0,
-          horizontal: horizontalPadding,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: isDark
-                      ? Palette.darkSurface
-                      : Palette.lightSurface,
-                  child: Icon(
-                    Icons.table_chart,
-                    color: isDark
-                        ? Palette.darkText
-                        : Palette.lightText,
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: ResponsivePadding(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: ResponsiveHelper.getResponsiveAvatarRadius(context),
+                    backgroundColor: isDark
+                        ? Palette.darkSurface
+                        : Palette.lightSurface,
+                    child: Icon(
+                      Icons.table_chart,
+                      color: isDark
+                          ? Palette.darkText
+                          : Palette.lightText,
+                      size: ResponsiveHelper.getResponsiveIconSize(context),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12.0),
-                Text(
-                  "Select Table",
-                  style: TextStyle(
-                    fontSize: 28.0,
+                  const SizedBox(width: 12.0),
+                  ResponsiveText(
+                    "Select Table",
+                    mobileFontSize: 24.0,
+                    tabletFontSize: 26.0,
+                    desktopFontSize: 28.0,
                     fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? Palette.darkText
-                        : Palette.lightText,
-                    fontFamily: 'Inter',
+                    color: isDark ? Palette.darkText : Palette.lightText,
                   ),
-                ),
-                const Spacer(),
-              ],
-            ),
-            const SizedBox(height: 24.0),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 24.0,
-                  mainAxisSpacing: 24.0,
+                  const Spacer(),
+                ],
+              ),
+              const SizedBox(height: 24.0),
+              Expanded(
+                child: ResponsiveGrid(
+                  children: tableData.map((table) => _buildTableCard(table, isDark)).toList(),
+                  mobileColumns: 1,
+                  tabletColumns: 2,
+                  desktopColumns: 3,
+                  largeDesktopColumns: 4,
                   childAspectRatio: 1.2,
                 ),
-                itemCount: tableData.length,
-                itemBuilder: (context, index) {
-                  final table = tableData[index];
-                  return _buildTableCard(table, isDark);
-                },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

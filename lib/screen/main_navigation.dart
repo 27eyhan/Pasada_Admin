@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/dashboard_pages/dashboard_content.dart';
@@ -30,6 +31,7 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   String _currentPage = '/dashboard';
   Map<String, dynamic>? _currentArgs;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Navigation methods
   void navigateToPage(String pageName, {Map<String, dynamic>? args}) {
@@ -86,16 +88,22 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: isDark ? Palette.darkBackground : Palette.lightBackground,
       body: Row(
         children: [
-          // Dynamic width sidebar drawer
-          MyDrawer(
-            currentRoute: _currentPage,
-            onNavigate: navigateToPage,
-          ),
+          // Responsive sidebar drawer
+          if (!isMobile) ...[
+            MyDrawer(
+              currentRoute: _currentPage,
+              onNavigate: navigateToPage,
+              isCollapsed: isTablet,
+            ),
+          ],
           // Main content area
           Expanded(
             child: Column(
@@ -115,6 +123,10 @@ class _MainNavigationState extends State<MainNavigation> {
                   onSettingsTabRequested: (tabIndex) {
                     navigateToPage('/settings', args: {'tabIndex': tabIndex});
                   },
+                  showMobileMenu: isMobile,
+                  onMobileMenuPressed: () {
+                    _showMobileDrawer(context);
+                  },
                 ),
                 // Page content
                 Expanded(
@@ -125,6 +137,18 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
       ),
+      // Mobile drawer
+      drawer: isMobile ? MyDrawer(
+        currentRoute: _currentPage,
+        onNavigate: navigateToPage,
+        isMobile: true,
+      ) : null,
     );
+  }
+
+  void _showMobileDrawer(BuildContext context) {
+    if (_scaffoldKey.currentState != null) {
+      _scaffoldKey.currentState!.openDrawer();
+    }
   }
 }

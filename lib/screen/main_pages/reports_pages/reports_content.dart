@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/reports_chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
@@ -39,8 +41,6 @@ class _ReportsContentState extends State<ReportsContent> {
   double monthlyQuotaTarget = 0; // ₱
   double overallQuotaTarget = 0; // ₱
   
-  // View mode: grid or list
-  bool isGridView = true;
 
   @override
   void initState() {
@@ -251,214 +251,119 @@ class _ReportsContentState extends State<ReportsContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context)
-        .size
-        .width
-        .clamp(600.0, double.infinity)
-        .toDouble();
-    final double horizontalPadding = screenWidth * 0.05;
 
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const double minBodyWidth = 900;
-          final double effectiveWidth = constraints.maxWidth < minBodyWidth
-              ? minBodyWidth
-              : constraints.maxWidth;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: minBodyWidth),
-              child: SizedBox(
-                width: effectiveWidth,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: isLoading
-                          ? Center(child: CircularProgressIndicator())
-                          : SingleChildScrollView(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 24.0,
-                                  horizontal: horizontalPadding,
+      child: ResponsiveLayout(
+        minWidth: 900,
+        child: Column(
+          children: [
+            Expanded(
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      child: ResponsivePadding(
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: ResponsiveHelper.getResponsiveAvatarRadius(context),
+                                  backgroundColor: isDark
+                                      ? Palette.darkSurface
+                                      : Palette.lightSurface,
+                                  child: Icon(
+                                    Icons.bar_chart,
+                                    color: isDark
+                                        ? Palette.darkText
+                                        : Palette.lightText,
+                                    size: ResponsiveHelper.getResponsiveIconSize(context),
+                                  ),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 20,
-                                          backgroundColor: isDark
-                                              ? Palette.darkSurface
-                                              : Palette.lightSurface,
-                                          child: Icon(
-                                            Icons.bar_chart,
-                                            color: isDark
-                                                ? Palette.darkText
-                                                : Palette.lightText,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12.0),
-                                        Text(
-                                          "Reports",
-                                          style: TextStyle(
-                                            fontSize: 28.0,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDark
-                                                ? Palette.darkText
-                                                : Palette.lightText,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 24.0),
-                                    // Quota Bento Grid + edit
-                                    QuotaBentoGrid(
-                                      dailyEarnings: dailyEarnings,
-                                      weeklyEarnings: weeklyEarnings,
-                                      monthlyEarnings: monthlyEarnings,
-                                      totalEarnings: totalEarnings,
-                                      dailyTarget: dailyQuotaTarget,
-                                      weeklyTarget: weeklyQuotaTarget,
-                                      monthlyTarget: monthlyQuotaTarget,
-                                      totalTarget: overallQuotaTarget,
-                                      onEdit: _openEditQuotaDialog,
-                                      onRefresh: _refreshQuotas,
-                                      onUpdate: _openUpdateQuotaDialog,
-                                    ),
-                                    const SizedBox(height: 24.0),
-                                    // Status metrics container with separators
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Palette.darkCard : Palette.lightCard,
-                                        borderRadius: BorderRadius.circular(12.0),
-                                        border: Border.all(
-                                          color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: isDark
-                                                ? Colors.black.withValues(alpha: 0.08)
-                                                : Colors.grey.withValues(alpha: 0.08),
-                                            spreadRadius: 1,
-                                            blurRadius: 10,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      padding: const EdgeInsets.all(20.0),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Total Drivers',
-                                              totalDrivers,
-                                              isDark
-                                                  ? Palette.darkText
-                                                  : Palette.lightText,
-                                            ),
-                                          ),
-                                          _buildVerticalSeparator(isDark),
-                                          Expanded(
-                                            child: _buildCompactMetric(
-                                              'Total Earnings',
-                                              totalEarnings.toInt(),
-                                              isDark
-                                                  ? Palette.darkText
-                                                  : Palette.lightText,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24.0),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.end,
-                                      children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: isDark
-                                                ? Palette.darkCard
-                                                : Palette.lightCard,
-                                            border: Border.all(
-                                              color: isDark
-                                                  ? Palette.darkBorder
-                                                  : Palette.lightBorder,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.grid_view,
-                                                  size: 18,
-                                                  color: isGridView
-                                                      ? (isDark
-                                                          ? Palette
-                                                              .darkText
-                                                          : Palette
-                                                              .lightText)
-                                                      : (isDark
-                                                          ? Palette
-                                                              .darkTextSecondary
-                                                          : Palette
-                                                              .lightTextSecondary),
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    isGridView = true;
-                                                  });
-                                                },
-                                              ),
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.view_list,
-                                                  size: 18,
-                                                  color: !isGridView
-                                                      ? (isDark
-                                                          ? Palette
-                                                              .darkText
-                                                          : Palette
-                                                              .lightText)
-                                                      : (isDark
-                                                          ? Palette
-                                                              .darkTextSecondary
-                                                          : Palette
-                                                              .lightTextSecondary),
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    isGridView = false;
-                                                  });
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16.0),
-                                    isGridView
-                                        ? _buildGridView()
-                                        : _buildListView(),
-                                  ],
+                                const SizedBox(width: 12.0),
+                                ResponsiveText(
+                                  "Reports",
+                                  mobileFontSize: 24.0,
+                                  tabletFontSize: 26.0,
+                                  desktopFontSize: 28.0,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Palette.darkText : Palette.lightText,
                                 ),
+                                const Spacer(),
+                              ],
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Quota Bento Grid + edit
+                            QuotaBentoGrid(
+                              dailyEarnings: dailyEarnings,
+                              weeklyEarnings: weeklyEarnings,
+                              monthlyEarnings: monthlyEarnings,
+                              totalEarnings: totalEarnings,
+                              dailyTarget: dailyQuotaTarget,
+                              weeklyTarget: weeklyQuotaTarget,
+                              monthlyTarget: monthlyQuotaTarget,
+                              totalTarget: overallQuotaTarget,
+                              onEdit: _openEditQuotaDialog,
+                              onRefresh: _refreshQuotas,
+                              onUpdate: _openUpdateQuotaDialog,
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Status metrics container with separators
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? Palette.darkCard : Palette.lightCard,
+                                borderRadius: BorderRadius.circular(12.0),
+                                border: Border.all(
+                                  color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark
+                                        ? Colors.black.withValues(alpha: 0.08)
+                                        : Colors.grey.withValues(alpha: 0.08),
+                                    spreadRadius: 1,
+                                    blurRadius: 10,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(20.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Total Drivers',
+                                      totalDrivers,
+                                      isDark
+                                          ? Palette.darkText
+                                          : Palette.lightText,
+                                    ),
+                                  ),
+                                  _buildVerticalSeparator(isDark),
+                                  Expanded(
+                                    child: _buildCompactMetric(
+                                      'Total Earnings',
+                                      totalEarnings.toInt(),
+                                      isDark
+                                          ? Palette.darkText
+                                          : Palette.lightText,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            const SizedBox(height: 24.0),
+                            const SizedBox(height: 16.0),
+                            _buildListView(),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
+                  )
+                ],
                 ),
               ),
-            ),
-          );
-        },
-      ),
+  
     );
   }
   
@@ -546,35 +451,11 @@ class _ReportsContentState extends State<ReportsContent> {
     }
   }
 
-  // Grid view implementation
-  Widget _buildGridView() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount;
-        if (constraints.maxWidth >= 1200) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth >= 800) {
-          crossAxisCount = 2;
-        } else {
-          crossAxisCount = 1;
-        }
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 24.0,
-          mainAxisSpacing: 24.0,
-          childAspectRatio: 2.2,
-          children: driversWithFares.map((driver) {
-            return _buildDriverEarningsCard(driver);
-          }).toList(),
-        );
-      },
-    );
-  }
   
   // List view implementation
   Widget _buildListView() {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -582,15 +463,21 @@ class _ReportsContentState extends State<ReportsContent> {
       itemBuilder: (context, index) {
         final driver = driversWithFares[index];
         return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: _buildDriverEarningsListItem(driver),
+          padding: EdgeInsets.only(bottom: isMobile ? 12.0 : 16.0),
+          child: isMobile 
+              ? _buildMobileDriverListItem(driver)
+              : _buildDriverEarningsListItem(driver),
         );
       },
     );
   }
   
-  // Driver earnings card for grid view
-  Widget _buildDriverEarningsCard(Map<String, dynamic> driver) {
+
+
+
+
+  // Mobile-optimized list item
+  Widget _buildMobileDriverListItem(Map<String, dynamic> driver) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
     final status = driver['driving_status'] ?? 'Offline';
@@ -604,7 +491,7 @@ class _ReportsContentState extends State<ReportsContent> {
       cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: () => _showEarningsBreakdown(driver),
-        borderRadius: BorderRadius.circular(15.0),
+        borderRadius: BorderRadius.circular(12.0),
         child: Container(
           decoration: BoxDecoration(
             color: isDark ? Palette.darkCard : Palette.lightCard,
@@ -614,90 +501,128 @@ class _ReportsContentState extends State<ReportsContent> {
                   : Palette.lightBorder.withValues(alpha: 77),
               width: 1.0,
             ),
-            borderRadius: BorderRadius.circular(15.0),
+            borderRadius: BorderRadius.circular(12.0),
           ),
-          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
-          child: Stack(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
             children: [
-              // Status indicator dot
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              
+              // Header row
               Row(
                 children: [
-                  // Enhanced avatar with gradient background
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: isDark 
-                            ? [Colors.grey.shade600, Colors.grey.shade800]
-                            : [Colors.grey.shade400, Colors.grey.shade600],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  // Avatar with status
+                  Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: isDark 
+                                ? [Colors.grey.shade600, Colors.grey.shade800]
+                                : [Colors.grey.shade400, Colors.grey.shade600],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.transparent,
+                          child: Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.transparent,
-                      child: Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 28,
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 16.0),
+                  const SizedBox(width: 12.0),
                   Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           "${driver['full_name'] ?? 'Unknown Driver'}",
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 18.0,
+                            fontSize: 16.0,
                             fontWeight: FontWeight.bold,
                             color: isDark ? Palette.darkText : Palette.lightText,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 8.0),
-                        _buildDriverInfoRow(Icons.badge_outlined, "ID: ${driver['driver_id']}"),
-                        _buildDriverInfoRow(
-                          isActive ? Icons.play_circle_outline : Icons.pause_circle_outline,
-                          "Status: $status",
-                          textColor: statusColor,
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.today,
-                          "Daily: ₱${(driver['daily_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.date_range,
-                          "Weekly: ₱${(driver['weekly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.calendar_month,
-                          "Monthly: ₱${(driver['monthly_earnings'] as double).toStringAsFixed(2)} / ₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
-                        ),
-                        _buildDriverInfoRow(
-                          Icons.monetization_on,
-                          "Total: ₱${(driver['total_fare'] as double).toStringAsFixed(2)} / ₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
-                          textColor: Palette.greenColor,
+                        const SizedBox(height: 2.0),
+                        Text(
+                          "ID: ${driver['driver_id']} • $status",
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.0,
+                            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                          ),
                         ),
                       ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12.0),
+              // Metrics in a 2x2 grid
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Daily",
+                      "₱${(driver['daily_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_daily'] as double).toStringAsFixed(0)}",
+                      Icons.today,
+                      isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Weekly",
+                      "₱${(driver['weekly_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_weekly'] as double).toStringAsFixed(0)}",
+                      Icons.date_range,
+                      isDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8.0),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Monthly",
+                      "₱${(driver['monthly_earnings'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_monthly'] as double).toStringAsFixed(0)}",
+                      Icons.calendar_month,
+                      isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  Expanded(
+                    child: _buildMobileMetricItem(
+                      "Total",
+                      "₱${(driver['total_fare'] as double).toStringAsFixed(0)}",
+                      "₱${(driver['quota_total'] as double).toStringAsFixed(0)}",
+                      Icons.monetization_on,
+                      isDark,
+                      isHighlighted: true,
                     ),
                   ),
                 ],
@@ -705,6 +630,67 @@ class _ReportsContentState extends State<ReportsContent> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Mobile metric item for list view
+  Widget _buildMobileMetricItem(String label, String current, String target, IconData icon, bool isDark, {bool isHighlighted = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+      decoration: BoxDecoration(
+        color: isHighlighted 
+            ? (isDark ? Palette.darkSurface : Palette.lightSurface)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(6.0),
+        border: isHighlighted 
+            ? Border.all(color: Palette.greenColor.withValues(alpha: 0.3), width: 1.0)
+            : null,
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 12,
+                color: isHighlighted ? Palette.greenColor : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.0,
+                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2.0),
+          Text(
+            current,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.0,
+              fontWeight: FontWeight.bold,
+              color: isHighlighted ? Palette.greenColor : (isDark ? Palette.darkText : Palette.lightText),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            "/ $target",
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 9.0,
+              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -940,21 +926,21 @@ class _ReportsContentState extends State<ReportsContent> {
     final isDark = themeProvider.isDarkMode;
     
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
+      padding: const EdgeInsets.only(bottom: 2.0),
       child: Row(
         children: [
           Icon(
             icon,
-            size: 14,
+            size: 12,
             color: textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
           ),
-          SizedBox(width: 4),
+          SizedBox(width: 3),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 13.0,
+                fontSize: 11.0,
                 color: textColor ?? (isDark ? Palette.darkText : Palette.lightText),
               ),
               overflow: TextOverflow.ellipsis,
@@ -1008,4 +994,5 @@ class _ReportsContentState extends State<ReportsContent> {
       ),
     );
   }
+
 }

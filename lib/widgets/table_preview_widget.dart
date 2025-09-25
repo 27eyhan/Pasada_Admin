@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:provider/provider.dart';
@@ -46,11 +47,18 @@ class TablePreviewWidget extends StatefulWidget {
 class _TablePreviewWidgetState extends State<TablePreviewWidget>
     with TickerProviderStateMixin {
   List<Map<String, dynamic>> tableData = [];
+  List<Map<String, dynamic>> paginatedData = [];
   bool isLoading = true;
   bool hasError = false;
   String? errorMessage;
   late AnimationController _loadingController;
   late Animation<double> _loadingAnimation;
+  
+  // Pagination state
+  int currentPage = 1;
+  int itemsPerPage = 25;
+  int totalItems = 0;
+  int totalPages = 0;
 
   @override
   void initState() {
@@ -91,6 +99,9 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
       if (mounted) {
         setState(() {
           tableData = data;
+          totalItems = data.length;
+          totalPages = (totalItems / itemsPerPage).ceil();
+          _updatePaginatedData();
           isLoading = false;
           hasError = false;
         });
@@ -106,6 +117,28 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
         _loadingController.reset();
       }
     }
+  }
+
+  void _updatePaginatedData() {
+    final startIndex = (currentPage - 1) * itemsPerPage;
+    final endIndex = (startIndex + itemsPerPage).clamp(0, tableData.length);
+    paginatedData = tableData.sublist(startIndex, endIndex);
+  }
+
+  void _onPageChanged(int page) {
+    setState(() {
+      currentPage = page;
+      _updatePaginatedData();
+    });
+  }
+
+  void _onItemsPerPageChanged(int newItemsPerPage) {
+    setState(() {
+      itemsPerPage = newItemsPerPage;
+      totalPages = (totalItems / itemsPerPage).ceil();
+      currentPage = 1; // Reset to first page
+      _updatePaginatedData();
+    });
   }
 
   void _handleRefresh() {
@@ -282,6 +315,10 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   }
 
   Widget _buildStatsContainer(bool isDark) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 400;
+    
     return Container(
       decoration: BoxDecoration(
         color: isDark ? Palette.darkCard : Palette.lightCard,
@@ -300,39 +337,167 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           ),
         ],
       ),
-      padding: const EdgeInsets.all(20.0),
-      child: Row(
+      padding: EdgeInsets.all(
+        isSmallMobile ? 12.0 : (isMobile ? 16.0 : 20.0)
+      ),
+      child: isMobile 
+          ? _buildMobileStatsLayout(isDark)
+          : _buildDesktopStatsLayout(isDark),
+    );
+  }
+
+  Widget _buildMobileStatsLayout(bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 400;
+    
+    // For very small screens, use a more compact layout with proper separators
+    if (isSmallMobile) {
+      return Column(
         children: [
-          Expanded(
-            child: _buildCompactMetric(
-              'Total Records',
-              tableData.length,
-              isDark ? Palette.darkText : Palette.lightText,
-              isDark,
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactMetric(
+                  'Total Records',
+                  totalItems,
+                  isDark ? Palette.darkText : Palette.lightText,
+                  isDark,
+                ),
+              ),
+              Container(
+                height: 30.0,
+                width: 1.0,
+                margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                decoration: BoxDecoration(
+                  color: isDark ? Palette.darkDivider : Palette.lightDivider,
+                  borderRadius: BorderRadius.circular(0.5),
+                ),
+              ),
+              Expanded(
+                child: _buildCompactMetric(
+                  'Page',
+                  '$currentPage/$totalPages',
+                  Palette.lightPrimary,
+                  isDark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16.0),
+          Container(
+            height: 1.0,
+            decoration: BoxDecoration(
+              color: isDark ? Palette.darkDivider : Palette.lightDivider,
+              borderRadius: BorderRadius.circular(0.5),
             ),
           ),
-          _buildVerticalSeparator(isDark),
-          Expanded(
-            child: _buildCompactMetric(
-              'Status',
-              hasError ? 'Error' : (isLoading ? 'Loading' : 'Active'),
-              hasError 
-                  ? Palette.lightError 
-                  : (isLoading ? Palette.lightWarning : Palette.lightSuccess),
-              isDark,
-            ),
-          ),
-          _buildVerticalSeparator(isDark),
-          Expanded(
-            child: _buildCompactMetric(
-              'Last Updated',
-              DateTime.now().toString().substring(11, 19),
-              isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-              isDark,
-            ),
+          const SizedBox(height: 16.0),
+          _buildCompactMetric(
+            'Status',
+            hasError ? 'Error' : (isLoading ? 'Loading' : 'Active'),
+            hasError 
+                ? Palette.lightError 
+                : (isLoading ? Palette.lightWarning : Palette.lightSuccess),
+            isDark,
           ),
         ],
-      ),
+      );
+    }
+    
+    // For regular mobile screens, use vertical layout with proper separators
+    return Column(
+      children: [
+        _buildCompactMetric(
+          'Total Records',
+          totalItems,
+          isDark ? Palette.darkText : Palette.lightText,
+          isDark,
+        ),
+        const SizedBox(height: 20.0),
+        Container(
+          height: 1.0,
+          decoration: BoxDecoration(
+            color: isDark ? Palette.darkDivider : Palette.lightDivider,
+            borderRadius: BorderRadius.circular(0.5),
+          ),
+        ),
+        const SizedBox(height: 20.0),
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactMetric(
+                'Current Page',
+                '$currentPage of $totalPages',
+                Palette.lightPrimary,
+                isDark,
+              ),
+            ),
+            Container(
+              height: 30.0,
+              width: 1.0,
+              margin: const EdgeInsets.symmetric(horizontal: 12.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkDivider : Palette.lightDivider,
+                borderRadius: BorderRadius.circular(0.5),
+              ),
+            ),
+            Expanded(
+              child: _buildCompactMetric(
+                'Status',
+                hasError ? 'Error' : (isLoading ? 'Loading' : 'Active'),
+                hasError 
+                    ? Palette.lightError 
+                    : (isLoading ? Palette.lightWarning : Palette.lightSuccess),
+                isDark,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopStatsLayout(bool isDark) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildCompactMetric(
+            'Total Records',
+            totalItems,
+            isDark ? Palette.darkText : Palette.lightText,
+            isDark,
+          ),
+        ),
+        _buildVerticalSeparator(isDark),
+        Expanded(
+          child: _buildCompactMetric(
+            'Current Page',
+            '$currentPage of $totalPages',
+            Palette.lightPrimary,
+            isDark,
+          ),
+        ),
+        _buildVerticalSeparator(isDark),
+        Expanded(
+          child: _buildCompactMetric(
+            'Status',
+            hasError ? 'Error' : (isLoading ? 'Loading' : 'Active'),
+            hasError 
+                ? Palette.lightError 
+                : (isLoading ? Palette.lightWarning : Palette.lightSuccess),
+            isDark,
+          ),
+        ),
+        _buildVerticalSeparator(isDark),
+        Expanded(
+          child: _buildCompactMetric(
+            'Items/Page',
+            itemsPerPage,
+            isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            isDark,
+          ),
+        ),
+      ],
     );
   }
 
@@ -378,7 +543,347 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
       return _buildEmptyState(isDark);
     }
     
-    return _buildDataTable(isDark);
+    return Column(
+      children: [
+        Expanded(
+          child: _buildDataTable(isDark),
+        ),
+        const SizedBox(height: 16.0),
+        _buildPaginationWidget(isDark),
+      ],
+    );
+  }
+
+  Widget _buildPaginationWidget(bool isDark) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    
+    return Column(
+      children: [
+        // Page info and items per page selector
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Page info
+              Text(
+                _getPageInfoText(),
+                style: TextStyle(
+                  fontSize: isMobile ? 12.0 : 14.0,
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              // Items per page selector (desktop only)
+              if (!isMobile)
+                _buildItemsPerPageSelector(isDark, isTablet),
+            ],
+          ),
+        ),
+        SizedBox(height: isMobile ? 12.0 : 16.0),
+        
+        // Pagination controls
+        _buildPaginationControls(isDark, isMobile, isTablet),
+      ],
+    );
+  }
+
+  String _getPageInfoText() {
+    final startItem = (currentPage - 1) * itemsPerPage + 1;
+    final endItem = (currentPage * itemsPerPage).clamp(0, totalItems);
+    return 'Showing $startItem-$endItem of $totalItems items';
+  }
+
+  Widget _buildItemsPerPageSelector(bool isDark, bool isTablet) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Show:',
+          style: TextStyle(
+            fontSize: isTablet ? 12.0 : 14.0,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 8.0),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+          decoration: BoxDecoration(
+            color: isDark ? Palette.darkSurface.withValues(alpha: 0.5) : Palette.lightSurface.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(
+              color: isDark ? Palette.darkBorder.withValues(alpha: 0.3) : Palette.lightBorder.withValues(alpha: 0.3),
+              width: 1.0,
+            ),
+          ),
+          child: DropdownButton<int>(
+            value: itemsPerPage,
+            underline: const SizedBox.shrink(),
+            icon: Icon(
+              Icons.keyboard_arrow_down,
+              size: 16,
+              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            ),
+            style: TextStyle(
+              fontSize: isTablet ? 12.0 : 14.0,
+              color: isDark ? Palette.darkText : Palette.lightText,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
+            dropdownColor: isDark ? Palette.darkCard : Palette.lightCard,
+            onChanged: (int? newValue) {
+              if (newValue != null) {
+                _onItemsPerPageChanged(newValue);
+              }
+            },
+            items: const [10, 25, 50, 100].map((int value) {
+              return DropdownMenuItem<int>(
+                value: value,
+                child: Text(
+                  value.toString(),
+                  style: TextStyle(
+                    fontSize: isTablet ? 12.0 : 14.0,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(width: 4.0),
+        Text(
+          'per page',
+          style: TextStyle(
+            fontSize: isTablet ? 12.0 : 14.0,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaginationControls(bool isDark, bool isMobile, bool isTablet) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // First page button
+          _buildPageButton(
+            icon: Icons.first_page,
+            onPressed: currentPage > 1 ? () => _onPageChanged(1) : null,
+            isDark: isDark,
+            isMobile: isMobile,
+            tooltip: 'First page',
+          ),
+          const SizedBox(width: 6.0),
+          
+          // Previous page button
+          _buildPageButton(
+            icon: Icons.chevron_left,
+            onPressed: currentPage > 1 ? () => _onPageChanged(currentPage - 1) : null,
+            isDark: isDark,
+            isMobile: isMobile,
+            tooltip: 'Previous page',
+          ),
+          const SizedBox(width: 12.0),
+          
+          // Page numbers
+          if (!isMobile) _buildPageNumbers(isDark, isTablet),
+          if (isMobile) _buildMobilePageInfo(isDark),
+          
+          const SizedBox(width: 12.0),
+          
+          // Next page button
+          _buildPageButton(
+            icon: Icons.chevron_right,
+            onPressed: currentPage < totalPages ? () => _onPageChanged(currentPage + 1) : null,
+            isDark: isDark,
+            isMobile: isMobile,
+            tooltip: 'Next page',
+          ),
+          const SizedBox(width: 6.0),
+          
+          // Last page button
+          _buildPageButton(
+            icon: Icons.last_page,
+            onPressed: currentPage < totalPages ? () => _onPageChanged(totalPages) : null,
+            isDark: isDark,
+            isMobile: isMobile,
+            tooltip: 'Last page',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPageButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required bool isDark,
+    required bool isMobile,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8.0),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8.0),
+          onTap: onPressed,
+          child: Container(
+            width: isMobile ? 36.0 : 40.0,
+            height: isMobile ? 36.0 : 40.0,
+            decoration: BoxDecoration(
+              color: onPressed != null
+                  ? (isDark ? Palette.darkSurface.withValues(alpha: 0.6) : Palette.lightSurface.withValues(alpha: 0.6))
+                  : (isDark ? Palette.darkSurface.withValues(alpha: 0.2) : Palette.lightSurface.withValues(alpha: 0.2)),
+              borderRadius: BorderRadius.circular(8.0),
+              border: onPressed != null
+                  ? Border.all(
+                      color: isDark ? Palette.darkBorder.withValues(alpha: 0.4) : Palette.lightBorder.withValues(alpha: 0.4),
+                      width: 1.0,
+                    )
+                  : null,
+            ),
+            child: Icon(
+              icon,
+              size: isMobile ? 18.0 : 20.0,
+              color: onPressed != null
+                  ? (isDark ? Palette.darkText : Palette.lightText)
+                  : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageNumbers(bool isDark, bool isTablet) {
+    final List<Widget> pageNumbers = [];
+    final int maxVisiblePages = isTablet ? 5 : 7;
+    
+    int startPage = (currentPage - (maxVisiblePages ~/ 2)).clamp(1, totalPages);
+    int endPage = (startPage + maxVisiblePages - 1).clamp(1, totalPages);
+    
+    // Adjust start if we're near the end
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = (endPage - maxVisiblePages + 1).clamp(1, totalPages);
+    }
+    
+    // Add first page and ellipsis if needed
+    if (startPage > 1) {
+      pageNumbers.add(_buildPageNumber(1, isDark, isTablet));
+      if (startPage > 2) {
+        pageNumbers.add(_buildEllipsis(isDark));
+      }
+    }
+    
+    // Add visible page numbers
+    for (int i = startPage; i <= endPage; i++) {
+      pageNumbers.add(_buildPageNumber(i, isDark, isTablet));
+    }
+    
+    // Add ellipsis and last page if needed
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        pageNumbers.add(_buildEllipsis(isDark));
+      }
+      pageNumbers.add(_buildPageNumber(totalPages, isDark, isTablet));
+    }
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: pageNumbers,
+    );
+  }
+
+  Widget _buildPageNumber(int page, bool isDark, bool isTablet) {
+    final isCurrentPage = page == currentPage;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 3.0),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8.0),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8.0),
+          onTap: () => _onPageChanged(page),
+          child: Container(
+            width: isTablet ? 36.0 : 40.0,
+            height: isTablet ? 36.0 : 40.0,
+            decoration: BoxDecoration(
+              color: isCurrentPage
+                  ? (isDark ? Palette.darkPrimary : Palette.lightPrimary)
+                  : (isDark ? Palette.darkSurface.withValues(alpha: 0.3) : Palette.lightSurface.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8.0),
+              border: isCurrentPage
+                  ? null
+                  : Border.all(
+                      color: isDark ? Palette.darkBorder.withValues(alpha: 0.3) : Palette.lightBorder.withValues(alpha: 0.3),
+                      width: 1.0,
+                    ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              page.toString(),
+              style: TextStyle(
+                fontSize: isTablet ? 13.0 : 14.0,
+                fontWeight: isCurrentPage ? FontWeight.w700 : FontWeight.w500,
+                color: isCurrentPage
+                    ? Colors.white
+                    : (isDark ? Palette.darkText : Palette.lightText),
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEllipsis(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Text(
+        '...',
+        style: TextStyle(
+          fontSize: 14.0,
+          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          fontFamily: 'Inter',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobilePageInfo(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkSurface.withValues(alpha: 0.6) : Palette.lightSurface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(
+          color: isDark ? Palette.darkBorder.withValues(alpha: 0.4) : Palette.lightBorder.withValues(alpha: 0.4),
+          width: 1.0,
+        ),
+      ),
+      child: Text(
+        '$currentPage / $totalPages',
+        style: TextStyle(
+          fontSize: 13.0,
+          color: isDark ? Palette.darkText : Palette.lightText,
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 
   Widget _buildLoadingState(bool isDark) {
@@ -583,7 +1088,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
                   ),
                 );
               }).toList(),
-              rows: widget.rowBuilder(tableData).map((row) {
+              rows: widget.rowBuilder(paginatedData).map((row) {
                 return DataRow(
                   color: WidgetStateProperty.resolveWith<Color?>(
                     (Set<WidgetState> states) {
@@ -617,6 +1122,10 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   }
 
   Widget _buildCompactMetric(String label, dynamic value, Color valueColor, bool isDark) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 400;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -624,17 +1133,17 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           label.toUpperCase(),
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 12.0,
-            letterSpacing: 0.6,
+            fontSize: isSmallMobile ? 10.0 : (isMobile ? 11.0 : 12.0),
+            letterSpacing: isSmallMobile ? 0.4 : 0.6,
             color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
           ),
         ),
-        const SizedBox(height: 8.0),
+        SizedBox(height: isSmallMobile ? 4.0 : 8.0),
         Text(
           value.toString(),
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 22.0,
+            fontSize: isSmallMobile ? 16.0 : (isMobile ? 18.0 : 22.0),
             fontWeight: FontWeight.w700,
             color: valueColor,
           ),

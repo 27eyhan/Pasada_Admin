@@ -435,13 +435,19 @@ class _FleetState extends State<Fleet> {
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount;
+        double childAspectRatio;
+        
         if (constraints.maxWidth >= 900) {
           crossAxisCount = 3;
+          childAspectRatio = 2.2;
         } else if (constraints.maxWidth >= 600) {
           crossAxisCount = 2;
+          childAspectRatio = 1.0;
         } else {
           crossAxisCount = 1;
+          childAspectRatio = 0.6; // More vertical space for mobile
         }
+        
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -449,7 +455,7 @@ class _FleetState extends State<Fleet> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 24.0,
             mainAxisSpacing: 24.0,
-            childAspectRatio: 2.2,
+            childAspectRatio: childAspectRatio,
           ),
           itemCount: filteredVehicleData.length,
           itemBuilder: (context, index) {

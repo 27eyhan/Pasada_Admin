@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_dialog.dart';
 import 'package:provider/provider.dart';
 
 class EarningsBreakdownDialog extends StatelessWidget {
@@ -17,12 +19,6 @@ class EarningsBreakdownDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context).size.width * 0.65;
-    final double dialogWidth = screenWidth * 0.6;
-    final double dialogHeight = screenWidth * 0.75;
-    
-    // Calculate column widths
-    final double columnWidth = (dialogWidth - 80) / 2; // Account for padding and spacing
     
     final dailyEarnings = (driver['daily_earnings'] ?? 0.0) as double;
     final weeklyEarnings = (driver['weekly_earnings'] ?? 0.0) as double;
@@ -37,205 +33,164 @@ class EarningsBreakdownDialog extends StatelessWidget {
     final List weeklyBookings = breakdown?['weekly_bookings'] ?? [];
     final List monthlyBookings = breakdown?['monthly_bookings'] ?? [];
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 1.5),
-      ),
-      elevation: 8.0,
-      backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
-      child: Container(
-        width: dialogWidth,
-        height: dialogHeight,
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header with icon
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.bar_chart, color: isDark ? Palette.darkText : Palette.lightText, size: 28),
-                    SizedBox(width: 12.0),
-                    Text(
-                      "Earnings Report",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Palette.darkText : Palette.lightText,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
-                ),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(50),
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isDark ? Palette.darkBorder : Colors.grey[200],
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        size: 24,
-                        color: isDark ? Palette.darkText : Palette.lightText,
-                      ),
-                    ),
-                  ),
+    return ResponsiveDialog(
+      title: "Earnings Report",
+      titleIcon: Icons.bar_chart,
+      child: ResponsiveDialogContent(
+        children: [
+          // Driver information
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? Palette.darkSurface : Palette.lightSurface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+            ),
+            child: Text(
+              "${driver['full_name']} (ID: ${driver['driver_id']})",
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 14, tablet: 16, desktop: 16),
+                fontWeight: FontWeight.w600,
+                color: isDark ? Palette.darkText : Palette.lightText,
+              ),
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 16, tablet: 20, desktop: 24)),
+          
+          // Earnings Summary
+          Container(
+            padding: EdgeInsets.all(ResponsiveHelper.getResponsiveCardPadding(context)),
+            decoration: BoxDecoration(
+              color: isDark ? Palette.darkSurface : Palette.lightSurface,
+              borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveBorderRadius(context)),
+              border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark 
+                      ? Colors.black.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.1),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-            const SizedBox(height: 16.0),
-            Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, thickness: 1.5),
-            const SizedBox(height: 16.0),
-            
-            // Driver information
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isDark ? Palette.darkSurface : Palette.lightSurface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
-              ),
-              child: Text(
-                "${driver['full_name']} (ID: ${driver['driver_id']})",
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Palette.darkText : Palette.lightText,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24.0),
-            
-            // Earnings Summary
-            Container(
-              padding: EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: isDark ? Palette.darkSurface : Palette.lightSurface,
-                borderRadius: BorderRadius.circular(12.0),
-                border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark 
-                        ? Colors.black.withValues(alpha: 0.1)
-                        : Colors.grey.withValues(alpha: 0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildEarningsSummary('Daily', dailyEarnings, quotaDaily, isDark),
-                  _buildVerticalDivider(isDark),
-                  _buildEarningsSummary('Weekly', weeklyEarnings, quotaWeekly, isDark),
-                  _buildVerticalDivider(isDark),
-                  _buildEarningsSummary('Monthly', monthlyEarnings, quotaMonthly, isDark),
-                  _buildVerticalDivider(isDark),
-                  _buildEarningsSummary('All Time', totalEarnings, quotaTotal, isDark),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 24.0),
-            
-            // Bookings lists in two columns
-            Expanded(
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left column - Weekly Bookings
-                    SizedBox(
-                      width: columnWidth,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSectionHeader("This Week's Bookings", isDark),
-                          const SizedBox(height: 8.0),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: _buildBookingsList(weeklyBookings, isDark),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Spacing between columns
-                    const SizedBox(width: 24.0),
-                    
-                    // Right column - Monthly Bookings
-                    SizedBox(
-                      width: columnWidth,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSectionHeader("This Month's Bookings", isDark),
-                          const SizedBox(height: 8.0),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: _buildBookingsList(monthlyBookings, isDark),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 16.0),
-            
-            // Bottom button
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
-                  foregroundColor: isDark ? Palette.darkText : Palette.lightText,
-                  elevation: 4.0,
-                  shadowColor: isDark ? Colors.black.withValues(alpha: 0.1) : Colors.grey.shade300,
-                  side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 1.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      "Close",
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: ResponsiveHelper.isMobile(context)
+                ? _buildMobileEarningsSummary(dailyEarnings, weeklyEarnings, monthlyEarnings, totalEarnings, quotaDaily, quotaWeekly, quotaMonthly, quotaTotal, isDark)
+                : _buildDesktopEarningsSummary(dailyEarnings, weeklyEarnings, monthlyEarnings, totalEarnings, quotaDaily, quotaWeekly, quotaMonthly, quotaTotal, isDark),
+          ),
+          
+          SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 16, tablet: 20, desktop: 24)),
+          
+          // Bookings lists
+          ResponsiveHelper.isMobile(context)
+              ? _buildMobileBookingsLayout(weeklyBookings, monthlyBookings, isDark)
+              : _buildDesktopBookingsLayout(weeklyBookings, monthlyBookings, isDark),
+        ],
+      ),
+    );
+  }
+
+  // Mobile earnings summary layout
+  Widget _buildMobileEarningsSummary(double dailyEarnings, double weeklyEarnings, double monthlyEarnings, double totalEarnings, double quotaDaily, double quotaWeekly, double quotaMonthly, double quotaTotal, bool isDark) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildEarningsSummary('Daily', dailyEarnings, quotaDaily, isDark)),
+            SizedBox(width: 8),
+            Expanded(child: _buildEarningsSummary('Weekly', weeklyEarnings, quotaWeekly, isDark)),
           ],
         ),
-      ),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _buildEarningsSummary('Monthly', monthlyEarnings, quotaMonthly, isDark)),
+            SizedBox(width: 8),
+            Expanded(child: _buildEarningsSummary('All Time', totalEarnings, quotaTotal, isDark)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Desktop earnings summary layout
+  Widget _buildDesktopEarningsSummary(double dailyEarnings, double weeklyEarnings, double monthlyEarnings, double totalEarnings, double quotaDaily, double quotaWeekly, double quotaMonthly, double quotaTotal, bool isDark) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildEarningsSummary('Daily', dailyEarnings, quotaDaily, isDark),
+        _buildVerticalDivider(isDark),
+        _buildEarningsSummary('Weekly', weeklyEarnings, quotaWeekly, isDark),
+        _buildVerticalDivider(isDark),
+        _buildEarningsSummary('Monthly', monthlyEarnings, quotaMonthly, isDark),
+        _buildVerticalDivider(isDark),
+        _buildEarningsSummary('All Time', totalEarnings, quotaTotal, isDark),
+      ],
+    );
+  }
+
+  // Mobile bookings layout
+  Widget _buildMobileBookingsLayout(List weeklyBookings, List monthlyBookings, bool isDark) {
+    return Column(
+      children: [
+        _buildSectionHeader("This Week's Bookings", isDark),
+        SizedBox(height: 8),
+        SizedBox(
+          height: 200,
+          child: SingleChildScrollView(
+            child: _buildBookingsList(weeklyBookings, isDark),
+          ),
+        ),
+        SizedBox(height: 16),
+        _buildSectionHeader("This Month's Bookings", isDark),
+        SizedBox(height: 8),
+        SizedBox(
+          height: 200,
+          child: SingleChildScrollView(
+            child: _buildBookingsList(monthlyBookings, isDark),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Desktop bookings layout
+  Widget _buildDesktopBookingsLayout(List weeklyBookings, List monthlyBookings, bool isDark) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionHeader("This Week's Bookings", isDark),
+              SizedBox(height: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: _buildBookingsList(weeklyBookings, isDark),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 24),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionHeader("This Month's Bookings", isDark),
+              SizedBox(height: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: _buildBookingsList(monthlyBookings, isDark),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
   

@@ -396,20 +396,26 @@ class _DriversState extends State<Drivers> {
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount;
+        double childAspectRatio;
+        
         if (constraints.maxWidth >= 1200) {
           crossAxisCount = 3;
+          childAspectRatio = 2.2;
         } else if (constraints.maxWidth >= 800) {
           crossAxisCount = 2;
+          childAspectRatio = 1.0;
         } else {
           crossAxisCount = 1;
+          childAspectRatio = 0.6; // More vertical space for mobile
         }
+        
         return GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: 24.0,
           mainAxisSpacing: 24.0,
-          childAspectRatio: 2.2,
+          childAspectRatio: childAspectRatio,
           children: List.generate(filteredDriverData.length, (index) {
             final driver = filteredDriverData[index];
             final status =
@@ -615,6 +621,10 @@ class _DriversState extends State<Drivers> {
   Widget _buildDriverCard(Map<String, dynamic> driver, bool isActive) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final isSmallMobile = screenWidth < 400;
+    
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
@@ -633,20 +643,25 @@ class _DriversState extends State<Drivers> {
             border: Border.all(
                 color: isDark 
                     ? Palette.darkBorder.withValues(alpha: 77)
-                    : Palette.lightBorder.withValues(alpha: 77),
+                    : Palette.lightBorder.withValues(alpha: 77), 
                 width: 1.0),
             borderRadius: BorderRadius.circular(15.0),
           ),
-          padding: const EdgeInsets.fromLTRB(16.0, 12.0, 12.0, 12.0),
+          padding: EdgeInsets.fromLTRB(
+            isSmallMobile ? 12.0 : (isMobile ? 14.0 : 16.0),
+            isSmallMobile ? 8.0 : (isMobile ? 10.0 : 12.0),
+            isSmallMobile ? 8.0 : (isMobile ? 10.0 : 12.0),
+            isSmallMobile ? 8.0 : (isMobile ? 10.0 : 12.0),
+          ),
           child: Stack(
             children: [
               // Status indicator dot
               Positioned(
-                top: 8,
-                right: 8,
+                top: isSmallMobile ? 6.0 : (isMobile ? 7.0 : 8.0),
+                right: isSmallMobile ? 6.0 : (isMobile ? 7.0 : 8.0),
                 child: Container(
-                  width: 12,
-                  height: 12,
+                  width: isSmallMobile ? 10.0 : (isMobile ? 11.0 : 12.0),
+                  height: isSmallMobile ? 10.0 : (isMobile ? 11.0 : 12.0),
                   decoration: BoxDecoration(
                     color: isActive ? Colors.green : Colors.red,
                     shape: BoxShape.circle,
@@ -669,16 +684,16 @@ class _DriversState extends State<Drivers> {
                       ),
                     ),
                     child: CircleAvatar(
-                      radius: 28,
+                      radius: isSmallMobile ? 20.0 : (isMobile ? 24.0 : 28.0),
                       backgroundColor: Colors.transparent,
                       child: Icon(
                         Icons.person,
                         color: Colors.white,
-                        size: 28,
+                        size: isSmallMobile ? 20.0 : (isMobile ? 24.0 : 28.0),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16.0),
+                  SizedBox(width: isSmallMobile ? 12.0 : (isMobile ? 14.0 : 16.0)),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -688,28 +703,36 @@ class _DriversState extends State<Drivers> {
                           "${driver['full_name'] ?? 'Unknown Driver'}",
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 18.0,
+                            fontSize: isSmallMobile ? 14.0 : (isMobile ? 16.0 : 18.0),
                             fontWeight: FontWeight.bold,
                             color: isDark ? Palette.darkText : Palette.lightText,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 8.0),
+                        SizedBox(height: isSmallMobile ? 6.0 : (isMobile ? 7.0 : 8.0)),
                         _buildDriverInfoRow(Icons.badge_outlined,
                             "ID: ${driver['driver_id']}",
-                            textColor: isDark ? Palette.darkText : Palette.lightText),
+                            textColor: isDark ? Palette.darkText : Palette.lightText,
+                            isMobile: isMobile,
+                            isSmallMobile: isSmallMobile),
                         _buildDriverInfoRow(Icons.phone_android,
                             "${driver['driver_number']}",
-                            textColor: isDark ? Palette.darkText : Palette.lightText),
+                            textColor: isDark ? Palette.darkText : Palette.lightText,
+                            isMobile: isMobile,
+                            isSmallMobile: isSmallMobile),
                         _buildDriverInfoRow(Icons.directions_car_outlined,
                             "Vehicle: ${driver['vehicle_id']}",
-                            textColor: isDark ? Palette.darkText : Palette.lightText),
+                            textColor: isDark ? Palette.darkText : Palette.lightText,
+                            isMobile: isMobile,
+                            isSmallMobile: isSmallMobile),
                         _buildDriverInfoRow(
                           isActive
                               ? Icons.play_circle_outline
                               : Icons.pause_circle_outline,
                           "Status: ${_capitalizeFirstLetter(driver['driving_status'] ?? 'Offline')}",
                           textColor: isActive ? Colors.green : Colors.red,
+                          isMobile: isMobile,
+                          isSmallMobile: isSmallMobile,
                         ),
                       ],
                     ),
@@ -719,11 +742,12 @@ class _DriversState extends State<Drivers> {
 
               // Quick action buttons
               Positioned(
-                right: 4,
-                bottom: 8,
+                right: isSmallMobile ? 2.0 : (isMobile ? 3.0 : 4.0),
+                bottom: isSmallMobile ? 6.0 : (isMobile ? 7.0 : 8.0),
                 child: Row(
                   children: [
-                    _buildActionButton(Icons.map_outlined, Palette.blackColor, driver),
+                    _buildActionButton(Icons.map_outlined, Palette.blackColor, driver, 
+                        isMobile: isMobile, isSmallMobile: isSmallMobile),
                   ],
                 ),
               ),
@@ -736,26 +760,32 @@ class _DriversState extends State<Drivers> {
 
   // Helper widget for action buttons
   Widget _buildActionButton(
-      IconData icon, Color color, Map<String, dynamic> driver) {
+      IconData icon, Color color, Map<String, dynamic> driver, {bool? isMobile, bool? isSmallMobile}) {
     final bool isMap = icon == Icons.map_outlined;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final mobile = isMobile ?? false;
+    final smallMobile = isSmallMobile ?? false;
+    
+    final buttonSize = smallMobile ? 28.0 : (mobile ? 32.0 : 36.0);
+    final iconSize = smallMobile ? 14.0 : (mobile ? 16.0 : 18.0);
+    
     return Container(
-      margin: EdgeInsets.only(left: 4),
+      margin: EdgeInsets.only(left: smallMobile ? 2.0 : (mobile ? 3.0 : 4.0)),
       decoration: BoxDecoration(
         color: isMap ? (isDark ? Palette.darkSurface : Palette.lightSurface) : color,
         shape: BoxShape.circle,
         border: isMap
             ? Border.all(
                 color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                width: 1.5,
+                width: smallMobile ? 1.0 : 1.5,
               )
             : null,
       ),
       child: IconButton(
         icon: Icon(
           icon,
-          size: 18,
+          size: iconSize,
           color: isMap
               ? (isDark ? Palette.darkText : Palette.blackColor)
               : Colors.white,
@@ -772,34 +802,37 @@ class _DriversState extends State<Drivers> {
           }
           // Other icon actions can be added here
         },
-        constraints: BoxConstraints(minWidth: 36, minHeight: 36),
+        constraints: BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
         padding: EdgeInsets.zero,
-        splashRadius: 18,
+        splashRadius: smallMobile ? 14.0 : (mobile ? 16.0 : 18.0),
       ),
     );
   }
 
   // Helper widget for driver info rows with icons
-  Widget _buildDriverInfoRow(IconData icon, String text, {Color? textColor}) {
+  Widget _buildDriverInfoRow(IconData icon, String text, {Color? textColor, bool? isMobile, bool? isSmallMobile}) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final mobile = isMobile ?? false;
+    final smallMobile = isSmallMobile ?? false;
+    
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
+      padding: EdgeInsets.only(bottom: smallMobile ? 2.0 : (mobile ? 3.0 : 4.0)),
       child: Row(
         children: [
           Icon(
             icon,
-            size: 14,
+            size: smallMobile ? 10.0 : (mobile ? 12.0 : 14.0),
             color:
                 textColor ?? (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
           ),
-          SizedBox(width: 4),
+          SizedBox(width: smallMobile ? 3.0 : (mobile ? 3.5 : 4.0)),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 13.0,
+                fontSize: smallMobile ? 10.0 : (mobile ? 11.0 : 13.0),
                 color: textColor ?? (isDark ? Palette.darkText : Palette.lightText),
               ),
               overflow: TextOverflow.ellipsis,
