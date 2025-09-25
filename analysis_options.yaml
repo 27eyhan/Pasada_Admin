@@ -1,6 +1,6 @@
 include: package:flutter_lints/flutter.yaml
 analyzer:
   errors:
-    curly_braces_in_flow_control_structures: ignore ignore
+    curly_braces_in_flow_control_structures: ignore
     library_private_types_in_public_api: ignore
     use_build_context_synchronously: ignore

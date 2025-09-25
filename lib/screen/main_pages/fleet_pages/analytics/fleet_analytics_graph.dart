@@ -722,8 +722,13 @@ class _RouteDropdown extends StatelessWidget {
     final isMobile = ResponsiveHelper.isMobile(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallMobile = screenWidth < 400;
+    final double dropdownWidth = isSmallMobile
+        ? screenWidth * 0.46
+        : (isMobile ? screenWidth * 0.4 : 220);
     
-    return Container(
+    return SizedBox(
+      width: dropdownWidth,
+      child: Container(
       decoration: BoxDecoration(
         color: isDark ? Palette.darkCard : Palette.lightCard,
         border: Border.all(
@@ -758,6 +763,30 @@ class _RouteDropdown extends StatelessWidget {
             color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
           ),
           dropdownColor: isDark ? Palette.darkCard : Palette.lightCard,
+            isExpanded: true,
+            isDense: false,
+            itemHeight: isMobile ? 44.0 : 40.0,
+            menuMaxHeight: isMobile ? 320.0 : 400.0,
+            borderRadius: BorderRadius.circular(8.0),
+            selectedItemBuilder: (context) {
+              return routes.map((r) {
+                final String id = r['officialroute_id']?.toString() ?? '';
+                final String name = r['route_name']?.toString() ?? 'Route $id';
+                final String display = isSmallMobile ? name : '$name (ID: $id)';
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    display,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: isSmallMobile ? 12.0 : (isMobile ? 13.0 : 14.0),
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                );
+              }).toList();
+            },
           items: routes.map((r) {
             final String id = r['officialroute_id']?.toString() ?? '';
             final String name = r['route_name']?.toString() ?? 'Route $id';
@@ -781,6 +810,7 @@ class _RouteDropdown extends StatelessWidget {
           }).toList(),
           onChanged: onChanged,
         ),
+      ),
       ),
     );
   }

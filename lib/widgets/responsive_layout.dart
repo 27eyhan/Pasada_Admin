@@ -94,9 +94,13 @@ class ResponsiveGrid extends StatelessWidget {
       largeDesktop: largeDesktopColumns ?? 4,
     );
 
+    final isMobile = ResponsiveHelper.isMobile(context);
+    
     return GridView.builder(
       shrinkWrap: true,
-      physics: const AlwaysScrollableScrollPhysics(),
+      physics: isMobile 
+          ? const BouncingScrollPhysics() 
+          : const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: crossAxisSpacing,

@@ -6,6 +6,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/widgets/responsive_layout.dart';
+import 'package:pasada_admin_application/widgets/responsive_search_bar.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +37,9 @@ class _DriversContentState extends State<DriversContent> {
   Set<String> selectedStatuses = {};
   String? selectedVehicleId;
   String sortOption = 'numeric'; // Default sorting
+
+  // Search state
+  String searchQuery = '';
 
   // View mode: grid or list
   bool isGridView = true;
@@ -83,45 +87,55 @@ class _DriversContentState extends State<DriversContent> {
 
   void _applyFilters() {
     setState(() {
-      if (selectedStatuses.isEmpty && selectedVehicleId == null) {
-        // No filters applied, show all data
-        filteredDriverData = List.from(driverData);
-      } else {
-        filteredDriverData = driverData.where((driver) {
-          // Filter by status
-          bool statusMatch = true;
-          if (selectedStatuses.isNotEmpty) {
-            final status = driver["driving_status"]?.toString() ?? "Offline";
+      filteredDriverData = driverData.where((driver) {
+        // Search filter
+        bool searchMatch = true;
+        if (searchQuery.isNotEmpty) {
+          final fullName = driver['full_name']?.toString().toLowerCase() ?? '';
+          final driverId = driver['driver_id']?.toString().toLowerCase() ?? '';
+          final driverNumber = driver['driver_number']?.toString().toLowerCase() ?? '';
+          final vehicleId = driver['vehicle_id']?.toString().toLowerCase() ?? '';
+          
+          final query = searchQuery.toLowerCase();
+          searchMatch = fullName.contains(query) ||
+              driverId.contains(query) ||
+              driverNumber.contains(query) ||
+              vehicleId.contains(query);
+        }
 
-            if (selectedStatuses.contains('Online')) {
-              // For Online, match any of these statuses
-              bool isActive = status.toLowerCase() == "driving" ||
-                  status.toLowerCase() == "online" ||
-                  status.toLowerCase() == "idling" ||
-                  status.toLowerCase() == "active";
+        // Filter by status
+        bool statusMatch = true;
+        if (selectedStatuses.isNotEmpty) {
+          final status = driver["driving_status"]?.toString() ?? "Offline";
 
-              if (selectedStatuses.contains('Offline')) {
-                // If both Online and Offline are selected, show all
-                statusMatch = true;
-              } else {
-                // Only Online is selected
-                statusMatch = isActive;
-              }
-            } else if (selectedStatuses.contains('Offline')) {
-              // Only Offline is selected
-              bool isOffline = status.toLowerCase() == "offline" ||
-                  status.toLowerCase() == "";
-              statusMatch = isOffline;
+          if (selectedStatuses.contains('Online')) {
+            // For Online, match any of these statuses
+            bool isActive = status.toLowerCase() == "driving" ||
+                status.toLowerCase() == "online" ||
+                status.toLowerCase() == "idling" ||
+                status.toLowerCase() == "active";
+
+            if (selectedStatuses.contains('Offline')) {
+              // If both Online and Offline are selected, show all
+              statusMatch = true;
+            } else {
+              // Only Online is selected
+              statusMatch = isActive;
             }
+          } else if (selectedStatuses.contains('Offline')) {
+            // Only Offline is selected
+            bool isOffline = status.toLowerCase() == "offline" ||
+                status.toLowerCase() == "";
+            statusMatch = isOffline;
           }
+        }
 
-          // Filter by vehicle ID
-          bool vehicleMatch = selectedVehicleId == null ||
-              driver['vehicle_id']?.toString() == selectedVehicleId;
+        // Filter by vehicle ID
+        bool vehicleMatch = selectedVehicleId == null ||
+            driver['vehicle_id']?.toString() == selectedVehicleId;
 
-          return statusMatch && vehicleMatch;
-        }).toList();
-      }
+        return searchMatch && statusMatch && vehicleMatch;
+      }).toList();
 
       // Apply sorting
       if (sortOption == 'alphabetical') {
@@ -229,6 +243,17 @@ class _DriversContentState extends State<DriversContent> {
                                 ),
                                 const Spacer(),
                               ],
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Search bar
+                            ResponsiveSearchBar(
+                              hintText: 'Search drivers by name, ID, number, or vehicle...',
+                              onSearchChanged: (query) {
+                                setState(() {
+                                  searchQuery = query;
+                                  _applyFilters();
+                                });
+                              },
                             ),
                             const SizedBox(height: 24.0),
                             // Status metrics container with separators
@@ -356,7 +381,7 @@ class _DriversContentState extends State<DriversContent> {
     // Calculate dynamic aspect ratio based on screen size and zoom level
     double dynamicAspectRatio;
     if (isMobile) {
-      dynamicAspectRatio = 1.2; // More vertical space for mobile
+      dynamicAspectRatio = 2.0; // More vertical space for mobile
     } else if (isTablet) {
       // For tablets, adjust based on actual screen width
       if (screenWidth < 900) {
@@ -382,10 +407,12 @@ class _DriversContentState extends State<DriversContent> {
     }
     
     return ResponsiveGrid(
-      mobileColumns: 1,
+      mobileColumns: 2,
       tabletColumns: 2,
       desktopColumns: 3,
       largeDesktopColumns: 4,
+      crossAxisSpacing: isMobile ? 12.0 : 24.0,
+      mainAxisSpacing: isMobile ? 12.0 : 24.0,
       childAspectRatio: dynamicAspectRatio,
       children: filteredDriverData.map((driver) {
         final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
@@ -618,18 +645,19 @@ class _DriversContentState extends State<DriversContent> {
           child: Stack(
             children: [
               // Status indicator dot
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: isActive ? Colors.green : Colors.red,
-                    shape: BoxShape.circle,
+              if (!isMobile)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: isActive ? Colors.green : Colors.red,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
 
               Row(
                 children: [
@@ -859,7 +887,7 @@ class _DriversContentState extends State<DriversContent> {
   // Helper method to calculate responsive font sizes based on screen width and zoom level
   double _getResponsiveFontSize(double screenWidth, bool isMobile, String type) {
     if (isMobile) {
-      return type == 'name' ? 16.0 : 11.0;
+      return type == 'name' ? 14.0 : 7.0;
     }
     
     // Adjust font sizes based on screen width to handle zoom levels

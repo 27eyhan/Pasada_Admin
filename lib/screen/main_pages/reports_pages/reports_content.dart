@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/widgets/responsive_layout.dart';
+import 'package:pasada_admin_application/widgets/responsive_search_bar.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/reports_chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
@@ -24,8 +25,12 @@ class ReportsContent extends StatefulWidget {
 class _ReportsContentState extends State<ReportsContent> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> driversWithFares = [];
+  List<Map<String, dynamic>> filteredDriversWithFares = [];
   Map<int, Map<String, dynamic>> driverEarningsBreakdown = {};
   bool isLoading = true;
+  
+  // Search state
+  String searchQuery = '';
   
   // Summary statistics
   int totalDrivers = 0;
@@ -47,6 +52,27 @@ class _ReportsContentState extends State<ReportsContent> {
     super.initState();
     fetchData();
     _fetchQuotaTargets();
+  }
+
+  void _applyFilters() {
+    setState(() {
+      if (searchQuery.isEmpty) {
+        filteredDriversWithFares = List.from(driversWithFares);
+      } else {
+        final query = searchQuery.toLowerCase();
+        filteredDriversWithFares = driversWithFares.where((driver) {
+          final fullName = driver['full_name']?.toString().toLowerCase() ?? '';
+          final driverId = driver['driver_id']?.toString().toLowerCase() ?? '';
+          final driverNumber = driver['driver_number']?.toString().toLowerCase() ?? '';
+          final vehicleId = driver['vehicle_id']?.toString().toLowerCase() ?? '';
+          
+          return fullName.contains(query) ||
+              driverId.contains(query) ||
+              driverNumber.contains(query) ||
+              vehicleId.contains(query);
+        }).toList();
+      }
+    });
   }
 
   Future<void> fetchData() async {
@@ -197,6 +223,7 @@ class _ReportsContentState extends State<ReportsContent> {
       
       setState(() {
         driversWithFares = result;
+        filteredDriversWithFares = List.from(driversWithFares);
         driverEarningsBreakdown = breakdownByDriver;
         totalDrivers = result.length;
         totalEarnings = sumTotal;
@@ -291,6 +318,17 @@ class _ReportsContentState extends State<ReportsContent> {
                                 ),
                                 const Spacer(),
                               ],
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Search bar
+                            ResponsiveSearchBar(
+                              hintText: 'Search drivers by name, ID, number, or vehicle...',
+                              onSearchChanged: (query) {
+                                setState(() {
+                                  searchQuery = query;
+                                  _applyFilters();
+                                });
+                              },
                             ),
                             const SizedBox(height: 24.0),
                             // Quota Bento Grid + edit
@@ -459,9 +497,9 @@ class _ReportsContentState extends State<ReportsContent> {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: driversWithFares.length,
+      itemCount: filteredDriversWithFares.length,
       itemBuilder: (context, index) {
-        final driver = driversWithFares[index];
+        final driver = filteredDriversWithFares[index];
         return Padding(
           padding: EdgeInsets.only(bottom: isMobile ? 12.0 : 16.0),
           child: isMobile 

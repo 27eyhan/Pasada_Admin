@@ -4,6 +4,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/widgets/responsive_layout.dart';
+import 'package:pasada_admin_application/widgets/responsive_search_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
 import 'analytics/fleet_analytics_graph.dart';
@@ -35,6 +36,9 @@ class _FleetContentState extends State<FleetContent> {
   Set<String> selectedStatuses = {};
   String? selectedRouteId;
 
+  // Search state
+  String searchQuery = '';
+
   // View mode: grid or list
   bool isGridView = true;
 
@@ -55,12 +59,23 @@ class _FleetContentState extends State<FleetContent> {
 
   void _applyFilters() {
     setState(() {
-      if (selectedStatuses.isEmpty && selectedRouteId == null) {
-        filteredVehicleData = List.from(vehicleData);
-        return;
-      }
-
       filteredVehicleData = vehicleData.where((vehicle) {
+        // Search filter
+        bool searchMatch = true;
+        if (searchQuery.isNotEmpty) {
+          final plateNumber = vehicle['plate_number']?.toString().toLowerCase() ?? '';
+          final vehicleId = vehicle['vehicle_id']?.toString().toLowerCase() ?? '';
+          final routeId = vehicle['route_id']?.toString().toLowerCase() ?? '';
+          final capacity = vehicle['passenger_capacity']?.toString().toLowerCase() ?? '';
+          
+          final query = searchQuery.toLowerCase();
+          searchMatch = plateNumber.contains(query) ||
+              vehicleId.contains(query) ||
+              routeId.contains(query) ||
+              capacity.contains(query);
+        }
+
+        // Status filter
         String? vehicleStatus = 'Offline';
         final driverData = vehicle['driverTable'];
         if (driverData != null && driverData is List && driverData.isNotEmpty) {
@@ -73,10 +88,11 @@ class _FleetContentState extends State<FleetContent> {
         bool statusMatch = selectedStatuses.isEmpty ||
             selectedStatuses.contains(vehicleStatus);
 
+        // Route filter
         bool routeMatch = selectedRouteId == null ||
             vehicle['route_id']?.toString() == selectedRouteId;
 
-        return statusMatch && routeMatch;
+        return searchMatch && statusMatch && routeMatch;
       }).toList();
     });
   }
@@ -226,6 +242,17 @@ class _FleetContentState extends State<FleetContent> {
                               ],
                             ),
                             const SizedBox(height: 24.0),
+                            // Search bar
+                            ResponsiveSearchBar(
+                              hintText: 'Search vehicles by plate number, ID, route, or capacity...',
+                              onSearchChanged: (query) {
+                                setState(() {
+                                  searchQuery = query;
+                                  _applyFilters();
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 24.0),
                             // Booking frequency graph
                             BookingFrequencyGraph(days: 14),
                             const SizedBox(height: 24.0),
@@ -367,7 +394,7 @@ class _FleetContentState extends State<FleetContent> {
     // Calculate dynamic aspect ratio based on screen size and zoom level
     double dynamicAspectRatio;
     if (isMobile) {
-      dynamicAspectRatio = 1.2; // More vertical space for mobile
+      dynamicAspectRatio = 2.0; // More vertical space for mobile
     } else if (isTablet) {
       // For tablets, adjust based on actual screen width
       if (screenWidth < 900) {
@@ -393,10 +420,12 @@ class _FleetContentState extends State<FleetContent> {
     }
     
     return ResponsiveGrid(
-      mobileColumns: 1,
+      mobileColumns: 2,
       tabletColumns: 2,
       desktopColumns: 3,
       largeDesktopColumns: 4,
+      crossAxisSpacing: isMobile ? 12.0 : 24.0,
+      mainAxisSpacing: isMobile ? 12.0 : 24.0,
       childAspectRatio: dynamicAspectRatio,
       children: filteredVehicleData.map((vehicle) => _buildVehicleCard(vehicle)).toList(),
     );
@@ -487,18 +516,19 @@ class _FleetContentState extends State<FleetContent> {
           padding: EdgeInsets.all(_getResponsivePadding(screenWidth, isMobile)),
           child: Stack(
             children: [
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
+              if (!isMobile)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -805,10 +835,10 @@ class _FleetContentState extends State<FleetContent> {
   double _getResponsiveFontSize(double screenWidth, bool isMobile, String type) {
     if (isMobile) {
       switch (type) {
-        case 'title': return 16.0;
-        case 'info': return 10.0;
-        case 'status': return 11.0;
-        default: return 12.0;
+        case 'title': return 14.0;
+        case 'info': return 8.0;
+        case 'status': return 9.0;
+        default: return 10.0;
       }
     }
     

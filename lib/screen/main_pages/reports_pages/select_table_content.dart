@@ -101,6 +101,8 @@ class _SelectTableContentState extends State<SelectTableContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
 
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
@@ -145,7 +147,11 @@ class _SelectTableContentState extends State<SelectTableContent> {
                   tabletColumns: 2,
                   desktopColumns: 3,
                   largeDesktopColumns: 4,
-                  childAspectRatio: 1.2,
+                  crossAxisSpacing: isMobile ? 12.0 : 24.0,
+                  mainAxisSpacing: isMobile ? 12.0 : 24.0,
+                  childAspectRatio: isMobile
+                      ? 2.0
+                      : (isTablet ? 1.6 : 1.2),
                 ),
               ),
             ],

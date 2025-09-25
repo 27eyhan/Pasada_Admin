@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/screen/main_pages/fleet_pages/fleet_data.dart'; // Import FleetData
 import 'package:provider/provider.dart';
 
@@ -133,11 +134,27 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double dialogWidth = screenWidth * 0.4;
-    final double dialogHeight = screenWidth * 0.23;
+    final Size screenSize = MediaQuery.of(context).size;
+    final double screenWidth = screenSize.width;
+    final double screenHeight = screenSize.height;
+
+    final bool isMobile = ResponsiveHelper.isMobile(context);
+    final bool isTablet = ResponsiveHelper.isTablet(context);
+
+    // Responsive dialog dimensions and constraints
+    final double targetWidth = isMobile
+        ? screenWidth * 0.95
+        : (isTablet ? screenWidth * 0.7 : screenWidth * 0.4);
+    final double dialogWidth = targetWidth.clamp(320.0, 720.0);
+    final double maxDialogHeight = isMobile
+        ? screenHeight * 0.9
+        : (isTablet ? screenHeight * 0.85 : screenHeight * 0.8);
 
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8.0 : 24.0,
+        vertical: isMobile ? 12.0 : 24.0,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
       ),
@@ -145,7 +162,9 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
       backgroundColor: Colors.transparent,
       child: Container(
         width: dialogWidth,
-        height: dialogHeight,
+        constraints: BoxConstraints(
+          maxHeight: maxDialogHeight,
+        ),
         decoration: BoxDecoration(
           color: isDark ? Palette.darkCard : Palette.lightCard,
           borderRadius: BorderRadius.circular(16.0),
@@ -171,7 +190,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
           children: [
             // Modern header
             Container(
-              padding: const EdgeInsets.all(20.0),
+              padding: EdgeInsets.all(isMobile ? 14.0 : 20.0),
               decoration: BoxDecoration(
                 color: isDark ? Palette.darkCard : Palette.lightCard,
                 borderRadius: const BorderRadius.only(
@@ -190,19 +209,19 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 18,
+                    radius: isMobile ? 16 : 18,
                     backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
                     child: Icon(
                       Icons.edit_note,
                       color: isDark ? Palette.darkText : Palette.lightText,
-                      size: 18,
+                      size: isMobile ? 16 : 18,
                     ),
                   ),
                   const SizedBox(width: 12.0),
                   Text(
                     "Edit Vehicle Information",
                     style: TextStyle(
-                      fontSize: 20.0,
+                      fontSize: isMobile ? 18.0 : 20.0,
                       fontWeight: FontWeight.w700,
                       color: isDark ? Palette.darkText : Palette.lightText,
                       fontFamily: 'Inter',
@@ -215,7 +234,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                       onTap: () => Navigator.of(context).pop(),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: EdgeInsets.all(isMobile ? 4 : 6),
                         decoration: BoxDecoration(
                           color: isDark ? Palette.darkCard : Palette.lightCard,
                           border: Border.all(
@@ -228,7 +247,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                         ),
                         child: Icon(
                           Icons.close,
-                          size: 16,
+                          size: isMobile ? 14 : 16,
                           color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                         ),
                       ),
@@ -241,7 +260,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
             // Content area
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20.0),
+                padding: EdgeInsets.all(isMobile ? 14.0 : 20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -264,13 +283,13 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                         "Vehicle ID: ${widget.vehicleData['vehicle_id']?.toString() ?? 'N/A'}",
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12,
+                          fontSize: isMobile ? 11 : 12,
                           fontWeight: FontWeight.w600,
                           color: isDark ? Palette.darkPrimary : Palette.lightPrimary,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20.0),
+                    SizedBox(height: isMobile ? 14.0 : 20.0),
 
                     // Form with modern styling
                     Form(
@@ -286,7 +305,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                                 ? 'Please enter plate number'
                                 : null,
                           ),
-                          const SizedBox(height: 16.0),
+                          SizedBox(height: isMobile ? 12.0 : 16.0),
                           _buildModernFormField(
                             controller: _routeIdController,
                             label: 'Route ID',
@@ -303,7 +322,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16.0),
+                          SizedBox(height: isMobile ? 12.0 : 16.0),
                           _buildModernFormField(
                             controller: _passengerCapacityController,
                             label: 'Passenger Capacity',
@@ -330,7 +349,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
 
             // Action buttons
             Container(
-              padding: const EdgeInsets.all(20.0),
+              padding: EdgeInsets.all(isMobile ? 14.0 : 20.0),
               decoration: BoxDecoration(
                 color: isDark ? Palette.darkCard : Palette.lightCard,
                 borderRadius: const BorderRadius.only(
@@ -364,7 +383,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.0),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        padding: EdgeInsets.symmetric(vertical: isMobile ? 10.0 : 12.0),
                       ),
                       onPressed: _isLoading
                           ? null
@@ -391,7 +410,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                           Text(
                             'Cancel',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isMobile ? 13 : 14,
                               fontWeight: FontWeight.w600,
                               fontFamily: 'Inter',
                             ),
@@ -400,7 +419,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12.0),
+                  SizedBox(width: isMobile ? 10.0 : 12.0),
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -411,7 +430,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.0),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        padding: EdgeInsets.symmetric(vertical: isMobile ? 10.0 : 12.0),
                       ),
                       onPressed: _isLoading ? null : _updateVehicle,
                       child: _isLoading
@@ -431,7 +450,7 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                                 Text(
                                   'Save Changes',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: isMobile ? 13 : 14,
                                     fontWeight: FontWeight.w600,
                                     fontFamily: 'Inter',
                                   ),
