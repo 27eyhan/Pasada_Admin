@@ -31,6 +31,7 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   String _currentPage = '/dashboard';
   Map<String, dynamic>? _currentArgs;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Navigation methods
   void navigateToPage(String pageName, {Map<String, dynamic>? args}) {
@@ -91,6 +92,7 @@ class _MainNavigationState extends State<MainNavigation> {
     final isTablet = ResponsiveHelper.isTablet(context);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: isDark ? Palette.darkBackground : Palette.lightBackground,
       body: Row(
         children: [
@@ -145,6 +147,8 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   void _showMobileDrawer(BuildContext context) {
-    Scaffold.of(context).openDrawer();
+    if (_scaffoldKey.currentState != null) {
+      _scaffoldKey.currentState!.openDrawer();
+    }
   }
 }

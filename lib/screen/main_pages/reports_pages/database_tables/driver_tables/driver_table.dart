@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
@@ -552,38 +554,67 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
       body: Stack(
         children: [
           // Main content: loading indicator or table display.
-          Center( // Center the table content
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : driverData.isEmpty
-                    ? const Center(child: Text("No data found."))
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.vertical,
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : driverData.isEmpty
+                  ? const Center(child: Text("No data found."))
+                  : SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
                         child: Container(
-                          margin: const EdgeInsets.all(16.0),
+                          margin: const EdgeInsets.all(8.0),
                           decoration: BoxDecoration(
                             color: Palette.whiteColor,
-                            borderRadius: BorderRadius.circular(16.0),
+                            borderRadius: BorderRadius.circular(12.0),
                             border: Border.all(
                               color: Palette.blackColor.withValues(alpha: 128),
                               width: 1,
                             ),
                           ),
                           child: DataTable(
-                            columnSpacing: 90.0, // Reduce column spacing
-                            horizontalMargin: 12.0, // Reduce horizontal margin
-                            headingRowHeight: 50.0, // Reduce heading row height
-                            dataRowMinHeight: 40.0, // Set minimum row height
-                            dataRowMaxHeight: 60.0, // Set maximum row height
-                            showCheckboxColumn: false, // Remove checkbox column 
-                            columns: const [
-                              DataColumn(label: Text('Driver ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Name', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('License No.', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Number', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Vehicle ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Status', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Last Online', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                            columnSpacing: ResponsiveHelper.isMobile(context) ? 15.0 : 60.0,
+                            horizontalMargin: ResponsiveHelper.isMobile(context) ? 6.0 : 8.0,
+                            headingRowHeight: ResponsiveHelper.isMobile(context) ? 35.0 : 40.0,
+                            dataRowMinHeight: ResponsiveHelper.isMobile(context) ? 30.0 : 35.0,
+                            dataRowMaxHeight: ResponsiveHelper.isMobile(context) ? 40.0 : 45.0,
+                            showCheckboxColumn: false,
+                            columns: [
+                              DataColumn(label: ResponsiveText('Driver ID', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Name', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('License No.', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Number', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Vehicle ID', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Status', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Last Online', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
                             ],
                             rows: filteredDriverData.asMap().entries.map((entry) { // Use filteredDriverData instead of driverData
                               final int index = entry.key;
@@ -621,16 +652,37 @@ class _DriverTableScreenState extends State<DriverTableScreen> {
                                             },
                                           ),
                                         SizedBox(width: 8),
-                                        Text(driver['driver_id'].toString(), style: TextStyle(fontSize: 12.0)),
+                                        ResponsiveText(driver['driver_id'].toString(), 
+                                          mobileFontSize: 10.0, 
+                                          tabletFontSize: 11.0, 
+                                          desktopFontSize: 12.0),
                                       ],
                                     )
                                   ),
-                                  DataCell(Text(driver['full_name'] ?? 'Unknown', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(driver['driver_license_number'] ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(driver['driver_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(driver['vehicle_id']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(_capitalizeFirstLetter(driver['driving_status']?.toString() ?? 'N/A'), style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(driver['last_online']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
+                                  DataCell(ResponsiveText(driver['full_name'] ?? 'Unknown', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(driver['driver_license_number'] ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(driver['driver_number']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(driver['vehicle_id']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(_capitalizeFirstLetter(driver['driving_status']?.toString() ?? 'N/A'), 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(driver['last_online']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
                                 ],
                               );
                             }).toList(),

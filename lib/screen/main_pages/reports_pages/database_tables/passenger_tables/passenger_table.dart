@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
+import 'package:pasada_admin_application/widgets/responsive_layout.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/passenger_tables/passenger_dialog.dart';
@@ -122,39 +124,72 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
         children: [
           // Main content: displays a loading indicator, "No data found." message, 
           // or the DataTable with passenger data.
-          Center( // Center the table content
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : passengerData.isEmpty
-                    ? const Center(child: Text("No data found."))
-                    : SingleChildScrollView(
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : passengerData.isEmpty
+                  ? const Center(child: Text("No data found."))
+                  : SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Container(
-                          margin: const EdgeInsets.all(16.0),
+                          margin: const EdgeInsets.all(8.0),
                           decoration: BoxDecoration(
                             color: Palette.whiteColor,
-                            borderRadius: BorderRadius.circular(16.0),
+                            borderRadius: BorderRadius.circular(12.0),
                             border: Border.all(
                               color: Palette.blackColor.withValues(alpha: 128),
                               width: 1,
                             ),
                           ),
                           child: DataTable(
-                            columnSpacing: 70.0, // Reduce column spacing
-                            horizontalMargin: 12.0, // Reduce horizontal margin
-                            headingRowHeight: 50.0, // Set heading row height
-                            dataRowMinHeight: 40.0, // Set minimum row height
-                            dataRowMaxHeight: 60.0, // Set maximum row height
-                            showCheckboxColumn: false, // Remove checkbox column
-                            columns: const [
-                              DataColumn(label: Text('Created At', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Name', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Contact Number', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Passenger Email', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Passenger Type', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Valid ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Last Login', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('ID', style: TextStyle(fontSize: 14.0, fontFamily: 'Inter', fontWeight: FontWeight.bold))),
+                            columnSpacing: ResponsiveHelper.isMobile(context) ? 15.0 : 50.0,
+                            horizontalMargin: ResponsiveHelper.isMobile(context) ? 6.0 : 8.0,
+                            headingRowHeight: ResponsiveHelper.isMobile(context) ? 35.0 : 40.0,
+                            dataRowMinHeight: ResponsiveHelper.isMobile(context) ? 30.0 : 35.0,
+                            dataRowMaxHeight: ResponsiveHelper.isMobile(context) ? 40.0 : 45.0,
+                            showCheckboxColumn: false,
+                            columns: [
+                              DataColumn(label: ResponsiveText('Created At', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Name', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Contact Number', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Passenger Email', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Passenger Type', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Valid ID', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('Last Login', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
+                              DataColumn(label: ResponsiveText('ID', 
+                                mobileFontSize: 12.0, 
+                                tabletFontSize: 13.0, 
+                                desktopFontSize: 14.0, 
+                                fontWeight: FontWeight.bold)),
                             ],
                             rows: passengerData.asMap().entries.map((entry) { // Use asMap().entries
                               final int index = entry.key;
@@ -194,17 +229,41 @@ class _PassengerTableScreenState extends State<PassengerTableScreen> {
                                             },
                                           ),
                                         SizedBox(width: 8),
-                                        Text(passenger['created_at'].toString(), style: TextStyle(fontSize: 14.0)),
+                                        ResponsiveText(passenger['created_at'].toString(), 
+                                          mobileFontSize: 11.0, 
+                                          tabletFontSize: 12.0, 
+                                          desktopFontSize: 14.0),
                                       ],
                                     )
                                   ),
-                                  DataCell(Text(passenger['display_name']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(passenger['contact_number']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(passenger['passenger_email']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(passenger['passenger_type']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(passenger['valid_id']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(passenger['last_login']?.toString() ?? 'N/A', style: TextStyle(fontSize: 14.0))),
-                                  DataCell(Text(passenger['id'].toString(), style: TextStyle(fontSize: 14.0))),
+                                  DataCell(ResponsiveText(passenger['display_name']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(passenger['contact_number']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(passenger['passenger_email']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(passenger['passenger_type']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(passenger['valid_id']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(passenger['last_login']?.toString() ?? 'N/A', 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
+                                  DataCell(ResponsiveText(passenger['id'].toString(), 
+                                    mobileFontSize: 11.0, 
+                                    tabletFontSize: 12.0, 
+                                    desktopFontSize: 14.0)),
                                 ],
                               );
                             }).toList(),

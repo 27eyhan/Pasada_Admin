@@ -30,7 +30,8 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _isCollapsed = widget.isCollapsed;
+    // On mobile, never collapse the drawer
+    _isCollapsed = widget.isCollapsed && !widget.isMobile;
     _collapseController = AnimationController(
       duration: const Duration(milliseconds: 250),
       vsync: this,
@@ -45,6 +46,22 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
     
     if (_isCollapsed) {
       _collapseController.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(MyDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update collapse state when widget updates
+    if (oldWidget.isCollapsed != widget.isCollapsed && !widget.isMobile) {
+      setState(() {
+        _isCollapsed = widget.isCollapsed;
+        if (_isCollapsed) {
+          _collapseController.forward();
+        } else {
+          _collapseController.reverse();
+        }
+      });
     }
   }
 
@@ -71,7 +88,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
     return Container(
       margin: EdgeInsets.symmetric(
         horizontal: isSubItem ? 12.0 : 16.0, 
-        vertical: _isCollapsed ? 8.0 : 4.0,
+        vertical: (_isCollapsed && !widget.isMobile) ? 8.0 : 4.0,
       ),
       child: Material(
         color: Colors.transparent,
@@ -93,8 +110,8 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOutCubic,
-            height: _isCollapsed ? 48.0 : null,
-            padding: _isCollapsed 
+            height: (_isCollapsed && !widget.isMobile) ? 48.0 : null,
+            padding: (_isCollapsed && !widget.isMobile)
                 ? EdgeInsets.zero
                 : (customPadding ?? EdgeInsets.symmetric(
                     horizontal: isSubItem ? 16.0 : 16.0, 
@@ -112,7 +129,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                     )
                   : null,
             ),
-            child: _isCollapsed 
+            child: (_isCollapsed && !widget.isMobile)
                 ? Center(
                     child: Icon(
                       icon,
@@ -193,8 +210,8 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOutCubic,
           width: widget.isMobile 
-              ? MediaQuery.of(context).size.width * 0.8
-              : (_isCollapsed ? 80.0 : 280.0),
+              ? MediaQuery.of(context).size.width * 0.5
+              : (_isCollapsed && !widget.isMobile ? 80.0 : 280.0),
           decoration: BoxDecoration(
             color: isDark ? Palette.darkSurface : Palette.lightSurface,
             border: Border(
@@ -232,7 +249,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-                child: _isCollapsed 
+                child: (_isCollapsed && !widget.isMobile)
                     ? Center(
                         child: IconButton(
                           onPressed: () {
@@ -272,24 +289,26 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                               },
                             ),
                           ),
-                          const SizedBox(width: 8.0),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _isCollapsed = !_isCollapsed;
-                                if (_isCollapsed) {
-                                  _collapseController.forward();
-                                } else {
-                                  _collapseController.reverse();
-                                }
-                              });
-                            },
-                            icon: Icon(
-                              Icons.chevron_left,
-                              color: isDark ? Palette.darkText : Palette.lightText,
+                          if (!widget.isMobile) ...[
+                            const SizedBox(width: 8.0),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isCollapsed = !_isCollapsed;
+                                  if (_isCollapsed) {
+                                    _collapseController.forward();
+                                  } else {
+                                    _collapseController.reverse();
+                                  }
+                                });
+                              },
+                              icon: Icon(
+                                Icons.chevron_left,
+                                color: isDark ? Palette.darkText : Palette.lightText,
+                              ),
+                              tooltip: 'Collapse sidebar',
                             ),
-                            tooltip: 'Collapse sidebar',
-                          ),
+                          ],
                         ],
                       ),
               ),
@@ -325,7 +344,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                     Container(
                       margin: EdgeInsets.symmetric(
                         horizontal: 16.0, 
-                        vertical: _isCollapsed ? 8.0 : 4.0,
+                        vertical: (_isCollapsed && !widget.isMobile) ? 8.0 : 4.0,
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -340,6 +359,15 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                                   _collapseController.reverse();
                                 }
                               });
+                            }
+                            // On mobile, if reports is selected, navigate to reports
+                            if (widget.isMobile && reportsSelected) {
+                              if (widget.onNavigate != null) {
+                                widget.onNavigate!('/reports');
+                              } else {
+                                Navigator.pushReplacementNamed(context, '/reports');
+                              }
+                              Navigator.of(context).pop();
                             }
                           },
                           onDoubleTap: () {
@@ -361,8 +389,8 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             curve: Curves.easeInOutCubic,
-                            height: _isCollapsed ? 48.0 : null,
-                            padding: _isCollapsed 
+                            height: (_isCollapsed && !widget.isMobile) ? 48.0 : null,
+                            padding: (_isCollapsed && !widget.isMobile)
                                 ? EdgeInsets.zero
                                 : const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                             decoration: BoxDecoration(
@@ -377,7 +405,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                                     )
                                   : null,
                             ),
-                            child: _isCollapsed 
+                            child: (_isCollapsed && !widget.isMobile)
                                 ? Center(
                                     child: Icon(
                                       Icons.analytics_rounded,
@@ -418,7 +446,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                                       Expanded(
                                         child: AnimatedOpacity(
                                           duration: const Duration(milliseconds: 150),
-                                          opacity: _isCollapsed ? 0.0 : 1.0,
+                                          opacity: (_isCollapsed && !widget.isMobile) ? 0.0 : 1.0,
                                           child: Text(
                                             'Reports',
                                             style: TextStyle(
@@ -434,7 +462,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                                       ),
                                       AnimatedOpacity(
                                         duration: const Duration(milliseconds: 150),
-                                        opacity: _isCollapsed ? 0.0 : 1.0,
+                                        opacity: (_isCollapsed && !widget.isMobile) ? 0.0 : 1.0,
                                         child: AnimatedRotation(
                                           turns: expanded ? 0.5 : 0.0,
                                           duration: const Duration(milliseconds: 150),
@@ -455,7 +483,11 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeInOutCubic,
-                        margin: const EdgeInsets.only(left: 24.0, right: 16.0, top: 8.0),
+                        margin: EdgeInsets.only(
+                          left: widget.isMobile ? 16.0 : 24.0, 
+                          right: 16.0, 
+                          top: 8.0
+                        ),
                         child: Column(
                           children: [
                             _createDrawerItem(
@@ -486,7 +518,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                       routeName: '/ai_chat',
                       currentRoute: currentRoute,
                     ),
-                    if (!_isCollapsed) ...[
+                    if (!_isCollapsed || widget.isMobile) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                         child: Divider(
@@ -527,7 +559,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                         : [Palette.lightSurface, Palette.lightSurface.withValues(alpha: 0.8)],
                   ),
                 ),
-                child: _isCollapsed 
+                child: (_isCollapsed && !widget.isMobile)
                     ? Center(
                         child: GestureDetector(
                           onTap: () {
@@ -568,7 +600,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                           Expanded(
                             child: AnimatedOpacity(
                               duration: const Duration(milliseconds: 150),
-                              opacity: _isCollapsed ? 0.0 : 1.0,
+                              opacity: (_isCollapsed && !widget.isMobile) ? 0.0 : 1.0,
                               child: Text(
                                 isDark ? 'Dark Mode' : 'Light Mode',
                                 style: TextStyle(
@@ -582,7 +614,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                           ),
                           AnimatedOpacity(
                             duration: const Duration(milliseconds: 150),
-                            opacity: _isCollapsed ? 0.0 : 1.0,
+                            opacity: (_isCollapsed && !widget.isMobile) ? 0.0 : 1.0,
                             child: Transform.scale(
                               scale: 0.9,
                               child: Switch(
