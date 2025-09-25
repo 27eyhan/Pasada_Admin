@@ -316,6 +316,8 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
 
   Widget _buildStatsContainer(bool isDark) {
     final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 400;
     
     return Container(
       decoration: BoxDecoration(
@@ -335,7 +337,9 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           ),
         ],
       ),
-      padding: EdgeInsets.all(isMobile ? 16.0 : 20.0),
+      padding: EdgeInsets.all(
+        isSmallMobile ? 12.0 : (isMobile ? 16.0 : 20.0)
+      ),
       child: isMobile 
           ? _buildMobileStatsLayout(isDark)
           : _buildDesktopStatsLayout(isDark),
@@ -343,6 +347,64 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   }
 
   Widget _buildMobileStatsLayout(bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 400;
+    
+    // For very small screens, use a more compact layout with proper separators
+    if (isSmallMobile) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactMetric(
+                  'Total Records',
+                  totalItems,
+                  isDark ? Palette.darkText : Palette.lightText,
+                  isDark,
+                ),
+              ),
+              Container(
+                height: 30.0,
+                width: 1.0,
+                margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                decoration: BoxDecoration(
+                  color: isDark ? Palette.darkDivider : Palette.lightDivider,
+                  borderRadius: BorderRadius.circular(0.5),
+                ),
+              ),
+              Expanded(
+                child: _buildCompactMetric(
+                  'Page',
+                  '$currentPage/$totalPages',
+                  Palette.lightPrimary,
+                  isDark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16.0),
+          Container(
+            height: 1.0,
+            decoration: BoxDecoration(
+              color: isDark ? Palette.darkDivider : Palette.lightDivider,
+              borderRadius: BorderRadius.circular(0.5),
+            ),
+          ),
+          const SizedBox(height: 16.0),
+          _buildCompactMetric(
+            'Status',
+            hasError ? 'Error' : (isLoading ? 'Loading' : 'Active'),
+            hasError 
+                ? Palette.lightError 
+                : (isLoading ? Palette.lightWarning : Palette.lightSuccess),
+            isDark,
+          ),
+        ],
+      );
+    }
+    
+    // For regular mobile screens, use vertical layout with proper separators
     return Column(
       children: [
         _buildCompactMetric(
@@ -351,21 +413,45 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           isDark ? Palette.darkText : Palette.lightText,
           isDark,
         ),
-        const SizedBox(height: 12.0),
-        _buildCompactMetric(
-          'Current Page',
-          '$currentPage of $totalPages',
-          Palette.lightPrimary,
-          isDark,
+        const SizedBox(height: 20.0),
+        Container(
+          height: 1.0,
+          decoration: BoxDecoration(
+            color: isDark ? Palette.darkDivider : Palette.lightDivider,
+            borderRadius: BorderRadius.circular(0.5),
+          ),
         ),
-        const SizedBox(height: 12.0),
-        _buildCompactMetric(
-          'Status',
-          hasError ? 'Error' : (isLoading ? 'Loading' : 'Active'),
-          hasError 
-              ? Palette.lightError 
-              : (isLoading ? Palette.lightWarning : Palette.lightSuccess),
-          isDark,
+        const SizedBox(height: 20.0),
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactMetric(
+                'Current Page',
+                '$currentPage of $totalPages',
+                Palette.lightPrimary,
+                isDark,
+              ),
+            ),
+            Container(
+              height: 30.0,
+              width: 1.0,
+              margin: const EdgeInsets.symmetric(horizontal: 12.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkDivider : Palette.lightDivider,
+                borderRadius: BorderRadius.circular(0.5),
+              ),
+            ),
+            Expanded(
+              child: _buildCompactMetric(
+                'Status',
+                hasError ? 'Error' : (isLoading ? 'Loading' : 'Active'),
+                hasError 
+                    ? Palette.lightError 
+                    : (isLoading ? Palette.lightWarning : Palette.lightSuccess),
+                isDark,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -1036,6 +1122,10 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   }
 
   Widget _buildCompactMetric(String label, dynamic value, Color valueColor, bool isDark) {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallMobile = screenWidth < 400;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1043,17 +1133,17 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           label.toUpperCase(),
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 12.0,
-            letterSpacing: 0.6,
+            fontSize: isSmallMobile ? 10.0 : (isMobile ? 11.0 : 12.0),
+            letterSpacing: isSmallMobile ? 0.4 : 0.6,
             color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
           ),
         ),
-        const SizedBox(height: 8.0),
+        SizedBox(height: isSmallMobile ? 4.0 : 8.0),
         Text(
           value.toString(),
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 22.0,
+            fontSize: isSmallMobile ? 16.0 : (isMobile ? 18.0 : 22.0),
             fontWeight: FontWeight.w700,
             color: valueColor,
           ),
