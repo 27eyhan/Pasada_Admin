@@ -4,6 +4,7 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/widgets/responsive_layout.dart';
+import 'package:pasada_admin_application/widgets/responsive_search_bar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fleet_data.dart';
 import 'analytics/fleet_analytics_graph.dart';
@@ -35,6 +36,9 @@ class _FleetContentState extends State<FleetContent> {
   Set<String> selectedStatuses = {};
   String? selectedRouteId;
 
+  // Search state
+  String searchQuery = '';
+
   // View mode: grid or list
   bool isGridView = true;
 
@@ -55,12 +59,23 @@ class _FleetContentState extends State<FleetContent> {
 
   void _applyFilters() {
     setState(() {
-      if (selectedStatuses.isEmpty && selectedRouteId == null) {
-        filteredVehicleData = List.from(vehicleData);
-        return;
-      }
-
       filteredVehicleData = vehicleData.where((vehicle) {
+        // Search filter
+        bool searchMatch = true;
+        if (searchQuery.isNotEmpty) {
+          final plateNumber = vehicle['plate_number']?.toString().toLowerCase() ?? '';
+          final vehicleId = vehicle['vehicle_id']?.toString().toLowerCase() ?? '';
+          final routeId = vehicle['route_id']?.toString().toLowerCase() ?? '';
+          final capacity = vehicle['passenger_capacity']?.toString().toLowerCase() ?? '';
+          
+          final query = searchQuery.toLowerCase();
+          searchMatch = plateNumber.contains(query) ||
+              vehicleId.contains(query) ||
+              routeId.contains(query) ||
+              capacity.contains(query);
+        }
+
+        // Status filter
         String? vehicleStatus = 'Offline';
         final driverData = vehicle['driverTable'];
         if (driverData != null && driverData is List && driverData.isNotEmpty) {
@@ -73,10 +88,11 @@ class _FleetContentState extends State<FleetContent> {
         bool statusMatch = selectedStatuses.isEmpty ||
             selectedStatuses.contains(vehicleStatus);
 
+        // Route filter
         bool routeMatch = selectedRouteId == null ||
             vehicle['route_id']?.toString() == selectedRouteId;
 
-        return statusMatch && routeMatch;
+        return searchMatch && statusMatch && routeMatch;
       }).toList();
     });
   }
@@ -224,6 +240,17 @@ class _FleetContentState extends State<FleetContent> {
                                 ),
                                 const Spacer(),
                               ],
+                            ),
+                            const SizedBox(height: 24.0),
+                            // Search bar
+                            ResponsiveSearchBar(
+                              hintText: 'Search vehicles by plate number, ID, route, or capacity...',
+                              onSearchChanged: (query) {
+                                setState(() {
+                                  searchQuery = query;
+                                  _applyFilters();
+                                });
+                              },
                             ),
                             const SizedBox(height: 24.0),
                             // Booking frequency graph

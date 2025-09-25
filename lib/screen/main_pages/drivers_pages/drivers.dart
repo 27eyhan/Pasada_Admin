@@ -5,6 +5,7 @@ import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/appbar_search.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/drawer.dart';
 import 'package:pasada_admin_application/screen/appbars_&_drawer/driver_filter_dialog.dart';
+import 'package:pasada_admin_application/widgets/responsive_search_bar.dart';
 import 'package:pasada_admin_application/screen/main_pages/drivers_pages/drivers_info.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/driver_tables/add_driver_dialog.dart';
@@ -33,6 +34,9 @@ class _DriversState extends State<Drivers> {
   Set<String> selectedStatuses = {};
   String? selectedVehicleId;
   String sortOption = 'numeric'; // Default sorting
+
+  // Search state
+  String searchQuery = '';
 
   // View mode: grid or list
   bool isGridView = true;
@@ -76,45 +80,55 @@ class _DriversState extends State<Drivers> {
 
   void _applyFilters() {
     setState(() {
-      if (selectedStatuses.isEmpty && selectedVehicleId == null) {
-        // No filters applied, show all data
-        filteredDriverData = List.from(driverData);
-      } else {
-        filteredDriverData = driverData.where((driver) {
-          // Filter by status
-          bool statusMatch = true;
-          if (selectedStatuses.isNotEmpty) {
-            final status = driver["driving_status"]?.toString() ?? "Offline";
+      filteredDriverData = driverData.where((driver) {
+        // Search filter
+        bool searchMatch = true;
+        if (searchQuery.isNotEmpty) {
+          final fullName = driver['full_name']?.toString().toLowerCase() ?? '';
+          final driverId = driver['driver_id']?.toString().toLowerCase() ?? '';
+          final driverNumber = driver['driver_number']?.toString().toLowerCase() ?? '';
+          final vehicleId = driver['vehicle_id']?.toString().toLowerCase() ?? '';
+          
+          final query = searchQuery.toLowerCase();
+          searchMatch = fullName.contains(query) ||
+              driverId.contains(query) ||
+              driverNumber.contains(query) ||
+              vehicleId.contains(query);
+        }
 
-            if (selectedStatuses.contains('Online')) {
-              // For Online, match any of these statuses
-              bool isActive = status.toLowerCase() == "driving" ||
-                  status.toLowerCase() == "online" ||
-                  status.toLowerCase() == "idling" ||
-                  status.toLowerCase() == "active";
+        // Filter by status
+        bool statusMatch = true;
+        if (selectedStatuses.isNotEmpty) {
+          final status = driver["driving_status"]?.toString() ?? "Offline";
 
-              if (selectedStatuses.contains('Offline')) {
-                // If both Online and Offline are selected, show all
-                statusMatch = true;
-              } else {
-                // Only Online is selected
-                statusMatch = isActive;
-              }
-            } else if (selectedStatuses.contains('Offline')) {
-              // Only Offline is selected
-              bool isOffline = status.toLowerCase() == "offline" ||
-                  status.toLowerCase() == "";
-              statusMatch = isOffline;
+          if (selectedStatuses.contains('Online')) {
+            // For Online, match any of these statuses
+            bool isActive = status.toLowerCase() == "driving" ||
+                status.toLowerCase() == "online" ||
+                status.toLowerCase() == "idling" ||
+                status.toLowerCase() == "active";
+
+            if (selectedStatuses.contains('Offline')) {
+              // If both Online and Offline are selected, show all
+              statusMatch = true;
+            } else {
+              // Only Online is selected
+              statusMatch = isActive;
             }
+          } else if (selectedStatuses.contains('Offline')) {
+            // Only Offline is selected
+            bool isOffline = status.toLowerCase() == "offline" ||
+                status.toLowerCase() == "";
+            statusMatch = isOffline;
           }
+        }
 
-          // Filter by vehicle ID
-          bool vehicleMatch = selectedVehicleId == null ||
-              driver['vehicle_id']?.toString() == selectedVehicleId;
+        // Filter by vehicle ID
+        bool vehicleMatch = selectedVehicleId == null ||
+            driver['vehicle_id']?.toString() == selectedVehicleId;
 
-          return statusMatch && vehicleMatch;
-        }).toList();
-      }
+        return searchMatch && statusMatch && vehicleMatch;
+      }).toList();
 
       // Apply sorting
       if (sortOption == 'alphabetical') {
@@ -254,6 +268,19 @@ class _DriversState extends State<Drivers> {
                                     ),
                                     const Spacer(),
                                   ],
+                                ),
+                                const SizedBox(height: 24.0),
+                                // Search bar
+                                ResponsiveSearchBar(
+                                  hintText: 'Search drivers by name, ID, number, or vehicle...',
+                                  onSearchChanged: (query) {
+                                    setState(() {
+                                      searchQuery = query;
+                                      _applyFilters();
+                                    });
+                                  },
+                                  showFilterButton: true,
+                                  onFilterPressed: _showFilterDialog,
                                 ),
                                 const SizedBox(height: 24.0),
                                 // Status metrics container with separators
