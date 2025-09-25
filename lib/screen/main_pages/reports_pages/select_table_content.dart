@@ -145,7 +145,7 @@ class _SelectTableContentState extends State<SelectTableContent> {
                   tabletColumns: 2,
                   desktopColumns: 3,
                   largeDesktopColumns: 4,
-                  childAspectRatio: 1.2,
+                  childAspectRatio: 2.0,
                 ),
               ),
             ],

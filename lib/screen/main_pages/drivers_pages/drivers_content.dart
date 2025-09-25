@@ -356,7 +356,7 @@ class _DriversContentState extends State<DriversContent> {
     // Calculate dynamic aspect ratio based on screen size and zoom level
     double dynamicAspectRatio;
     if (isMobile) {
-      dynamicAspectRatio = 1.2; // More vertical space for mobile
+      dynamicAspectRatio = 2.0; // More vertical space for mobile
     } else if (isTablet) {
       // For tablets, adjust based on actual screen width
       if (screenWidth < 900) {
@@ -382,10 +382,12 @@ class _DriversContentState extends State<DriversContent> {
     }
     
     return ResponsiveGrid(
-      mobileColumns: 1,
+      mobileColumns: 2,
       tabletColumns: 2,
       desktopColumns: 3,
       largeDesktopColumns: 4,
+      crossAxisSpacing: isMobile ? 12.0 : 24.0,
+      mainAxisSpacing: isMobile ? 12.0 : 24.0,
       childAspectRatio: dynamicAspectRatio,
       children: filteredDriverData.map((driver) {
         final status = driver["driving_status"]?.toString().toLowerCase() ?? "";
@@ -618,18 +620,19 @@ class _DriversContentState extends State<DriversContent> {
           child: Stack(
             children: [
               // Status indicator dot
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: isActive ? Colors.green : Colors.red,
-                    shape: BoxShape.circle,
+              if (!isMobile)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: isActive ? Colors.green : Colors.red,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
 
               Row(
                 children: [
@@ -859,7 +862,7 @@ class _DriversContentState extends State<DriversContent> {
   // Helper method to calculate responsive font sizes based on screen width and zoom level
   double _getResponsiveFontSize(double screenWidth, bool isMobile, String type) {
     if (isMobile) {
-      return type == 'name' ? 16.0 : 11.0;
+      return type == 'name' ? 14.0 : 7.0;
     }
     
     // Adjust font sizes based on screen width to handle zoom levels
