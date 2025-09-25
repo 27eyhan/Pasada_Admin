@@ -57,7 +57,6 @@ class _ResponsiveSearchBarState extends State<ResponsiveSearchBar> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
     final isMobile = ResponsiveHelper.isMobile(context);
-    final isTablet = ResponsiveHelper.isTablet(context);
     
     return Container(
       decoration: BoxDecoration(

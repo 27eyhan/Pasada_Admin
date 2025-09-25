@@ -4,7 +4,7 @@ import 'palette.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'theme_mode';
-  bool _isDarkMode = false;
+  bool _isDarkMode = true; // Default to dark mode
 
   bool get isDarkMode => _isDarkMode;
 
@@ -14,7 +14,7 @@ class ThemeProvider extends ChangeNotifier {
 
   Future<void> _loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool(_themeKey) ?? false;
+    _isDarkMode = prefs.getBool(_themeKey) ?? true; // Default to dark mode
     notifyListeners();
   }
 
