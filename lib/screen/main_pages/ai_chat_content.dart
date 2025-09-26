@@ -7,6 +7,8 @@ import 'package:pasada_admin_application/services/gemini_ai_service.dart';
 import 'package:pasada_admin_application/services/chat_session_manager.dart';
 import 'package:pasada_admin_application/services/chat_message_controller.dart';
 import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
+import 'package:pasada_admin_application/models/chat_message.dart';
+import 'dart:async';
 
 class AiChatContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -27,6 +29,7 @@ class _AiChatContentState extends State<AiChatContent> {
   bool _isTyping = false;
   bool _isHistoryOpen = false;
   List<Map<String, dynamic>> _savedChats = [];
+  Timer? _loadChatDebounce;
 
   // Services
   late GeminiAIService _aiService;
@@ -49,13 +52,13 @@ class _AiChatContentState extends State<AiChatContent> {
       setTypingState: _setTypingState,
       addMessage: _addMessage,
       scrollToBottom: _scrollToBottom,
+      getMessages: () => _messages,
     );
   }
 
   // Load initial data and setup
   Future<void> _loadInitialData() async {
-    // Initialize AI service and load authentication
-    _aiService.initialize();
+    // Load authentication and chat history (no direct Gemini init required)
     await _sessionManager.loadAuthentication();
     await _sessionManager.loadChatHistory();
 
@@ -127,15 +130,51 @@ class _AiChatContentState extends State<AiChatContent> {
   Future<void> _loadChatSession(String chatId) async {
     try {
       final messages = await _sessionManager.loadChatSession(chatId);
-      if (messages != null) {
+      if (messages != null && messages.isNotEmpty) {
         setState(() {
           _messages.clear();
           _messages.addAll(messages);
         });
+        // Close history drawer after loading
+        setState(() {
+          _isHistoryOpen = false;
+        });
+        // Scroll to bottom to show the loaded messages
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chat loaded successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No messages found in this chat'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
-      throw Exception('Error loading chat session: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading chat: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
+  }
+
+  void _debouncedLoadChat(String chatId) {
+    _loadChatDebounce?.cancel();
+    _loadChatDebounce = Timer(const Duration(milliseconds: 250), () {
+      _loadChatSession(chatId);
+    });
   }
 
   Future<void> _deleteChatSession(String chatId) async {
@@ -146,8 +185,21 @@ class _AiChatContentState extends State<AiChatContent> {
       setState(() {
         _savedChats = _sessionManager.savedChats;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chat deleted successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
-      throw Exception('Error deleting chat session: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting chat: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -201,75 +253,113 @@ class _AiChatContentState extends State<AiChatContent> {
                   children: [
                     // Chat History Drawer (inline, minimal border)
                     AnimatedContainer(
-                      duration: Duration(milliseconds: 300),
+                      duration: Duration(milliseconds: 280),
+                      curve: Curves.easeOut,
                       width: _isHistoryOpen ? 260 : 0,
                       child: _isHistoryOpen
-                          ? Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  right: BorderSide(
-                                    color: isDark
-                                        ? Palette.darkBorder
-                                        : Palette.lightBorder,
-                                    width: 1,
-                                  ),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(
-                                          color: isDark
-                                              ? Palette.darkBorder
-                                              : Palette.lightBorder,
-                                        ),
+                          ? AnimatedSlide(
+                              duration: Duration(milliseconds: 260),
+                              curve: Curves.easeOut,
+                              offset: _isHistoryOpen ? Offset(0, 0) : Offset(-0.05, 0),
+                              child: AnimatedOpacity(
+                                duration: Duration(milliseconds: 220),
+                                opacity: _isHistoryOpen ? 1.0 : 0.0,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Palette.darkCard : Palette.lightCard,
+                                    border: Border(
+                                      right: BorderSide(
+                                        color: isDark
+                                            ? Palette.darkBorder
+                                            : Palette.lightBorder,
+                                        width: 1,
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Chat History',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isDark
+                                            ? Colors.black.withValues(alpha: 0.08)
+                                            : Colors.black.withValues(alpha: 0.06),
+                                        blurRadius: 10,
+                                        offset: Offset(1, 0),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: isDark
+                                                  ? Palette.darkBorder
+                                                  : Palette.lightBorder,
+                                            ),
                                           ),
                                         ),
-                                        IconButton(
-                                          icon: Icon(Icons.close),
-                                          onPressed: () => setState(() => _isHistoryOpen = false),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Chat History',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: Icon(Icons.close),
+                                              onPressed: () => setState(() => _isHistoryOpen = false),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          padding: EdgeInsets.only(top: 8),
+                                          itemCount: _savedChats.length,
+                                          itemBuilder: (context, index) {
+                                            final chat = _savedChats[index];
+                                            return TweenAnimationBuilder<double>(
+                                              tween: Tween(begin: 0.0, end: 1.0),
+                                              duration: Duration(milliseconds: 160 + (index % 6) * 16),
+                                              curve: Curves.easeOut,
+                                              builder: (context, value, child) {
+                                                return Opacity(
+                                                  opacity: value,
+                                                  child: child,
+                                                );
+                                              },
+                                              child: ListTile(
+                                                dense: true,
+                                                visualDensity: VisualDensity.compact,
+                                                title: Text(
+                                                  (chat['title'] ?? 'Untitled Chat').toString(),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  softWrap: false,
+                                                ),
+                                                subtitle: Text(
+                                                  _formatCreatedAt(chat['created_at']),
+                                                  style: TextStyle(fontSize: 12),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  softWrap: false,
+                                                ),
+                                                trailing: IconButton(
+                                                  icon: Icon(Icons.delete_outline),
+                                                  onPressed: () => _deleteChatSession(chat['history_id'].toString()),
+                                                ),
+                                                onTap: () => _debouncedLoadChat(chat['history_id'].toString()),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Expanded(
-                                    child: ListView.builder(
-                                      itemCount: _savedChats.length,
-                                      itemBuilder: (context, index) {
-                                        final chat = _savedChats[index];
-                                        return ListTile(
-                                          title: Text(
-                                            chat['title'] ?? 'Untitled Chat',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          subtitle: Text(
-                                            DateTime.parse(chat['created_at']).toString(),
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                          trailing: IconButton(
-                                            icon: Icon(Icons.delete_outline),
-                                            onPressed: () => _deleteChatSession(chat['history_id']),
-                                          ),
-                                          onTap: () => _loadChatSession(chat['history_id']),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             )
                           : null,
@@ -329,29 +419,65 @@ class _AiChatContentState extends State<AiChatContent> {
                           // Messages
                           Expanded(
                             child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    (isDark ? Palette.darkSurface : Palette.lightSurface).withValues(alpha: 0.0),
+                                    (isDark ? Palette.darkSurface : Palette.lightSurface).withValues(alpha: 0.06),
+                                  ],
+                                ),
+                              ),
                               padding: EdgeInsets.symmetric(vertical: 8),
                               child: ListView.builder(
                                 controller: _scrollController,
+                                physics: BouncingScrollPhysics(),
                                 itemCount: _messages.length,
                                 itemBuilder: (context, index) {
-                                  return _messages[index];
+                                  return _AnimatedMessage(
+                                    key: ValueKey('msg-$index-${_messages[index].hashCode}'),
+                                    child: ChatMessageWidget(
+                                      message: _messages[index],
+                                    ),
+                                  );
                                 },
                               ),
                             ),
                           ),
 
-                          if (_isTyping)
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Manong is typing...',
-                                style: TextStyle(
-                                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
+                        AnimatedSwitcher(
+                          duration: Duration(milliseconds: 200),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: _isTyping
+                              ? Padding(
+                                  key: ValueKey('typing'),
+                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Palette.lightPrimary),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Manong is typing...',
+                                        style: TextStyle(
+                                          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : SizedBox.shrink(key: ValueKey('notyping')),
+                        ),
 
                           // Input area
                           Container(
@@ -430,5 +556,43 @@ class _AiChatContentState extends State<AiChatContent> {
         ),
       ),
     );
+  }
+}
+
+class _AnimatedMessage extends StatelessWidget {
+  final Widget child;
+  const _AnimatedMessage({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      builder: (context, value, _) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 8),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+String _formatCreatedAt(dynamic raw) {
+  try {
+    if (raw is String) {
+      final dt = DateTime.tryParse(raw);
+      if (dt != null) {
+        return '${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')} ${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
+      }
+      return raw;
+    }
+    return raw?.toString() ?? '';
+  } catch (_) {
+    return raw?.toString() ?? '';
   }
 }

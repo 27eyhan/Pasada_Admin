@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
-import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 typedef FilterCallback = void Function();
@@ -66,7 +65,11 @@ class _AppBarSearchState extends State<AppBarSearch> {
             // Profile button styled like "Docs" link
             TextButton(
               onPressed: () {
-                _showProfileMenu(context);
+                if (widget.onSettingsTabRequested != null) {
+                  widget.onSettingsTabRequested!(0);
+                } else {
+                  Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 0});
+                }
               },
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
@@ -93,123 +96,5 @@ class _AppBarSearchState extends State<AppBarSearch> {
     );
   }
 
-  void _showProfileMenu(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDark = themeProvider.isDarkMode;
-    
-    showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        MediaQuery.of(context).size.width - 220,
-        55,
-        15,
-        0,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      elevation: 4.0,
-      color: isDark ? Palette.darkSurface : Palette.lightSurface,
-      constraints: const BoxConstraints(
-        minWidth: 160.0,
-        maxWidth: 200.0,
-      ),
-      items: [
-        PopupMenuItem<String>(
-          value: 'profile',
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text('Profile', style: TextStyle(fontSize: 14.0)),
-        ),
-        PopupMenuItem<String>(
-          height: 1,
-          padding: EdgeInsets.zero,
-          enabled: false,
-          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
-        ),
-        PopupMenuItem<String>(
-          value: 'notification',
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text('Notification', style: TextStyle(fontSize: 14.0)),
-        ),
-        PopupMenuItem<String>(
-          height: 1,
-          padding: EdgeInsets.zero,
-          enabled: false,
-          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
-        ),
-        PopupMenuItem<String>(
-          value: 'security',
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text('Security', style: TextStyle(fontSize: 14.0)),
-        ),
-        PopupMenuItem<String>(
-          height: 1,
-          padding: EdgeInsets.zero,
-          enabled: false,
-          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
-        ),
-        PopupMenuItem<String>(
-          value: 'updates',
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text('Updates', style: TextStyle(fontSize: 14.0)),
-        ),
-        PopupMenuItem<String>(
-          height: 1,
-          padding: EdgeInsets.zero,
-          enabled: false,
-          child: Divider(color: isDark ? Palette.darkDivider : Palette.lightDivider, height: 1),
-        ),
-        PopupMenuItem<String>(
-          value: 'logout',
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text('Logout', style: TextStyle(color: Palette.lightError, fontSize: 14.0)),
-        ),
-      ],
-    ).then((String? result) async {
-      if (result != null) {
-        switch (result) {
-          case 'profile':
-            // Navigate to settings with profile tab (index 0)
-            if (widget.onSettingsTabRequested != null) {
-              widget.onSettingsTabRequested!(0);
-            } else {
-              // Fallback: navigate to settings page with profile tab
-              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 0});
-            }
-            break;
-          case 'notification':
-            // Navigate to settings with notifications tab (index 1)
-            if (widget.onSettingsTabRequested != null) {
-              widget.onSettingsTabRequested!(1);
-            } else {
-              // Fallback: navigate to settings page with notifications tab
-              Navigator.pushNamed(context, '/settings', arguments: {'tabIndex': 1});
-            }
-            break;
-            case 'security':
-              // Navigate to settings with security tab (index 3)
-              if (widget.onSettingsTabRequested != null) {
-                widget.onSettingsTabRequested!(3);
-              }
-              break;
-            case 'updates':
-              // Navigate to settings with updates tab (index 2)
-              if (widget.onSettingsTabRequested != null) {
-                widget.onSettingsTabRequested!(2);
-              }
-              break;
-          case 'logout':
-            try { await AuthService().clearSession(); } catch (_) {}
-            if (context.mounted) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/',
-                (Route<dynamic> route) => false,
-              );
-            }
-            break;
-        }
-      }
-    });
-  }
+  // Dropdown removed; Profile button now redirects directly to Settings (Profile tab)
 }

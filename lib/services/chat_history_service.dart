@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'dart:convert';
 
 class ChatHistoryService {
   // Singleton pattern
@@ -37,8 +38,9 @@ class ChatHistoryService {
 
       await supabase.from('aiChat_history').insert({
         'admin_id': adminId,
-        'messages': userMessages,
-        'ai_message': aiMessages,
+        // Columns are TEXT; store JSON-encoded arrays
+        'messages': jsonEncode(userMessages),
+        'ai_message': jsonEncode(aiMessages),
         'title': title,
         'created_at': DateTime.now().toIso8601String(),
       });
@@ -48,7 +50,7 @@ class ChatHistoryService {
   }
 
   // Delete a chat session
-  Future<void> deleteChatSession(String chatId) async {
+  Future<void> deleteChatSession(dynamic chatId) async {
     try {
       await supabase
           .from('aiChat_history')
@@ -60,7 +62,7 @@ class ChatHistoryService {
   }
 
   // Get a specific chat session
-  Future<Map<String, dynamic>?> getChatSession(String chatId) async {
+  Future<Map<String, dynamic>?> getChatSession(dynamic chatId) async {
     try {
       final response = await supabase
           .from('aiChat_history')

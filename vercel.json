@@ -2,19 +2,12 @@
   "version": 2,
   "builds": [
     {
-      "src": "build/web/**",
-      "use": "@vercel/static"
+      "src": "package.json",
+      "use": "@vercel/static",
+      "config": { "distDir": "build/web" }
     }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/build/web/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/build/web/index.html"
-    }
-  ],
-  "outputDirectory": "build/web"
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }

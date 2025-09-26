@@ -68,6 +68,11 @@ class RouteTrafficService {
   }
 
   Future<String> getRouteTrafficForAI(int routeId) async {
+    // Check if API URL is configured
+    if (_apiUrl.isEmpty) {
+      return 'Error: API_URL is not configured in .env file. Please add API_URL=your_api_url_here to your .env file.';
+    }
+
     final data = await getRouteTrafficData(routeId);
 
     if (data == null) {

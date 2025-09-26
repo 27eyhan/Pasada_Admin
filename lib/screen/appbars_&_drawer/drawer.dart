@@ -175,6 +175,9 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                           opacity: _isCollapsed ? 0.0 : 1.0,
                           child: Text(
                             text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
                             style: TextStyle(
                               fontSize: 14.0,
                               color: selected 
