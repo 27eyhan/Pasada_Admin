@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
-import 'package:pasada_admin_application/screen/main_pages/ai_chat.dart';
 import 'package:provider/provider.dart';
 // import removed; base URL handled in service
 
@@ -22,6 +21,11 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
   List<double> _history = const [];
   List<double> _forecast = const [];
   String _source = 'live';
+  // AI explanation panel state
+  bool _showExplanation = false;
+  bool _explaining = false;
+  String? _explainError;
+  String? _explanation;
 
   @override
   void initState() {
@@ -179,24 +183,50 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
                 message: 'Explain with AI',
                 child: IconButton(
                   tooltip: 'Explain with AI',
-                  onPressed: _loading
+                  onPressed: _loading || _explaining
                       ? null
-                      : () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const AiChat(),
-                              settings: RouteSettings(
-                                arguments: {
-                                  'initialPrompt': 'Explain the booking frequency for the last ${widget.days} days and provide actionable tips.'
-                                },
-                              ),
-                            ),
-                          );
+                      : () async {
+                          setState(() {
+                            _showExplanation = true;
+                            _explaining = true;
+                            _explainError = null;
+                          });
+                          try {
+                            final resp = await _analyticsService.getBookingFrequencyWithExplanation(days: widget.days);
+                            if (resp.statusCode != 200) {
+                              setState(() {
+                                _explainError = 'Failed to get AI explanation (${resp.statusCode})';
+                                _explaining = false;
+                              });
+                              return;
+                            }
+                            final decoded = jsonDecode(resp.body);
+                            String? explanation;
+                            if (decoded is Map && decoded['data'] is Map) {
+                              final data = decoded['data'] as Map;
+                              if (data['manongExplanation'] is String) {
+                                explanation = data['manongExplanation'] as String;
+                              } else if (data['geminiInsights'] is String) {
+                                explanation = data['geminiInsights'] as String;
+                              }
+                            }
+                            setState(() {
+                              _explanation = explanation ?? 'No explanation available.';
+                              _explaining = false;
+                            });
+                          } catch (e) {
+                            setState(() {
+                              _explainError = 'Failed to get AI explanation: $e';
+                              _explaining = false;
+                            });
+                          }
                         },
                   icon: Icon(
                     Icons.smart_toy_outlined,
                     size: 18,
-                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    color: _explaining
+                        ? Palette.lightPrimary
+                        : (isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary),
                   ),
                 ),
               ),
@@ -266,6 +296,71 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
           ),
           const SizedBox(height: 8.0),
           _WeekAxis(isDark: isDark),
+          if (_showExplanation) ...[
+            const SizedBox(height: 12.0),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkSurface : Palette.lightSurface,
+                border: Border.all(
+                  color: isDark
+                      ? Palette.darkBorder.withValues(alpha: 77)
+                      : Palette.lightBorder.withValues(alpha: 77),
+                ),
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: _explaining
+                  ? Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 8.0),
+                        Text(
+                          'Generating explanation...',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.0,
+                            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                          ),
+                        ),
+                      ],
+                    )
+                  : _explainError != null
+                      ? Text(
+                          _explainError!,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12.0,
+                            color: Palette.lightError,
+                          ),
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.smart_toy,
+                              size: 16,
+                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                            ),
+                            const SizedBox(width: 8.0),
+                            Expanded(
+                              child: Text(
+                                _explanation ?? 'No explanation available.',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13.0,
+                                  color: isDark ? Palette.darkText : Palette.lightText,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+            ),
+          ],
         ],
       ),
     );

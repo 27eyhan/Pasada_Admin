@@ -23,9 +23,6 @@ class GeminiAIService {
         routeId: routeId,
         days: days,
       );
-      if (resp.statusCode == 404) {
-        return 'Service not found (404). Ensure API_URL points to your backend and that /api/analytics/ai/ask exists.';
-      }
       if (resp.statusCode != 200) {
         return 'Sorry, I could not answer that right now (status ${resp.statusCode}).';
       }
@@ -44,9 +41,6 @@ class GeminiAIService {
         return "API not configured. Set API_URL in .env.";
       }
       final resp = await _analyticsService.getDatabaseRouteAnalysis(routeId: routeId, days: days);
-      if (resp.statusCode == 404) {
-        return 'Route analysis endpoint not found (404). Check API_URL and /api/analytics/database-analysis/route/:routeId.';
-      }
       if (resp.statusCode != 200) {
         return 'Failed to analyze route (status ${resp.statusCode}).';
       }
@@ -63,9 +57,6 @@ class GeminiAIService {
         return "API not configured. Set API_URL in .env.";
       }
       final resp = await _analyticsService.getDatabaseOverviewAnalysis(days: days);
-      if (resp.statusCode == 404) {
-        return 'Overview analysis endpoint not found (404). Check API_URL and /api/analytics/database-analysis/overview.';
-      }
       if (resp.statusCode != 200) {
         return 'Failed to analyze overview (status ${resp.statusCode}).';
       }
