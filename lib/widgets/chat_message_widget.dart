@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/models/chat_message.dart';
 
-class ChatMessage extends StatelessWidget {
-  final String text;
-  final bool isUser;
+class ChatMessageWidget extends StatelessWidget {
+  final ChatMessage message;
   final VoidCallback? onRefresh;
 
-  const ChatMessage({
+  const ChatMessageWidget({
     super.key,
-    required this.text,
-    required this.isUser,
+    required this.message,
     this.onRefresh,
   });
 
   void _copyToClipboard(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: text));
+    Clipboard.setData(ClipboardData(text: message.text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Message copied to clipboard'),
@@ -35,10 +34,10 @@ class ChatMessage extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser) ...[
+          if (!message.isUser) ...[
             CircleAvatar(
               backgroundColor: Palette.blackColor,
               child: Icon(Icons.smart_toy, color: Palette.whiteColor, size: 16),
@@ -48,7 +47,7 @@ class ChatMessage extends StatelessWidget {
           Flexible(
             child: Column(
               crossAxisAlignment:
-                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -56,19 +55,19 @@ class ChatMessage extends StatelessWidget {
                     maxWidth: screenWidth * 0.7,
                   ),
                   decoration: BoxDecoration(
-                    color: isUser ? Palette.greyColor : Palette.greyColor,
+                    color: message.isUser ? Palette.greyColor : Palette.greyColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    text,
+                    message.text,
                     style: TextStyle(
-                      color: isUser ? Palette.blackColor : Palette.blackColor,
+                      color: message.isUser ? Palette.blackColor : Palette.blackColor,
                     ),
                   ),
                 ),
 
                 // Action buttons for AI messages
-                if (!isUser) ...[
+                if (!message.isUser) ...[
                   SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -101,7 +100,7 @@ class ChatMessage extends StatelessWidget {
               ],
             ),
           ),
-          if (isUser) ...[
+          if (message.isUser) ...[
             SizedBox(width: 8),
             CircleAvatar(
               backgroundColor: Palette.blackColor,

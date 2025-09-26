@@ -8,6 +8,7 @@ import 'package:pasada_admin_application/services/gemini_ai_service.dart';
 import 'package:pasada_admin_application/services/chat_session_manager.dart';
 import 'package:pasada_admin_application/services/chat_message_controller.dart';
 import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
+import 'package:pasada_admin_application/models/chat_message.dart';
 
 class AiChat extends StatefulWidget {
   const AiChat({super.key});
@@ -31,12 +32,33 @@ class _AiChatState extends State<AiChat> {
   late GeminiAIService _aiService;
   late ChatSessionManager _sessionManager;
   late ChatMessageController _messageController;
+  bool _initialPromptHandled = false;
 
   @override
   void initState() {
     super.initState();
     _initializeServices();
     _loadInitialData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Handle initial prompt passed via Navigator arguments once
+    if (!_initialPromptHandled) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map) {
+        final String? initialPrompt = args['initialPrompt'] as String?;
+        if (initialPrompt != null && initialPrompt.trim().isNotEmpty) {
+          _initialPromptHandled = true;
+          // Add and send automatically
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _textController.text = initialPrompt;
+            _handleSubmitted(initialPrompt);
+          });
+        }
+      }
+    }
   }
 
   // Initialize all services
@@ -53,8 +75,7 @@ class _AiChatState extends State<AiChat> {
 
   // Load initial data and setup
   Future<void> _loadInitialData() async {
-    // Initialize AI service and load authentication
-    _aiService.initialize();
+    // Load authentication and chat history (no direct Gemini init required)
     await _sessionManager.loadAuthentication();
     await _sessionManager.loadChatHistory();
 
@@ -126,14 +147,43 @@ class _AiChatState extends State<AiChat> {
   Future<void> _loadChatSession(String chatId) async {
     try {
       final messages = await _sessionManager.loadChatSession(chatId);
-      if (messages != null) {
+      if (messages != null && messages.isNotEmpty) {
         setState(() {
           _messages.clear();
           _messages.addAll(messages);
         });
+        // Close history drawer after loading
+        setState(() {
+          _isHistoryOpen = false;
+        });
+        // Scroll to bottom to show the loaded messages
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chat loaded successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No messages found in this chat'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
-      throw Exception('Error loading chat session: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading chat: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -145,8 +195,21 @@ class _AiChatState extends State<AiChat> {
       setState(() {
         _savedChats = _sessionManager.savedChats;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chat deleted successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
-      throw Exception('Error deleting chat session: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting chat: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -356,7 +419,9 @@ class _AiChatState extends State<AiChat> {
                                             controller: _scrollController,
                                             itemCount: _messages.length,
                                             itemBuilder: (context, index) {
-                                              return _messages[index];
+                                              return ChatMessageWidget(
+                                                message: _messages[index],
+                                              );
                                             },
                                           ),
                                         ),

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:pasada_admin_application/services/chat_history_service.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
-import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
+import 'package:pasada_admin_application/models/chat_message.dart';
 
 class ChatSessionManager {
   final ChatHistoryService _chatService = ChatHistoryService();

@@ -120,6 +120,43 @@ class AnalyticsService {
   Future<http.Response> processWeeklyAnalyticsWithOffset(int weekOffset) {
     return http.post(_u('/api/analytics/admin/process-weekly/$weekOffset'));
   }
+
+  // =============================
+  // Database-Based Gemini Analysis
+  // =============================
+
+  // Per-Route Analysis
+  Future<http.Response> getDatabaseRouteAnalysis({required int routeId, int days = 7}) {
+    return http.get(_u('/api/analytics/database-analysis/route/$routeId?days=$days'));
+  }
+
+  // System-wide Overview Analysis
+  Future<http.Response> getDatabaseOverviewAnalysis({int days = 7}) {
+    return http.get(_u('/api/analytics/database-analysis/overview?days=$days'));
+  }
+
+  // Free-form Manong Q&A (Grounded)
+  Future<http.Response> askManong({
+    required String question,
+    int? routeId,
+    int days = 7,
+  }) {
+    final body = <String, dynamic>{
+      'question': question,
+      'days': days,
+    };
+    if (routeId != null) body['routeId'] = routeId;
+    return http.post(
+      _u('/api/analytics/ai/ask'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(body),
+    );
+  }
+
+  // Booking Frequency with Manong Explanation
+  Future<http.Response> getBookingFrequencyWithExplanation({int days = 14}) {
+    return http.get(_u('/api/analytics/bookings/frequency?days=$days'));
+  }
 }
 
  

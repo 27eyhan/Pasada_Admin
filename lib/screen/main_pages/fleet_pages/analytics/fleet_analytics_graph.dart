@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
 import 'package:pasada_admin_application/widgets/sync_progress_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pasada_admin_application/screen/main_pages/ai_chat.dart';
 
 class FleetAnalyticsGraph extends StatefulWidget {
   final String? routeId;
@@ -545,6 +546,33 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                     },
                   ),
                 ),
+              Tooltip(
+                message: 'Explain with AI',
+                child: IconButton(
+                  tooltip: 'Explain with AI',
+                  onPressed: _loading
+                      ? null
+                      : () {
+                          final routeId = int.tryParse(_selectedRouteId ?? widget.routeId ?? '1') ?? 1;
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const AiChat(),
+                              settings: RouteSettings(
+                                arguments: {
+                                  'initialPrompt': 'Provide a concise, data-grounded traffic overview for route ID $routeId and suggestions for operations.',
+                                  'routeId': routeId,
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                  icon: Icon(
+                    Icons.smart_toy_outlined,
+                    size: 18,
+                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  ),
+                ),
+              ),
               // Collection status and sync controls
               Row(
                 mainAxisSize: MainAxisSize.min,

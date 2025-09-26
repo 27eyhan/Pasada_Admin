@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/services/gemini_ai_service.dart';
-import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
+import 'package:pasada_admin_application/models/chat_message.dart';
 
 enum ChatMessageType {
   user,
@@ -61,6 +62,11 @@ class ChatMessageController {
       return true;
     }
 
+    if (trimmedText.startsWith('/ask')) {
+      await _handleAskCommand(trimmedText);
+      return true;
+    }
+
     // Add more commands here as needed
     // if (trimmedText.startsWith('/anothercommand')) {
     //   await _handleAnotherCommand(trimmedText);
@@ -88,16 +94,14 @@ class ChatMessageController {
     _setTypingState(true);
 
     try {
-      // Get traffic analysis from AI service
-      final aiResponse = await _aiService.getTrafficAnalysis(routeId);
-
+      // Use backend database-based route analysis
+      final raw = await _aiService.getDatabaseRouteInsights(routeId: routeId, days: 7);
+      final display = _extractManongText(raw);
       _setTypingState(false);
       _addMessage(ChatMessage(
-        text: aiResponse,
+        text: display,
         isUser: false,
-        onRefresh: () => _regenerateTrafficResponse(routeId),
       ));
-
       _scrollToBottom();
     } catch (e) {
       _setTypingState(false);
@@ -105,6 +109,31 @@ class ChatMessageController {
         text: 'Error processing route traffic command: $e',
         isUser: false,
       ));
+    }
+  }
+
+  // Handle /ask command for grounded Q&A (e.g., /ask What are the busiest hours?)
+  Future<void> _handleAskCommand(String text) async {
+    final question = text.substring('/ask'.length).trim();
+    if (question.isEmpty) {
+      _addMessage(ChatMessage(
+        text: 'Usage: /ask <your question>\n\nExample: /ask What are the busiest hours for route 1?',
+        isUser: false,
+      ));
+      return;
+    }
+
+    _addMessage(ChatMessage(text: text, isUser: true));
+    _setTypingState(true);
+    try {
+      final raw = await _aiService.askGroundedManong(question: question);
+      final display = _extractManongText(raw);
+      _setTypingState(false);
+      _addMessage(ChatMessage(text: display, isUser: false));
+      _scrollToBottom();
+    } catch (e) {
+      _setTypingState(false);
+      _addMessage(ChatMessage(text: 'Error processing ask: $e', isUser: false));
     }
   }
 
@@ -123,14 +152,14 @@ class ChatMessageController {
     });
 
     try {
-      // Get response from AI service
-      final aiResponse = await _aiService.getGeminiResponse(text);
+      // Grounded Q&A via backend
+      final raw = await _aiService.askGroundedManong(question: text);
+      final String aiResponse = _extractManongText(raw);
 
       _setTypingState(false);
       _addMessage(ChatMessage(
         text: aiResponse,
         isUser: false,
-        onRefresh: () => _regenerateResponse(text),
       ));
 
       // Scroll to show AI response
@@ -146,58 +175,6 @@ class ChatMessageController {
     }
   }
 
-  // Regenerate response for regular messages
-  Future<void> _regenerateResponse(String originalQuery) async {
-    _setTypingState(true);
-
-    try {
-      final response = await _aiService.getGeminiResponse(originalQuery);
-
-      _setTypingState(false);
-
-      // Return the new response for the caller to handle
-      // (The caller will remove the last message and add the new one)
-      _addMessage(ChatMessage(
-        text: response,
-        isUser: false,
-        onRefresh: () => _regenerateResponse(originalQuery),
-      ));
-
-      // Scroll to the new message
-      Future.delayed(Duration(milliseconds: 100), () {
-        _scrollToBottom();
-      });
-    } catch (e) {
-      _setTypingState(false);
-      throw Exception('Error regenerating response: $e');
-    }
-  }
-
-  // Regenerate traffic analysis response
-  Future<void> _regenerateTrafficResponse(int routeId) async {
-    _setTypingState(true);
-
-    try {
-      final response = await _aiService.getTrafficAnalysis(routeId);
-
-      _setTypingState(false);
-
-      // Return the new response for the caller to handle
-      _addMessage(ChatMessage(
-        text: response,
-        isUser: false,
-        onRefresh: () => _regenerateTrafficResponse(routeId),
-      ));
-
-      // Scroll to the new message
-      Future.delayed(Duration(milliseconds: 100), () {
-        _scrollToBottom();
-      });
-    } catch (e) {
-      _setTypingState(false);
-      throw Exception('Error regenerating traffic response: $e');
-    }
-  }
 
   // Get available commands help
   String getCommandsHelp() {
@@ -221,5 +198,26 @@ More commands coming soon...''';
       return 'routetraffic';
     }
     return null;
+  }
+
+  // Extract concise text from grounded Manong JSON responses
+  String _extractManongText(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        // Primary formats
+        if (decoded['data'] is Map) {
+          final data = decoded['data'] as Map;
+          if (data['geminiInsights'] is String) return data['geminiInsights'] as String;
+          if (data['manongExplanation'] is String) return data['manongExplanation'] as String;
+        }
+        // Some endpoints may flatten message
+        if (decoded['message'] is String) return decoded['message'] as String;
+        if (decoded['error'] is String) return decoded['error'] as String;
+      }
+    } catch (_) {
+      // Not JSON; fall through
+    }
+    return raw;
   }
 }

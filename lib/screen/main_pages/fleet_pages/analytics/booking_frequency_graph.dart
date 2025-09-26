@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
+import 'package:pasada_admin_application/screen/main_pages/ai_chat.dart';
 import 'package:provider/provider.dart';
 // import removed; base URL handled in service
 
@@ -174,6 +175,31 @@ class _BookingFrequencyGraphState extends State<BookingFrequencyGraph> {
                 ),
               ),
               const Spacer(),
+              Tooltip(
+                message: 'Explain with AI',
+                child: IconButton(
+                  tooltip: 'Explain with AI',
+                  onPressed: _loading
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const AiChat(),
+                              settings: RouteSettings(
+                                arguments: {
+                                  'initialPrompt': 'Explain the booking frequency for the last ${widget.days} days and provide actionable tips.'
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                  icon: Icon(
+                    Icons.smart_toy_outlined,
+                    size: 18,
+                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  ),
+                ),
+              ),
               if (_source == 'persisted')
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
