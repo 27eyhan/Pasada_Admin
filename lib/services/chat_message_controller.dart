@@ -29,16 +29,19 @@ class ChatMessageController {
   final Function(bool) _setTypingState;
   final Function(ChatMessage) _addMessage;
   final VoidCallback _scrollToBottom;
+  final List<ChatMessage> Function() _getMessages;
 
   ChatMessageController({
     required GeminiAIService aiService,
     required Function(bool) setTypingState,
     required Function(ChatMessage) addMessage,
     required VoidCallback scrollToBottom,
+    required List<ChatMessage> Function() getMessages,
   })  : _aiService = aiService,
         _setTypingState = setTypingState,
         _addMessage = addMessage,
-        _scrollToBottom = scrollToBottom;
+        _scrollToBottom = scrollToBottom,
+        _getMessages = getMessages;
 
   // Handle submitted message
   Future<void> handleSubmittedMessage(String text) async {
@@ -152,9 +155,14 @@ class ChatMessageController {
     });
 
     try {
-      // Grounded Q&A via backend
-      final raw = await _aiService.askGroundedManong(question: text);
-      final String aiResponse = _extractManongText(raw);
+      // Build short chat history for Manong chat
+      final List<Map<String, String>> history = _buildMessageHistoryForApi();
+      // Append current user message
+      history.add({'role': 'user', 'content': text});
+
+      // Conversational Manong chat via backend (uses last <= 6 turns)
+      final raw = await _aiService.chatWithManong(messages: history);
+      final String aiResponse = _extractManongChatReply(raw);
 
       _setTypingState(false);
       _addMessage(ChatMessage(
@@ -219,5 +227,40 @@ More commands coming soon...''';
       // Not JSON; fall through
     }
     return raw;
+  }
+
+  // Extract reply from conversational Manong chat response
+  String _extractManongChatReply(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map && decoded['data'] is Map) {
+        final data = decoded['data'] as Map;
+        if (data['reply'] is String) return data['reply'] as String;
+        if (data['geminiInsights'] is String) return data['geminiInsights'] as String;
+        if (data['manongExplanation'] is String) return data['manongExplanation'] as String;
+      }
+      if (decoded is Map && decoded['message'] is String) return decoded['message'] as String;
+      if (decoded is Map && decoded['error'] is String) return decoded['error'] as String;
+    } catch (_) {
+      // Not JSON; return raw
+    }
+    return raw;
+  }
+
+  // Build short history from _messages for API (role/content only)
+  List<Map<String, String>> _buildMessageHistoryForApi() {
+    final List<Map<String, String>> items = [];
+    final msgs = _getMessages();
+    for (final m in msgs) {
+      items.add({
+        'role': m.isUser ? 'user' : 'assistant',
+        'content': m.text,
+      });
+    }
+    // Keep only last 6 entries
+    if (items.length > 6) {
+      return items.sublist(items.length - 6);
+    }
+    return items;
   }
 }

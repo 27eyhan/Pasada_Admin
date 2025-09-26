@@ -34,6 +34,27 @@ class GeminiAIService {
     }
   }
 
+  // Conversational Manong chat via backend (history-aware)
+  Future<String> chatWithManong({
+    required List<Map<String, String>> messages,
+    int days = 7,
+  }) async {
+    try {
+      if (!_analyticsService.isConfigured) {
+        return "API not configured. Set API_URL in .env.";
+      }
+      // Keep only last 6 turns
+      final recent = messages.length > 6 ? messages.sublist(messages.length - 6) : messages;
+      final resp = await _analyticsService.chatManong(messages: recent, days: days);
+      if (resp.statusCode != 200) {
+        return 'Sorry, I could not process the chat right now (status ${resp.statusCode}).';
+      }
+      return resp.body;
+    } catch (e) {
+      return 'Technical error while chatting with Manong: $e';
+    }
+  }
+
   // Database-based route analysis via backend
   Future<String> getDatabaseRouteInsights({required int routeId, int days = 7}) async {
     try {

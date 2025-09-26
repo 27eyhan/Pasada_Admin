@@ -157,6 +157,28 @@ class AnalyticsService {
   Future<http.Response> getBookingFrequencyWithExplanation({int days = 14}) {
     return http.get(_u('/api/analytics/bookings/frequency?days=$days'));
   }
+
+  // =============================
+  // Manong Chat (Grounded) - free-form conversation
+  // =============================
+  Future<http.Response> chatManong({
+    required List<Map<String, String>> messages,
+    int days = 7,
+  }) {
+    // Retain only {role, content}
+    final sanitized = messages.map((m) => {
+      'role': m['role'] ?? 'user',
+      'content': m['content'] ?? '',
+    }).toList();
+    return http.post(
+      _u('/api/analytics/ai/chat'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'messages': sanitized,
+        'days': days,
+      }),
+    );
+  }
 }
 
  

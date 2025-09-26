@@ -50,6 +50,7 @@ class _AiChatContentState extends State<AiChatContent> {
       setTypingState: _setTypingState,
       addMessage: _addMessage,
       scrollToBottom: _scrollToBottom,
+      getMessages: () => _messages,
     );
   }
 
@@ -371,31 +372,65 @@ class _AiChatContentState extends State<AiChatContent> {
                           // Messages
                           Expanded(
                             child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    (isDark ? Palette.darkSurface : Palette.lightSurface).withValues(alpha: 0.0),
+                                    (isDark ? Palette.darkSurface : Palette.lightSurface).withValues(alpha: 0.06),
+                                  ],
+                                ),
+                              ),
                               padding: EdgeInsets.symmetric(vertical: 8),
                               child: ListView.builder(
                                 controller: _scrollController,
+                                physics: BouncingScrollPhysics(),
                                 itemCount: _messages.length,
                                 itemBuilder: (context, index) {
-                                  return ChatMessageWidget(
-                                    message: _messages[index],
+                                  return _AnimatedMessage(
+                                    key: ValueKey('msg-$index-${_messages[index].hashCode}'),
+                                    child: ChatMessageWidget(
+                                      message: _messages[index],
+                                    ),
                                   );
                                 },
                               ),
                             ),
                           ),
 
-                          if (_isTyping)
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Manong is typing...',
-                                style: TextStyle(
-                                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
+                        AnimatedSwitcher(
+                          duration: Duration(milliseconds: 200),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: _isTyping
+                              ? Padding(
+                                  key: ValueKey('typing'),
+                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Palette.lightPrimary),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Manong is typing...',
+                                        style: TextStyle(
+                                          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : SizedBox.shrink(key: ValueKey('notyping')),
+                        ),
 
                           // Input area
                           Container(
@@ -473,6 +508,29 @@ class _AiChatContentState extends State<AiChatContent> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AnimatedMessage extends StatelessWidget {
+  final Widget child;
+  const _AnimatedMessage({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      builder: (context, value, _) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 8),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
