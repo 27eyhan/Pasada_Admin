@@ -28,10 +28,29 @@ class ChatMessageWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Bubble styling per role
+    final Color userBg = isDark ? Palette.darkDivider : Palette.lightDivider;
+    final Color aiBg = isDark ? Palette.darkCard : Colors.white;
+    final Color userText = isDark ? Palette.darkText : Palette.lightText;
+    final Color aiText = isDark ? Palette.darkText : Palette.lightText;
+    final BorderRadius userRadius = BorderRadius.only(
+      topLeft: Radius.circular(16),
+      topRight: Radius.circular(6),
+      bottomLeft: Radius.circular(16),
+      bottomRight: Radius.circular(16),
+    );
+    final BorderRadius aiRadius = BorderRadius.only(
+      topLeft: Radius.circular(6),
+      topRight: Radius.circular(16),
+      bottomLeft: Radius.circular(16),
+      bottomRight: Radius.circular(16),
+    );
 
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      margin: EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment:
             message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -50,18 +69,31 @@ class ChatMessageWidget extends StatelessWidget {
                   message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   constraints: BoxConstraints(
-                    maxWidth: screenWidth * 0.7,
+                    maxWidth: screenWidth * 0.72,
                   ),
                   decoration: BoxDecoration(
-                    color: message.isUser ? Palette.greyColor : Palette.greyColor,
-                    borderRadius: BorderRadius.circular(16),
+                    color: message.isUser ? userBg : aiBg,
+                    borderRadius: message.isUser ? userRadius : aiRadius,
+                    border: Border.all(
+                      color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.06)
+                            : Colors.grey.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Text(
+                  child: SelectableText(
                     message.text,
                     style: TextStyle(
-                      color: message.isUser ? Palette.blackColor : Palette.blackColor,
+                      color: message.isUser ? userText : aiText,
+                      height: 1.35,
                     ),
                   ),
                 ),

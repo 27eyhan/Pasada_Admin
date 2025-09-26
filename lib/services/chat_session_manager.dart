@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:pasada_admin_application/services/chat_history_service.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/models/chat_message.dart';
+import 'package:pasada_admin_application/services/gemini_ai_service.dart';
+import 'dart:convert';
 
 class ChatSessionManager {
   final ChatHistoryService _chatService = ChatHistoryService();
@@ -41,10 +43,25 @@ class ChatSessionManager {
     }
 
     try {
-      // Generate a title from first message for display purposes
-      final title = '${messages.first.text.split(' ').take(5).join(' ')}...';
+      // Build recent history for title generation
+      final List<Map<String, String>> recent = messages
+          .map((m) => {
+                'role': m.isUser ? 'user' : 'assistant',
+                'content': m.text,
+              })
+          .toList();
 
-      // Separate user messages and AI responses
+      // Generate a concise title via Manong chat endpoint
+      String title = '${messages.first.text.split(' ').take(5).join(' ')}...';
+      try {
+        final ai = GeminiAIService();
+        final generated = await ai.generateChatTitle(recentMessages: recent);
+        if (generated != null && generated.trim().isNotEmpty) {
+          title = generated.trim();
+        }
+      } catch (_) {}
+
+      // Separate user messages and AI responses (schema columns: messages, ai_message)
       final userMessages = messages
           .where((msg) => msg.isUser)
           .map((msg) => {
@@ -80,51 +97,66 @@ class ChatSessionManager {
     }
   }
 
-  // Load a specific chat session
-  Future<List<ChatMessage>?> loadChatSession(String chatId) async {
+  // Load a specific chat session (accept int or string IDs)
+  Future<List<ChatMessage>?> loadChatSession(dynamic chatId) async {
     try {
       final chat = await _chatService.getChatSession(chatId);
       if (chat == null) return null;
 
       final List<ChatMessage> messages = [];
 
-      // Create a temporary list to hold all messages with timestamps
-      final List<Map<String, dynamic>> tempMessages = [];
-
-      // Load user messages
-      if (chat['messages'] is List && (chat['messages'] as List).isNotEmpty) {
-        List<dynamic> userMessages = chat['messages'];
-        for (var msg in userMessages) {
-          tempMessages.add({
-            'text': msg['text'],
-            'isUser': true,
-            'timestamp': msg['timestamp'] ?? '',
-          });
+      // Support both legacy combined arrays and split schema
+      final List<Map<String, dynamic>> combined = [];
+      // messages may be TEXT (string JSON) or List
+      dynamic rawMessages = chat['messages'];
+      if (rawMessages is String) {
+        try { rawMessages = jsonDecode(rawMessages); } catch (_) {}
+      }
+      if (rawMessages is List) {
+        for (final m in rawMessages) {
+          if (m is Map) {
+            combined.add({
+              'text': m['text'],
+              'isUser': true,
+              'timestamp': m['timestamp'] ?? '',
+            });
+          }
         }
       }
-
-      // Load AI messages
-      if (chat['ai_message'] is List &&
-          (chat['ai_message'] as List).isNotEmpty) {
-        List<dynamic> aiMessages = chat['ai_message'];
-        for (var msg in aiMessages) {
-          tempMessages.add({
-            'text': msg['text'],
-            'isUser': false,
-            'timestamp': msg['timestamp'] ?? '',
-          });
+      // ai_message may be TEXT (string JSON) or List
+      dynamic rawAi = chat['ai_message'];
+      if (rawAi is String) {
+        try { rawAi = jsonDecode(rawAi); } catch (_) {}
+      }
+      if (rawAi is List) {
+        for (final m in rawAi) {
+          if (m is Map) {
+            combined.add({
+              'text': m['text'],
+              'isUser': false,
+              'timestamp': m['timestamp'] ?? '',
+            });
+          }
         }
       }
-
-      // Sort messages by timestamp
-      tempMessages.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
-
-      // Add sorted messages to the result
-      for (var msg in tempMessages) {
-        messages.add(ChatMessage(
-          text: msg['text'],
-          isUser: msg['isUser'],
-        ));
+      // If legacy: some records may store a single 'messages' array of role+text
+      if (combined.isEmpty && rawMessages is List) {
+        for (final m in rawMessages) {
+          if (m is Map && m['role'] != null) {
+            combined.add({
+              'text': m['text'],
+              'isUser': (m['role'] == 'user'),
+              'timestamp': m['timestamp'] ?? '',
+            });
+          }
+        }
+      }
+      // Sort by timestamp if present
+      combined.sort((a, b) => (a['timestamp'] ?? '').toString().compareTo((b['timestamp'] ?? '').toString()));
+      for (final m in combined) {
+        if (m['text'] != null) {
+          messages.add(ChatMessage(text: m['text'], isUser: m['isUser'] == true));
+        }
       }
 
       return messages;
@@ -134,20 +166,14 @@ class ChatSessionManager {
     }
   }
 
-  // Delete a chat session
-  Future<void> deleteChatSession(String chatId) async {
+  // Delete a chat session and refresh list
+  Future<void> deleteChatSession(dynamic chatId) async {
     try {
       await _chatService.deleteChatSession(chatId);
-      await loadChatHistory(); // Reload the chat history
+      await loadChatHistory();
     } catch (e) {
       debugPrint('Error deleting chat session: $e');
       rethrow;
     }
   }
-
-  // Check if user is authenticated
-  bool get isAuthenticated => _authService.currentAdminID != null;
-
-  // Get current admin ID
-  String? get currentAdminID => _authService.currentAdminID?.toString();
 }

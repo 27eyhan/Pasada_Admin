@@ -354,20 +354,41 @@ class _ProfileContentState extends State<ProfileContent> {
                     ),
                   ],
                 )
-              : ElevatedButton.icon(
-                  onPressed: _startEditing,
-                  icon: Icon(Icons.edit, size: 18),
-                  label: Text("Edit Profile"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Palette.greenColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _startEditing,
+                      icon: Icon(Icons.edit, size: 18),
+                      label: Text("Edit Profile"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Palette.greenColor,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        elevation: 2,
+                        shadowColor: Palette.greenColor.withAlpha(100),
+                      ),
                     ),
-                    elevation: 2,
-                    shadowColor: Palette.greenColor.withAlpha(100),
-                  ),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        try { await AuthService().clearSession(); } catch (_) {}
+                        if (context.mounted) {
+                          Navigator.pushNamedAndRemoveUntil(context, '/', (Route<dynamic> route) => false);
+                        }
+                      },
+                      icon: Icon(Icons.logout, size: 18, color: Palette.lightError),
+                      label: Text('Logout', style: TextStyle(color: Palette.lightError)),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Palette.lightError),
+                        padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 20.0),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                      ),
+                    ),
+                  ],
                 ),
         ),
       ],

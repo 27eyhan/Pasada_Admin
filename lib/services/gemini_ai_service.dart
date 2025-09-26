@@ -1,4 +1,5 @@
 import 'package:pasada_admin_application/services/analytics_service.dart';
+import 'dart:convert';
 
 class GeminiAIService {
   final AnalyticsService _analyticsService = AnalyticsService();
@@ -55,6 +56,43 @@ class GeminiAIService {
     }
   }
 
+  // Generate a short chat title (4-6 words, no punctuation)
+  Future<String?> generateChatTitle({required List<Map<String, String>> recentMessages}) async {
+    try {
+      if (!_analyticsService.isConfigured) return null;
+      final List<Map<String, String>> history = [];
+      // Constrain to last 4 messages for context
+      final recent = recentMessages.length > 4
+          ? recentMessages.sublist(recentMessages.length - 4)
+          : recentMessages;
+      history.addAll(recent);
+      // Add system instruction asking for a concise title only
+      history.insert(0, {
+        'role': 'system',
+        'content': 'Given the following short conversation, generate a concise 4-6 word title summarizing the topic. Return ONLY the title text, no punctuation, no quotes.'
+      });
+      final resp = await _analyticsService.chatManong(messages: history, days: 7);
+      if (resp.statusCode != 200) return null;
+      final raw = resp.body;
+      // Extract reply
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map && decoded['data'] is Map) {
+          final data = decoded['data'] as Map;
+          String? title = data['reply'] as String?;
+          if (title != null) {
+            title = title.replaceAll(RegExp(r'[\"\.!?\n]'), ' ').trim();
+            // Collapse whitespace and cap length
+            title = title.split(RegExp(r'\s+')).take(8).join(' ');
+            if (title.isNotEmpty) return title;
+          }
+        }
+      } catch (_) {}
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
   // Database-based route analysis via backend
   Future<String> getDatabaseRouteInsights({required int routeId, int days = 7}) async {
     try {
