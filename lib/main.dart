@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pasada_admin_application/maps/google_maps_api.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/services/connectivity_service.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/screen/login_set_up/login_signup.dart';
@@ -46,8 +47,11 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()..initialize()),
+      ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(

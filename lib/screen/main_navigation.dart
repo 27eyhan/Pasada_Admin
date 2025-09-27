@@ -12,6 +12,7 @@ import 'package:pasada_admin_application/screen/main_pages/ai_chat_content.dart'
 import 'package:pasada_admin_application/screen/settings_pages/settings_content.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/data_tables_content.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/select_table_content.dart';
+import 'package:pasada_admin_application/widgets/slow_connection_notice.dart';
 import 'package:provider/provider.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -128,6 +129,8 @@ class _MainNavigationState extends State<MainNavigation> {
                     _showMobileDrawer(context);
                   },
                 ),
+                // Slow connection notice
+                const SlowConnectionNotice(),
                 // Page content
                 Expanded(
                   child: _getCurrentPageContent(),
