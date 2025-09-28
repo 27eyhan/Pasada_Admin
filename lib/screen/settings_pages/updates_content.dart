@@ -16,9 +16,45 @@ class _UpdatesContentState extends State<UpdatesContent> {
   String updateFrequency = 'realtime';
   bool enableAutoRefresh = true;
   int refreshInterval = 30;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final authService = AuthService();
+      await authService.loadSession();
+      
+      if (mounted) {
+        setState(() {
+          updateFrequency = authService.updateFrequency;
+          enableAutoRefresh = authService.autoRefreshEnabled;
+          refreshInterval = authService.refreshIntervalSeconds;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: Palette.greenColor,
+        ),
+      );
+    }
     return Column(
       children: [
         // Update Frequency

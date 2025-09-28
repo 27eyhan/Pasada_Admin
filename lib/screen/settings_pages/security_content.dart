@@ -18,6 +18,7 @@ class _SecurityContentState extends State<SecurityContent> {
   bool sessionTimeout = true;
   int sessionTimeoutMinutes = 30;
   bool _savingTimeout = false;
+  bool _isLoading = true;
   
   // Password change variables
   bool isChangingPassword = false;
@@ -32,6 +33,33 @@ class _SecurityContentState extends State<SecurityContent> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final authService = AuthService();
+      await authService.loadSession();
+      
+      if (mounted) {
+        setState(() {
+          sessionTimeout = authService.sessionTimeoutEnabled;
+          sessionTimeoutMinutes = authService.sessionTimeoutMinutes;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -155,6 +183,14 @@ class _SecurityContentState extends State<SecurityContent> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: Palette.greenColor,
+        ),
+      );
+    }
+    
     return Column(
       children: [
         SizedBox(height: 20),
