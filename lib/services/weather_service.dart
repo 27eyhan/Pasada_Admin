@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_admin_application/models/weather_model.dart';
 
 class WeatherService {
-  static const String _baseUrl = 'http://api.weatherapi.com/v1';
+  static const String _baseUrl = 'https://api.weatherapi.com/v1';
   static const String _endpoint = '/current.json';
   
   String? get _apiKey => dotenv.env['WEATHER_API_KEY'];
