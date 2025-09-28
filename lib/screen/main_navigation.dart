@@ -107,34 +107,41 @@ class _MainNavigationState extends State<MainNavigation> {
           ],
           // Main content area
           Expanded(
-            child: Column(
+            child: Stack(
               children: [
-                // App bar in the main content area
-                AppBarSearch(
-                  onFilterPressed: () {
-                    // Handle filter based on current page
-                    if (_currentPage == '/dashboard') {
-                      // Dashboard filter logic
-                    } else if (_currentPage == '/fleet') {
-                      // Fleet filter logic
-                    } else if (_currentPage == '/drivers') {
-                      // Drivers filter logic
-                    }
-                  },
-                  onSettingsTabRequested: (tabIndex) {
-                    navigateToPage('/settings', args: {'tabIndex': tabIndex});
-                  },
-                  showMobileMenu: isMobile,
-                  onMobileMenuPressed: () {
-                    _showMobileDrawer(context);
-                  },
+                Column(
+                  children: [
+                    // App bar in the main content area
+                    AppBarSearch(
+                      onFilterPressed: () {
+                        // Handle filter based on current page
+                        if (_currentPage == '/dashboard') {
+                          // Dashboard filter logic
+                        } else if (_currentPage == '/fleet') {
+                          // Fleet filter logic
+                        } else if (_currentPage == '/drivers') {
+                          // Drivers filter logic
+                        }
+                      },
+                      onSettingsTabRequested: (tabIndex) {
+                        navigateToPage('/settings', args: {'tabIndex': tabIndex});
+                      },
+                      showMobileMenu: isMobile,
+                      onMobileMenuPressed: () {
+                        _showMobileDrawer(context);
+                      },
+                    ),
+                    // Page content
+                    Expanded(
+                      child: _getCurrentPageContent(),
+                    ),
+                  ],
                 ),
-                // Slow connection notice
-                const SlowConnectionNotice(),
-                // Page content
-                Expanded(
-                  child: _getCurrentPageContent(),
-                ),
+                // Floating slow connection notice
+                if (isMobile)
+                  const SlowConnectionNotice()
+                else
+                  const SlowConnectionNotice(),
               ],
             ),
           ),

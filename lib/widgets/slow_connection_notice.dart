@@ -18,56 +18,49 @@ class SlowConnectionNotice extends StatelessWidget {
         final isMobile = ResponsiveHelper.isMobile(context);
         final isTablet = ResponsiveHelper.isTablet(context);
         
-        // For mobile screens, show icon-only version
+        // For mobile screens, show floating icon-only version
         if (isMobile) {
           return _buildIconOnlyNotice(context, connectivityService);
         }
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          margin: EdgeInsets.symmetric(
-            horizontal: isTablet ? 12 : 16, 
-            vertical: isTablet ? 6 : 8
-          ),
-          child: Material(
-            elevation: 2,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                horizontal: isTablet ? 12 : 16, 
-                vertical: isTablet ? 10 : 12
-              ),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                gradient: LinearGradient(
-                  colors: connectivityService.isVerySlowConnection
-                      ? [Colors.red.shade100, Colors.red.shade50]
-                      : [Colors.orange.shade100, Colors.orange.shade50],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        return Positioned(
+          top: 90,
+          left: 16,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.transparent,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 12 : 16, 
+                  vertical: isTablet ? 10 : 12
                 ),
-                border: Border.all(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
                   color: connectivityService.isVerySlowConnection
-                      ? Colors.red.shade300
-                      : Colors.orange.shade300,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    connectivityService.isVerySlowConnection
-                        ? Icons.warning_rounded
-                        : Icons.speed_rounded,
+                      ? Colors.red.shade900.withOpacity(0.9)
+                      : Colors.orange.shade900.withOpacity(0.9),
+                  border: Border.all(
                     color: connectivityService.isVerySlowConnection
-                        ? Colors.red.shade700
-                        : Colors.orange.shade700,
-                    size: isTablet ? 18 : 20,
+                        ? Colors.red.shade600
+                        : Colors.orange.shade600,
+                    width: 1,
                   ),
-                  SizedBox(width: isTablet ? 10 : 12),
-                  Expanded(
-                    child: Column(
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      connectivityService.isVerySlowConnection
+                          ? Icons.warning_rounded
+                          : Icons.speed_rounded,
+                      color: Colors.white,
+                      size: isTablet ? 18 : 20,
+                    ),
+                    SizedBox(width: isTablet ? 10 : 12),
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -78,9 +71,7 @@ class SlowConnectionNotice extends StatelessWidget {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: isTablet ? 13 : 14,
-                            color: connectivityService.isVerySlowConnection
-                                ? Colors.red.shade800
-                                : Colors.orange.shade800,
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -88,16 +79,15 @@ class SlowConnectionNotice extends StatelessWidget {
                           connectivityService.getConnectionQualityDescription(),
                           style: TextStyle(
                             fontSize: isTablet ? 11 : 12,
-                            color: connectivityService.isVerySlowConnection
-                                ? Colors.red.shade700
-                                : Colors.orange.shade700,
+                            color: Colors.white.withOpacity(0.8),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  _buildRefreshButton(connectivityService, isTablet),
-                ],
+                    SizedBox(width: isTablet ? 8 : 12),
+                    _buildRefreshButton(connectivityService, isTablet),
+                  ],
+                ),
               ),
             ),
           ),
@@ -107,26 +97,24 @@ class SlowConnectionNotice extends StatelessWidget {
   }
 
   Widget _buildIconOnlyNotice(BuildContext context, ConnectivityService connectivityService) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    return Positioned(
+      bottom: 16,
+      left: 16,
       child: Material(
-        elevation: 1,
-        borderRadius: BorderRadius.circular(6),
+        elevation: 4,
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.transparent,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            gradient: LinearGradient(
-              colors: connectivityService.isVerySlowConnection
-                  ? [Colors.red.shade100, Colors.red.shade50]
-                  : [Colors.orange.shade100, Colors.orange.shade50],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            borderRadius: BorderRadius.circular(8),
+            color: connectivityService.isVerySlowConnection
+                ? Colors.red.shade900.withOpacity(0.9)
+                : Colors.orange.shade900.withOpacity(0.9),
             border: Border.all(
               color: connectivityService.isVerySlowConnection
-                  ? Colors.red.shade300
-                  : Colors.orange.shade300,
+                  ? Colors.red.shade600
+                  : Colors.orange.shade600,
               width: 1,
             ),
           ),
@@ -137,9 +125,7 @@ class SlowConnectionNotice extends StatelessWidget {
                 connectivityService.isVerySlowConnection
                     ? Icons.warning_rounded
                     : Icons.speed_rounded,
-                color: connectivityService.isVerySlowConnection
-                    ? Colors.red.shade700
-                    : Colors.orange.shade700,
+                color: Colors.white,
                 size: 16,
               ),
               const SizedBox(width: 6),
@@ -157,16 +143,20 @@ class SlowConnectionNotice extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(isSmall ? 4 : 6),
         decoration: BoxDecoration(
-          color: connectivityService.isVerySlowConnection
-              ? Colors.red.shade200
-              : Colors.orange.shade200,
+          color: isSmall 
+              ? Colors.white.withOpacity(0.2)
+              : (connectivityService.isVerySlowConnection
+                  ? Colors.red.shade200
+                  : Colors.orange.shade200),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Icon(
           Icons.refresh_rounded,
-          color: connectivityService.isVerySlowConnection
-              ? Colors.red.shade700
-              : Colors.orange.shade700,
+          color: isSmall 
+              ? Colors.white
+              : (connectivityService.isVerySlowConnection
+                  ? Colors.red.shade700
+                  : Colors.orange.shade700),
           size: isSmall ? 12 : 14,
         ),
       ),
