@@ -155,6 +155,22 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                   ],
                 ],
               ),
+            ] else ...[
+              // Fallback when no weather data and no error
+              Icon(
+                Icons.wb_sunny_outlined,
+                size: isMobile ? 14 : 20,
+                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+              ),
+              SizedBox(width: isMobile ? 6.0 : 8.0),
+              Text(
+                isMobile ? 'N/A' : 'Weather unavailable',
+                style: TextStyle(
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  fontSize: isMobile ? 12.0 : 14.0,
+                  fontFamily: 'Inter',
+                ),
+              ),
             ],
           ],
         ),

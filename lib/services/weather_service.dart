@@ -2,16 +2,25 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_admin_application/models/weather_model.dart';
+import 'package:pasada_admin_application/config/web_config.dart';
 
 class WeatherService {
-  static const String _baseUrl = 'http://api.weatherapi.com/v1';
+  static const String _baseUrl = 'https://api.weatherapi.com/v1';
   static const String _endpoint = '/current.json';
   
-  String? get _apiKey => dotenv.env['WEATHER_API_KEY'];
+  String? get _apiKey {
+    // Try dotenv first, then fallback to web config
+    final dotenvKey = dotenv.env['WEATHER_API_KEY'];
+    if (dotenvKey != null && dotenvKey.isNotEmpty) {
+      return dotenvKey;
+    }
+    return WebConfig.weatherApiKey;
+  }
 
   Future<WeatherModel?> getCurrentWeather(String city) async {
     if (_apiKey == null || _apiKey!.isEmpty) {
-      throw Exception('Weather API key not found. Please check your .env file.');
+      print('Weather API key not found. Please check your .env file.');
+      return null;
     }
 
     try {
@@ -21,6 +30,7 @@ class WeatherService {
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       );
 
@@ -39,7 +49,8 @@ class WeatherService {
 
   Future<WeatherModel?> getCurrentWeatherByCoordinates(double lat, double lon) async {
     if (_apiKey == null || _apiKey!.isEmpty) {
-      throw Exception('Weather API key not found. Please check your .env file.');
+      print('Weather API key not found. Please check your .env file.');
+      return null;
     }
 
     try {
@@ -49,6 +60,7 @@ class WeatherService {
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       );
 
