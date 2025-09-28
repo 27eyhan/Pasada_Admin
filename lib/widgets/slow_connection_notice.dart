@@ -40,8 +40,8 @@ class SlowConnectionNotice extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: connectivityService.isVerySlowConnection
-                      ? Colors.red.shade900.withOpacity(0.9)
-                      : Colors.orange.shade900.withOpacity(0.9),
+                      ? Colors.red.shade900.withValues(alpha: 0.9)
+                      : Colors.orange.shade900.withValues(alpha: 0.9),
                   border: Border.all(
                     color: connectivityService.isVerySlowConnection
                         ? Colors.red.shade600
@@ -79,7 +79,7 @@ class SlowConnectionNotice extends StatelessWidget {
                           connectivityService.getConnectionQualityDescription(),
                           style: TextStyle(
                             fontSize: isTablet ? 11 : 12,
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -109,8 +109,8 @@ class SlowConnectionNotice extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             color: connectivityService.isVerySlowConnection
-                ? Colors.red.shade900.withOpacity(0.9)
-                : Colors.orange.shade900.withOpacity(0.9),
+                ? Colors.red.shade900.withValues(alpha: 0.9)
+                : Colors.orange.shade900.withValues(alpha: 0.9),
             border: Border.all(
               color: connectivityService.isVerySlowConnection
                   ? Colors.red.shade600
@@ -140,15 +140,14 @@ class SlowConnectionNotice extends StatelessWidget {
   Widget _buildRefreshButton(ConnectivityService connectivityService, bool isSmall) {
     return GestureDetector(
       onTap: () async {
-        // Perform both connectivity refresh and speed test
-        await connectivityService.refreshConnectivity();
-        await connectivityService.performSpeedTest();
+        // Force a complete connection test
+        await connectivityService.forceConnectionTest();
       },
       child: Container(
         padding: EdgeInsets.all(isSmall ? 4 : 6),
         decoration: BoxDecoration(
           color: isSmall 
-              ? Colors.white.withOpacity(0.2)
+              ? Colors.white.withValues(alpha: 0.2)
               : (connectivityService.isVerySlowConnection
                   ? Colors.red.shade200
                   : Colors.orange.shade200),
