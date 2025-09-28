@@ -17,13 +17,13 @@ class WeatherDetailsModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final isMobile = ResponsiveHelper.isMobile(context);
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        width: MediaQuery.of(context).size.width > 600 ? 500 : MediaQuery.of(context).size.width * 0.9,
+        width: MediaQuery.of(context).size.width > 800 ? 700 : MediaQuery.of(context).size.width * 0.95,
         constraints: BoxConstraints(
-          maxWidth: 500,
+          maxWidth: 700,
           maxHeight: MediaQuery.of(context).size.height * 0.8,
         ),
         decoration: BoxDecoration(
@@ -115,14 +115,14 @@ class WeatherDetailsModal extends StatelessWidget {
                     // Weather details grid - responsive
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final isMobile = ResponsiveHelper.isMobile(context);
+                        final isMobile = MediaQuery.of(context).size.width < 600;
                         return GridView.count(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: isMobile ? 2 : 2,
-                          crossAxisSpacing: 16.0,
-                          mainAxisSpacing: 16.0,
-                          childAspectRatio: isMobile ? 3.5 : 2.0,
+                          crossAxisCount: isMobile ? 1 : 2,
+                          crossAxisSpacing: 20.0,
+                          mainAxisSpacing: 20.0,
+                          childAspectRatio: isMobile ? 3.5 : 2.2,
                           children: [
                             _buildDetailItem(
                               'Humidity',

@@ -54,21 +54,46 @@ class ConnectivityService extends ChangeNotifier {
   }
   
   void _handleConnectivityChange(List<ConnectivityResult> results) {
-    final bool wasConnected = _isConnected;
-    final bool wasSlowConnection = _isSlowConnection;
+    // Check if we have any network connection
+    final hasNetworkConnection = results.isNotEmpty && results.any((result) => result != ConnectivityResult.none);
     
-    _isConnected = results.isNotEmpty && 
-                   results.any((result) => result != ConnectivityResult.none);
-    
-    if (_isConnected) {
-      _testConnectionSpeed();
+    if (hasNetworkConnection) {
+      // Test actual internet connectivity
+      _testInternetConnectivity();
     } else {
+      _isConnected = false;
       _isSlowConnection = false;
       _connectionSpeed = 0.0;
+      notifyListeners();
     }
-    
-    // Notify listeners if connection status changed
-    if (wasConnected != _isConnected || wasSlowConnection != _isSlowConnection) {
+  }
+  
+  Future<void> _testInternetConnectivity() async {
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 5);
+      
+      // Test with a simple, reliable endpoint
+      final request = await client.getUrl(Uri.parse('https://www.google.com'));
+      final response = await request.close();
+      
+      client.close();
+      
+      if (response.statusCode == 200) {
+        _isConnected = true;
+        // Now test speed
+        _testConnectionSpeed();
+      } else {
+        _isConnected = false;
+        _isSlowConnection = false;
+        _connectionSpeed = 0.0;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Internet connectivity test failed: $e');
+      _isConnected = false;
+      _isSlowConnection = false;
+      _connectionSpeed = 0.0;
       notifyListeners();
     }
   }
@@ -77,25 +102,57 @@ class ConnectivityService extends ChangeNotifier {
     try {
       final stopwatch = Stopwatch()..start();
       
-      // Test with a small HTTP request to measure speed
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse('https://httpbin.org/bytes/1024'));
-      final response = await request.close();
+      // Test with multiple endpoints for better reliability
+      final testUrls = [
+        'https://httpbin.org/bytes/1024',
+        'https://www.google.com/favicon.ico',
+        'https://httpbin.org/bytes/512'
+      ];
+      
+      double totalSpeed = 0.0;
+      int successfulTests = 0;
+      
+      for (final url in testUrls) {
+        try {
+          final client = HttpClient();
+          client.connectionTimeout = const Duration(seconds: 8);
+          
+          final request = await client.getUrl(Uri.parse(url));
+          final response = await request.close();
+          
+          if (response.statusCode == 200) {
+            final durationInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
+            if (durationInSeconds > 0) {
+              // Calculate speed in Mbps
+              // 1KB = 8 kilobits = 0.008 megabits
+              final speedInMbps = (8.0 * 0.001) / durationInSeconds;
+              totalSpeed += speedInMbps;
+              successfulTests++;
+            }
+          }
+          
+          client.close();
+          stopwatch.reset();
+          stopwatch.start();
+        } catch (e) {
+          debugPrint('Speed test failed for $url: $e');
+          continue;
+        }
+      }
       
       stopwatch.stop();
       
-      if (response.statusCode == 200) {
-        // Calculate speed in Mbps (1KB = 8 kilobits)
-        final durationInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
-        final speedInMbps = (8.0 * 1.024) / durationInSeconds; // 1KB = 8.192 kilobits
+      if (successfulTests > 0) {
+        _connectionSpeed = totalSpeed / successfulTests;
+        _isSlowConnection = _connectionSpeed < _slowConnectionThreshold;
         
-        _connectionSpeed = speedInMbps;
-        _isSlowConnection = speedInMbps < _slowConnectionThreshold;
-        
+        debugPrint('Connection speed test: ${_connectionSpeed.toStringAsFixed(2)} Mbps (${successfulTests} tests)');
+        notifyListeners();
+      } else {
+        _isSlowConnection = true;
+        _connectionSpeed = 0.0;
         notifyListeners();
       }
-      
-      client.close();
     } catch (e) {
       debugPrint('Error testing connection speed: $e');
       // If speed test fails, assume slow connection
@@ -107,7 +164,19 @@ class ConnectivityService extends ChangeNotifier {
   
   // Manual speed test method
   Future<void> performSpeedTest() async {
+    debugPrint('Manual speed test initiated');
     await _testConnectionSpeed();
+  }
+  
+  // Force a complete connectivity refresh
+  Future<void> refreshConnectivity() async {
+    debugPrint('Refreshing connectivity status...');
+    try {
+      final results = await _connectivity.checkConnectivity();
+      _handleConnectivityChange(results);
+    } catch (e) {
+      debugPrint('Error refreshing connectivity: $e');
+    }
   }
   
   // Get connection quality description

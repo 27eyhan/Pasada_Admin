@@ -139,7 +139,11 @@ class SlowConnectionNotice extends StatelessWidget {
 
   Widget _buildRefreshButton(ConnectivityService connectivityService, bool isSmall) {
     return GestureDetector(
-      onTap: () => connectivityService.performSpeedTest(),
+      onTap: () async {
+        // Perform both connectivity refresh and speed test
+        await connectivityService.refreshConnectivity();
+        await connectivityService.performSpeedTest();
+      },
       child: Container(
         padding: EdgeInsets.all(isSmall ? 4 : 6),
         decoration: BoxDecoration(
