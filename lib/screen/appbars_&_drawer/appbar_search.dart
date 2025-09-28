@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/widgets/weather_widget.dart';
+import 'package:pasada_admin_application/widgets/signal_indicator.dart';
 import 'package:provider/provider.dart';
 
 typedef FilterCallback = void Function();
@@ -60,8 +62,13 @@ class _AppBarSearchState extends State<AppBarSearch> {
               ),
               const SizedBox(width: 8.0),
             ],
+            // Weather widget
+            const WeatherWidget(),
+            const SizedBox(width: 16.0),
             const Spacer(),
-            // Filter button removed
+            // Signal indicator
+            const SignalIndicator(),
+            const SizedBox(width: 8.0),
             // Profile button styled like "Docs" link
             TextButton(
               onPressed: () {

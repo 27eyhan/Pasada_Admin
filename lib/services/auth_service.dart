@@ -23,6 +23,8 @@ class AuthService {
   static const String _rtUpdateFrequencyKey = 'rtUpdateFrequency'; // 'realtime' | '5min' | '15min' | 'manual'
   static const String _rtAutoRefreshEnabledKey = 'rtAutoRefreshEnabled';
   static const String _rtRefreshIntervalSecondsKey = 'rtRefreshIntervalSeconds';
+  static const String _pushNotificationsKey = 'pushNotifications';
+  static const String _rideUpdatesKey = 'rideUpdates';
   SharedPreferences? _prefs;
   int? _adminID;
   String? _sessionToken;
@@ -32,6 +34,8 @@ class AuthService {
   String _updateFrequency = 'realtime';
   bool _autoRefreshEnabled = true;
   int _refreshIntervalSeconds = 30;
+  bool _pushNotifications = true;
+  bool _rideUpdates = true;
 
   Future<void> _initPrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -57,6 +61,8 @@ class AuthService {
     _updateFrequency = _prefs?.getString(_rtUpdateFrequencyKey) ?? 'realtime';
     _autoRefreshEnabled = _prefs?.getBool(_rtAutoRefreshEnabledKey) ?? true;
     _refreshIntervalSeconds = _prefs?.getInt(_rtRefreshIntervalSecondsKey) ?? 30;
+    _pushNotifications = _prefs?.getBool(_pushNotificationsKey) ?? true;
+    _rideUpdates = _prefs?.getBool(_rideUpdatesKey) ?? true;
     debugPrint('AuthService: Session loaded (adminID=$_adminID, hasToken=${_sessionToken != null}, expiryMs=$_sessionExpiryMs)');
   }
 
@@ -148,5 +154,21 @@ class AuthService {
     await _prefs?.setBool(_rtAutoRefreshEnabledKey, autoRefresh);
     await _prefs?.setInt(_rtRefreshIntervalSecondsKey, intervalSeconds);
     debugPrint('AuthService: Realtime settings frequency=$frequency autoRefresh=$autoRefresh interval=$intervalSeconds');
+  }
+
+  // Notification preferences
+  bool get pushNotifications => _pushNotifications;
+  bool get rideUpdates => _rideUpdates;
+
+  Future<void> setNotificationSettings({
+    required bool pushNotifications,
+    required bool rideUpdates,
+  }) async {
+    await _initPrefs();
+    _pushNotifications = pushNotifications;
+    _rideUpdates = rideUpdates;
+    await _prefs?.setBool(_pushNotificationsKey, pushNotifications);
+    await _prefs?.setBool(_rideUpdatesKey, rideUpdates);
+    debugPrint('AuthService: Notification settings pushNotifications=$pushNotifications rideUpdates=$rideUpdates');
   }
 } 

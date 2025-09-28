@@ -11,6 +11,7 @@ import 'fleet_data.dart';
 import 'analytics/fleet_analytics_graph.dart';
 import 'analytics/booking_frequency_graph.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/database_tables/vehicle_tables/add_vehicle_dialog.dart';
+import 'package:pasada_admin_application/widgets/weather_warning_widget.dart';
 import 'package:provider/provider.dart';
 
 class Fleet extends StatefulWidget {
@@ -307,6 +308,8 @@ class _FleetState extends State<Fleet> {
                                   onFilterPressed: _showFilterDialog,
                                 ),
                                 const SizedBox(height: 24.0),
+                                // Weather warning
+                                const WeatherWarningWidget(),
                                 // Booking frequency graph
                                 BookingFrequencyGraph(days: 14),
                                 const SizedBox(height: 24.0),

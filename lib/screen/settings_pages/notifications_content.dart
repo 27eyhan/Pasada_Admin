@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/screen/settings_pages/settings_utils.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 class NotificationsContent extends StatefulWidget {
   final bool isDark;
@@ -14,10 +15,44 @@ class NotificationsContent extends StatefulWidget {
 class _NotificationsContentState extends State<NotificationsContent> {
   bool pushNotifications = true;
   bool rideUpdates = true;
-  
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final authService = AuthService();
+      await authService.loadSession();
+      
+      if (mounted) {
+        setState(() {
+          pushNotifications = authService.pushNotifications;
+          rideUpdates = authService.rideUpdates;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: Palette.greenColor,
+        ),
+      );
+    }
     return Column(
       children: [
         // Notification Categories
@@ -96,14 +131,31 @@ class _NotificationsContentState extends State<NotificationsContent> {
         
         // Save Button
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             // Save notification preferences
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Notification preferences saved!"),
-                backgroundColor: Palette.greenColor,
-              ),
-            );
+            try {
+              await AuthService().setNotificationSettings(
+                pushNotifications: pushNotifications,
+                rideUpdates: rideUpdates,
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Notification preferences saved!"),
+                    backgroundColor: Palette.greenColor,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Failed to save preferences: ${e.toString()}"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Palette.greenColor,

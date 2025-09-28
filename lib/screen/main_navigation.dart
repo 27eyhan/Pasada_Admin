@@ -12,6 +12,7 @@ import 'package:pasada_admin_application/screen/main_pages/ai_chat_content.dart'
 import 'package:pasada_admin_application/screen/settings_pages/settings_content.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/data_tables_content.dart';
 import 'package:pasada_admin_application/screen/main_pages/reports_pages/select_table_content.dart';
+import 'package:pasada_admin_application/widgets/slow_connection_notice.dart';
 import 'package:provider/provider.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -106,32 +107,41 @@ class _MainNavigationState extends State<MainNavigation> {
           ],
           // Main content area
           Expanded(
-            child: Column(
+            child: Stack(
               children: [
-                // App bar in the main content area
-                AppBarSearch(
-                  onFilterPressed: () {
-                    // Handle filter based on current page
-                    if (_currentPage == '/dashboard') {
-                      // Dashboard filter logic
-                    } else if (_currentPage == '/fleet') {
-                      // Fleet filter logic
-                    } else if (_currentPage == '/drivers') {
-                      // Drivers filter logic
-                    }
-                  },
-                  onSettingsTabRequested: (tabIndex) {
-                    navigateToPage('/settings', args: {'tabIndex': tabIndex});
-                  },
-                  showMobileMenu: isMobile,
-                  onMobileMenuPressed: () {
-                    _showMobileDrawer(context);
-                  },
+                Column(
+                  children: [
+                    // App bar in the main content area
+                    AppBarSearch(
+                      onFilterPressed: () {
+                        // Handle filter based on current page
+                        if (_currentPage == '/dashboard') {
+                          // Dashboard filter logic
+                        } else if (_currentPage == '/fleet') {
+                          // Fleet filter logic
+                        } else if (_currentPage == '/drivers') {
+                          // Drivers filter logic
+                        }
+                      },
+                      onSettingsTabRequested: (tabIndex) {
+                        navigateToPage('/settings', args: {'tabIndex': tabIndex});
+                      },
+                      showMobileMenu: isMobile,
+                      onMobileMenuPressed: () {
+                        _showMobileDrawer(context);
+                      },
+                    ),
+                    // Page content
+                    Expanded(
+                      child: _getCurrentPageContent(),
+                    ),
+                  ],
                 ),
-                // Page content
-                Expanded(
-                  child: _getCurrentPageContent(),
-                ),
+                // Floating slow connection notice
+                if (isMobile)
+                  const SlowConnectionNotice()
+                else
+                  const SlowConnectionNotice(),
               ],
             ),
           ),
