@@ -21,4 +21,14 @@ flutter/bin/flutter --version
 # Install Dart/Flutter dependencies
 flutter/bin/flutter pub get
 
+# Ensure an env file exists for Flutter assets resolution
+if [ ! -f assets/.env ]; then
+  if [ -f assets/.env.example ]; then
+    cp assets/.env.example assets/.env
+  else
+    mkdir -p assets
+    : > assets/.env
+  fi
+fi
+
 
