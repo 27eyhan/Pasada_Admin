@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "installCommand": "bash vercel_install.sh",
+  "buildCommand": "flutter/bin/flutter build web --release",
+  "outputDirectory": "build/web",
+  "framework": null,
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ]
+}
+
+
