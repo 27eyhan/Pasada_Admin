@@ -89,6 +89,31 @@ class _AiChatContentState extends State<AiChatContent> {
     });
   }
 
+  void _startNewChat() {
+    setState(() {
+      _messages.clear();
+      _isTyping = false;
+    });
+    // Re-introduce welcome message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(ChatMessage(
+          text: "Hello! I'm Manong, your AI assistant for Pasada. How can I help you today?",
+          isUser: false,
+        ));
+      });
+      _scrollToBottom();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Started a new chat'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -384,6 +409,12 @@ class _AiChatContentState extends State<AiChatContent> {
                                     }
                                   },
                                   tooltip: 'Chat History',
+                                ),
+                                SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.chat_bubble_outline),
+                                  onPressed: _startNewChat,
+                                  tooltip: 'New Chat',
                                 ),
                                 SizedBox(width: 4),
                                 IconButton(
