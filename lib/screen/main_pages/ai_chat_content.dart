@@ -9,6 +9,7 @@ import 'package:pasada_admin_application/services/chat_message_controller.dart';
 import 'package:pasada_admin_application/widgets/chat_message_widget.dart';
 import 'package:pasada_admin_application/models/chat_message.dart';
 import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AiChatContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -30,6 +31,10 @@ class _AiChatContentState extends State<AiChatContent> {
   bool _isHistoryOpen = false;
   List<Map<String, dynamic>> _savedChats = [];
   Timer? _loadChatDebounce;
+  // Route dropdown state
+  bool _loadingRoutes = false;
+  List<Map<String, dynamic>> _routes = [];
+  String? _selectedRouteId;
 
   // Services
   late GeminiAIService _aiService;
@@ -41,6 +46,7 @@ class _AiChatContentState extends State<AiChatContent> {
     super.initState();
     _initializeServices();
     _loadInitialData();
+    _loadRoutes();
   }
 
   // Initialize all services
@@ -54,6 +60,33 @@ class _AiChatContentState extends State<AiChatContent> {
       scrollToBottom: _scrollToBottom,
       getMessages: () => _messages,
     );
+  }
+
+  // Load routes for /routetraffic command
+  Future<void> _loadRoutes() async {
+    try {
+      setState(() {
+        _loadingRoutes = true;
+      });
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('official_routes')
+          .select('officialroute_id, route_name')
+          .order('officialroute_id');
+
+      final List<Map<String, dynamic>> routes =
+          (response as List).cast<Map<String, dynamic>>();
+
+      setState(() {
+        _routes = routes;
+        _selectedRouteId = routes.isNotEmpty ? routes.first['officialroute_id']?.toString() : null;
+        _loadingRoutes = false;
+      });
+    } catch (_) {
+      setState(() {
+        _loadingRoutes = false;
+      });
+    }
   }
 
   // Load initial data and setup
@@ -87,6 +120,31 @@ class _AiChatContentState extends State<AiChatContent> {
     setState(() {
       _messages.add(message);
     });
+  }
+
+  void _startNewChat() {
+    setState(() {
+      _messages.clear();
+      _isTyping = false;
+    });
+    // Re-introduce welcome message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(ChatMessage(
+          text: "Hello! I'm Manong, your AI assistant for Pasada. How can I help you today?",
+          isUser: false,
+        ));
+      });
+      _scrollToBottom();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Started a new chat'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   void _scrollToBottom() {
@@ -375,6 +433,94 @@ class _AiChatContentState extends State<AiChatContent> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                // Route traffic command dropdown
+                                if (_routes.isNotEmpty || _loadingRoutes)
+                                  Container(
+                                    constraints: BoxConstraints(maxWidth: 220),
+                                    margin: EdgeInsets.only(right: 6),
+                                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Palette.darkCard : Palette.lightCard,
+                                      borderRadius: BorderRadius.circular(8.0),
+                                      border: Border.all(
+                                        color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: _selectedRouteId,
+                                        hint: Text(
+                                          '/routetraffic',
+                                          style: TextStyle(
+                                            fontSize: 13.0,
+                                            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                        isDense: true,
+                                        isExpanded: false,
+                                        icon: Icon(
+                                          Icons.keyboard_arrow_down,
+                                          size: 18.0,
+                                          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                        ),
+                                        dropdownColor: isDark ? Palette.darkCard : Palette.lightCard,
+                                        itemHeight: 40.0,
+                                        menuMaxHeight: 320.0,
+                                        selectedItemBuilder: (context) {
+                                          return _routes.map((r) {
+                                            final String id = r['officialroute_id']?.toString() ?? '';
+                                            final String name = r['route_name']?.toString() ?? 'Route $id';
+                                            return Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: SizedBox(
+                                                width: 160,
+                                                child: Text(
+                                                  name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 13.0,
+                                                    color: isDark ? Palette.darkText : Palette.lightText,
+                                                    fontFamily: 'Inter',
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList();
+                                        },
+                                        items: _routes.map((r) {
+                                          final String id = r['officialroute_id']?.toString() ?? '';
+                                          final String name = r['route_name']?.toString() ?? 'Route $id';
+                                          return DropdownMenuItem<String>(
+                                            value: id,
+                                            child: SizedBox(
+                                              width: 180,
+                                              child: Text(
+                                                '$name (ID: $id)',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 13.0,
+                                                  color: isDark ? Palette.darkText : Palette.lightText,
+                                                  fontFamily: 'Inter',
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          if (val == null || val.isEmpty) return;
+                                          setState(() {
+                                            _selectedRouteId = val;
+                                          });
+                                          // Auto send the command to chat
+                                          _handleSubmitted('/routetraffic $val');
+                                        },
+                                      ),
+                                    ),
+                                  ),
                                 IconButton(
                                   icon: Icon(Icons.history),
                                   onPressed: () {
@@ -384,6 +530,12 @@ class _AiChatContentState extends State<AiChatContent> {
                                     }
                                   },
                                   tooltip: 'Chat History',
+                                ),
+                                SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.chat_bubble_outline),
+                                  onPressed: _startNewChat,
+                                  tooltip: 'New Chat',
                                 ),
                                 SizedBox(width: 4),
                                 IconButton(
