@@ -307,124 +307,10 @@ class _AiChatContentState extends State<AiChatContent> {
                     ),
                   ],
                 ),
-                child: Row(
+                child: Stack(
                   children: [
-                    // Chat History Drawer (inline, minimal border)
-                    AnimatedContainer(
-                      duration: Duration(milliseconds: 280),
-                      curve: Curves.easeOut,
-                      width: _isHistoryOpen ? 260 : 0,
-                      child: _isHistoryOpen
-                          ? AnimatedSlide(
-                              duration: Duration(milliseconds: 260),
-                              curve: Curves.easeOut,
-                              offset: _isHistoryOpen ? Offset(0, 0) : Offset(-0.05, 0),
-                              child: AnimatedOpacity(
-                                duration: Duration(milliseconds: 220),
-                                opacity: _isHistoryOpen ? 1.0 : 0.0,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Palette.darkCard : Palette.lightCard,
-                                    border: Border(
-                                      right: BorderSide(
-                                        color: isDark
-                                            ? Palette.darkBorder
-                                            : Palette.lightBorder,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: isDark
-                                            ? Colors.black.withValues(alpha: 0.08)
-                                            : Colors.black.withValues(alpha: 0.06),
-                                        blurRadius: 10,
-                                        offset: Offset(1, 0),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        padding: EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          border: Border(
-                                            bottom: BorderSide(
-                                              color: isDark
-                                                  ? Palette.darkBorder
-                                                  : Palette.lightBorder,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              'Chat History',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            IconButton(
-                                              icon: Icon(Icons.close),
-                                              onPressed: () => setState(() => _isHistoryOpen = false),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: ListView.builder(
-                                          padding: EdgeInsets.only(top: 8),
-                                          itemCount: _savedChats.length,
-                                          itemBuilder: (context, index) {
-                                            final chat = _savedChats[index];
-                                            return TweenAnimationBuilder<double>(
-                                              tween: Tween(begin: 0.0, end: 1.0),
-                                              duration: Duration(milliseconds: 160 + (index % 6) * 16),
-                                              curve: Curves.easeOut,
-                                              builder: (context, value, child) {
-                                                return Opacity(
-                                                  opacity: value,
-                                                  child: child,
-                                                );
-                                              },
-                                              child: ListTile(
-                                                dense: true,
-                                                visualDensity: VisualDensity.compact,
-                                                title: Text(
-                                                  (chat['title'] ?? 'Untitled Chat').toString(),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  softWrap: false,
-                                                ),
-                                                subtitle: Text(
-                                                  _formatCreatedAt(chat['created_at']),
-                                                  style: TextStyle(fontSize: 12),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  softWrap: false,
-                                                ),
-                                                trailing: IconButton(
-                                                  icon: Icon(Icons.delete_outline),
-                                                  onPressed: () => _deleteChatSession(chat['history_id'].toString()),
-                                                ),
-                                                onTap: () => _debouncedLoadChat(chat['history_id'].toString()),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            )
-                          : null,
-                    ),
-
-                    // Main Chat Area
-                    Expanded(
+                    // Main Chat Area (fills)
+                    Positioned.fill(
                       child: Column(
                         children: [
                           // Minimal top bar with actions
@@ -699,6 +585,124 @@ class _AiChatContentState extends State<AiChatContent> {
                         ],
                       ),
                     ),
+                    // Backdrop when history is open
+                    if (_isHistoryOpen)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isHistoryOpen = false),
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.2),
+                          ),
+                        ),
+                      ),
+                    // Overlay Chat History Drawer
+                    AnimatedPositioned(
+                      duration: Duration(milliseconds: 280),
+                      curve: Curves.easeOut,
+                      left: _isHistoryOpen ? 0 : -280,
+                      top: 0,
+                      bottom: 0,
+                      width: 260,
+                      child: IgnorePointer(
+                        ignoring: !_isHistoryOpen,
+                        child: AnimatedOpacity(
+                          duration: Duration(milliseconds: 220),
+                          opacity: _isHistoryOpen ? 1.0 : 0.0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? Palette.darkCard : Palette.lightCard,
+                              border: Border(
+                                right: BorderSide(
+                                  color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                  width: 1,
+                                ),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDark
+                                      ? Colors.black.withValues(alpha: 0.08)
+                                      : Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 10,
+                                  offset: Offset(1, 0),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Chat History',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.close),
+                                        onPressed: () => setState(() => _isHistoryOpen = false),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.only(top: 8),
+                                    itemCount: _savedChats.length,
+                                    itemBuilder: (context, index) {
+                                      final chat = _savedChats[index];
+                                      return TweenAnimationBuilder<double>(
+                                        tween: Tween(begin: 0.0, end: 1.0),
+                                        duration: Duration(milliseconds: 160 + (index % 6) * 16),
+                                        curve: Curves.easeOut,
+                                        builder: (context, value, child) {
+                                          return Opacity(
+                                            opacity: value,
+                                            child: child,
+                                          );
+                                        },
+                                        child: ListTile(
+                                          dense: true,
+                                          visualDensity: VisualDensity.compact,
+                                          title: Text(
+                                            (chat['title'] ?? 'Untitled Chat').toString(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            softWrap: false,
+                                          ),
+                                          subtitle: Text(
+                                            _formatCreatedAt(chat['created_at']),
+                                            style: TextStyle(fontSize: 12),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            softWrap: false,
+                                          ),
+                                          trailing: IconButton(
+                                            icon: Icon(Icons.delete_outline),
+                                            onPressed: () => _deleteChatSession(chat['history_id'].toString()),
+                                          ),
+                                          onTap: () => _debouncedLoadChat(chat['history_id'].toString()),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      ),
                   ],
                 ),
               ),
