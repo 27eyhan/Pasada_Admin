@@ -31,4 +31,33 @@ if [ ! -f assets/.env ]; then
   fi
 fi
 
+# Inject Vercel environment variables into assets/.env when available
+set_kv() {
+  local key="$1"; shift
+  local value="${1:-}"
+  if [ -n "$value" ]; then
+    if grep -q "^${key}=" assets/.env; then
+      sed -i "s#^${key}=.*#${key}=${value//#/\\#}#" assets/.env
+    else
+      printf "%s=%s\n" "$key" "$value" >> assets/.env
+    fi
+  fi
+}
+
+set_kv SUPABASE_URL "${SUPABASE_URL:-}"
+set_kv SUPABASE_ANON_KEY "${SUPABASE_ANON_KEY:-}"
+set_kv GOOGLE_MAPS_API_KEY "${GOOGLE_MAPS_API_KEY:-}"
+set_kv API_URL "${API_URL:-}"
+set_kv WEATHER_API_KEY "${WEATHER_API_KEY:-}"
+set_kv SUPABASE_SERVICE_ROLE_KEY "${SUPABASE_SERVICE_ROLE_KEY:-}"
+set_kv RESEND_API_KEY "${RESEND_API_KEY:-}"
+set_kv ANALYTICS_API_URL "${ANALYTICS_API_URL:-}"
+set_kv GEMINI_API "${GEMINI_API:-}"
+set_kv QUESTDB_HTTP "${QUESTDB_HTTP:-}"
+set_kv QUESTDB_ILP "${QUESTDB_ILP:-}"
+set_kv IOS_MACOS_FIREBASE_KEY "${IOS_MACOS_FIREBASE_KEY:-}"
+set_kv ANDROID_FIREBASE_KEY "${ANDROID_FIREBASE_KEY:-}"
+set_kv WINDOWS_WEB_FIREBASE_KEY "${WINDOWS_WEB_FIREBASE_KEY:-}"
+set_kv ENCRYPTION_MASTER_KEY_B64 "${ENCRYPTION_MASTER_KEY_B64:-}"
+
 
