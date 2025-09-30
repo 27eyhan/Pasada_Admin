@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/screen/login_set_up/login_signup.dart';
 import 'dart:async';
 import 'package:pasada_admin_application/config/palette.dart';
+import 'package:pasada_admin_application/services/session_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -225,6 +226,7 @@ class _SessionWatcherState extends State<SessionWatcher> {
   @override
   void dispose() {
     _timer?.cancel();
+    SessionService().stopWatch();
     super.dispose();
   }
 

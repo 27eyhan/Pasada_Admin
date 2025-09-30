@@ -3,6 +3,7 @@ import 'package:flutter/services.dart'; // Added for LogicalKeyboardKey
 import 'package:supabase_flutter/supabase_flutter.dart';
 import './login_password_util.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
+import 'package:pasada_admin_application/services/session_service.dart';
 
 class LoginSignup extends StatefulWidget {
   const LoginSignup({super.key});
@@ -91,6 +92,32 @@ class _LoginSignupState extends State<LoginSignup> {
           );
           // Create secure session
           await AuthService().createSession(adminID);
+          // Register single-session on server and start watch
+          final auth = AuthService();
+          final token = auth.sessionToken;
+          final expiry = auth.sessionExpiry;
+          if (token != null && expiry != null) {
+            await SessionService().registerSingleSession(
+              supabase: supabase,
+              adminId: adminID,
+              sessionToken: token,
+              expiresAt: expiry,
+            );
+            SessionService().startSingleSessionWatch(
+              supabase: supabase,
+              adminId: adminID,
+              sessionToken: token,
+              onInvalidated: () async {
+                await AuthService().clearSession();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('You were logged out because your account was used on another device.')),
+                  );
+                  Navigator.pushReplacementNamed(context, '/');
+                }
+              },
+            );
+          }
           // Navigate to main navigation with dashboard as initial page
           Navigator.pushReplacementNamed(context, '/main', arguments: {'page': '/dashboard'});
         } else {

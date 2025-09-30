@@ -127,7 +127,7 @@ class _PreviewButton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.open_in_new, size: 18, color: Colors.white.withOpacity(0.9)),
+          Icon(Icons.open_in_new, size: 18, color: Colors.white.withValues(alpha: 0.9)),
           const SizedBox(width: 8),
           Text(
             label,

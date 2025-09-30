@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pasada_admin_application/services/rate_limiter.dart';
 
 class QuotaTargets {
   final double daily;
@@ -27,6 +28,7 @@ class QuotaTargets {
 class QuotaService {
   static const String tableName = 'adminQuotaTable';
   static const String driverQuotasTable = 'driverQuotasTable';
+  static final RateLimiter _limiter = RateLimiter(maxRequests: 3, window: const Duration(seconds: 5));
 
   static Future<QuotaTargets> fetchGlobalQuotaTargets(SupabaseClient supabase) async {
     try {
@@ -91,6 +93,9 @@ class QuotaService {
     required int? createdByAdminId,
     int? driverId,
   }) async {
+    if (!_limiter.allow('quota.save')) {
+      throw Exception('Too many quota updates. Please wait a few seconds and try again.');
+    }
     debugPrint('[QuotaService.saveGlobalQuotaTargets] driverId=$driverId daily=$daily weekly=$weekly monthly=$monthly total=$total');
     // Deactivate previous quotas for this scope (driver or global)
     final updateQuery = supabase
