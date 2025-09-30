@@ -97,6 +97,10 @@ class QuotaService {
         .from(tableName)
         .update({'is_active': false, 'updated_at': DateTime.now().toIso8601String()})
         .eq('is_active', true);
+    // If RLS restricts updates to rows created by the same admin, include that filter
+    if (createdByAdminId != null) {
+      updateQuery.eq('created_by', createdByAdminId);
+    }
     if (driverId == null) {
       // Use generic filter with 'is' operator for NULL
       updateQuery.filter('driver_id', 'is', null);

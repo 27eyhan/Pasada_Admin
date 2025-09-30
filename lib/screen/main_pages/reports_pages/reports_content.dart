@@ -12,6 +12,7 @@ import 'package:pasada_admin_application/services/quota_service.dart';
 import 'package:pasada_admin_application/widgets/quota/quota_bento_grid.dart';
 import 'package:pasada_admin_application/widgets/quota/quota_edit_dialog.dart';
 import 'package:pasada_admin_application/widgets/quota/quota_update_dialog.dart';
+import 'package:pasada_admin_application/services/auth_service.dart';
 
 class ReportsContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -465,13 +466,19 @@ class _ReportsContentState extends State<ReportsContent> {
   }) async {
     try {
       debugPrint('[ReportsContent._saveQuotaTargets] saving for driverId=$driverId daily=$daily weekly=$weekly monthly=$monthly total=$total');
+      // Ensure we have the current admin id for RLS-compliant writes
+      int? adminId = AuthService().currentAdminID;
+      if (adminId == null) {
+        await AuthService().loadAdminID();
+        adminId = AuthService().currentAdminID;
+      }
       await QuotaService.saveGlobalQuotaTargets(
         supabase,
         daily: daily,
         weekly: weekly,
         monthly: monthly,
         total: total,
-        createdByAdminId: null,
+        createdByAdminId: adminId,
         driverId: driverId,
       );
 
