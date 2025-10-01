@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -8,7 +9,7 @@ class SessionService {
   static final SessionService _instance = SessionService._internal();
   factory SessionService() => _instance;
 
-  static const String tableName = 'adminSessions';
+  static String get tableName => dotenv.env['ADMIN_SESSIONS_TABLE'] ?? 'adminSessions';
   static const String _deviceIdKey = 'deviceId';
 
   RealtimeChannel? _sessionChannel;
@@ -47,7 +48,7 @@ class SessionService {
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      debugPrint('[SessionService.registerSingleSession] error: $e');
+      debugPrint('[SessionService.registerSingleSession] error: $e (table=$tableName)');
       rethrow;
     }
   }
