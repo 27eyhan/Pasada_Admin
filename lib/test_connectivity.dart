@@ -45,7 +45,7 @@ class _TestConnectivityPageState extends State<TestConnectivityPage> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () async {
-                print('Manual refresh triggered');
+                debugPrint('Manual refresh triggered');
                 await _connectivityService.refreshConnectivity();
                 await _connectivityService.performSpeedTest();
                 setState(() {});

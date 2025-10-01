@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pasada_admin_application/models/weather_model.dart';
 
 class WeatherService {
@@ -28,11 +29,11 @@ class WeatherService {
         final Map<String, dynamic> data = json.decode(response.body);
         return WeatherModel.fromJson(data);
       } else {
-        print('Weather API Error: ${response.statusCode} - ${response.body}');
+        debugPrint('Weather API Error: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Weather service error: $e');
+      debugPrint('Weather service error: $e');
       return null;
     }
   }
@@ -56,11 +57,11 @@ class WeatherService {
         final Map<String, dynamic> data = json.decode(response.body);
         return WeatherModel.fromJson(data);
       } else {
-        print('Weather API Error: ${response.statusCode} - ${response.body}');
+        debugPrint('Weather API Error: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Weather service error: $e');
+      debugPrint('Weather service error: $e');
       return null;
     }
   }
