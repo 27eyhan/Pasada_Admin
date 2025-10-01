@@ -298,6 +298,7 @@ class _LoginSignupState extends State<LoginSignup> {
                                       setState(() {
                                         _captchaToken = token;
                                       });
+                                      debugPrint('[Login] CAPTCHA verified, token set');
                                     },
                                   ),
                                   const SizedBox(height: 16),

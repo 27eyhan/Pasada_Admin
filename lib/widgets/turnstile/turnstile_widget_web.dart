@@ -44,9 +44,22 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
     // Register global callback for Turnstile
     js_util.setProperty(web.window, _callbackName, js_util.allowInterop((dynamic token) {
       if (token is String) {
-        setState(() => _token = token);
+        setState(() {
+          _token = token;
+        });
         debugPrint('[Turnstile] onVerified token received (${token.substring(0, token.length > 8 ? 8 : token.length)}...)');
         widget.onVerified(token);
+        // Collapse the widget to avoid overlay/pointer blocking
+        final el = web.document.getElementById(_containerId) as web.HTMLElement?;
+        final parent = el?.parentElement as web.HTMLElement?;
+        if (el != null) {
+          el.style.display = 'none';
+          el.style.pointerEvents = 'none';
+        }
+        if (parent != null) {
+          parent.style.height = '0px';
+          parent.style.pointerEvents = 'none';
+        }
       }
     }));
 
@@ -54,6 +67,7 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
       debugPrint('[Turnstile] registerViewFactory called for viewId=$viewId');
       final wrapper = web.HTMLDivElement()
         ..style.width = '100%'
+        ..style.height = '70px'
         ..style.display = 'flex'
         ..style.justifyContent = 'center';
 
@@ -63,7 +77,8 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
         ..setAttribute('data-sitekey', widget.siteKey)
         ..setAttribute('data-callback', _callbackName)
         ..setAttribute('data-theme', widget.theme)
-        ..style.marginTop = '8px';
+        ..style.marginTop = '8px'
+        ..style.height = '70px';
 
       wrapper.append(container);
       // Attempt to render explicitly for dynamically added elements
