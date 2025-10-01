@@ -96,6 +96,7 @@ class AuthService {
   }
 
   String? get sessionToken => _sessionToken;
+  DateTime? get sessionExpiry => _sessionExpiryMs != null ? DateTime.fromMillisecondsSinceEpoch(_sessionExpiryMs!) : null;
 
   Future<void> createSession(int adminId, {Duration ttl = const Duration(hours: 12)}) async {
     await _initPrefs();

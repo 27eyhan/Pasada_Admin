@@ -1,8 +1,10 @@
 import 'package:pasada_admin_application/services/analytics_service.dart';
 import 'dart:convert';
+import 'package:pasada_admin_application/services/rate_limiter.dart';
 
 class GeminiAIService {
   final AnalyticsService _analyticsService = AnalyticsService();
+  static final RateLimiter _limiter = RateLimiter(maxRequests: 5, window: const Duration(seconds: 10));
 
   // Get welcome message
   String getWelcomeMessage() {
@@ -16,6 +18,9 @@ class GeminiAIService {
     int days = 7,
   }) async {
     try {
+      if (!_limiter.allow('ai.ask')) {
+        return 'Too many requests. Please wait a moment and try again.';
+      }
       if (!_analyticsService.isConfigured) {
         return "API not configured. Set API_URL in .env.";
       }
@@ -41,6 +46,9 @@ class GeminiAIService {
     int days = 7,
   }) async {
     try {
+      if (!_limiter.allow('ai.chat')) {
+        return 'Too many requests. Please wait a moment and try again.';
+      }
       if (!_analyticsService.isConfigured) {
         return "API not configured. Set API_URL in .env.";
       }
@@ -59,6 +67,9 @@ class GeminiAIService {
   // Generate a short chat title (4-6 words, no punctuation)
   Future<String?> generateChatTitle({required List<Map<String, String>> recentMessages}) async {
     try {
+      if (!_limiter.allow('ai.title')) {
+        return null;
+      }
       if (!_analyticsService.isConfigured) return null;
       final List<Map<String, String>> history = [];
       // Constrain to last 4 messages for context
