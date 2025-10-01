@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Added for LogicalKeyboardKey
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:pasada_admin_application/widgets/turnstile/turnstile_widget_stub.dart'
+    if (dart.library.html) 'package:pasada_admin_application/widgets/turnstile/turnstile_widget_web.dart';
 import './login_password_util.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/services/session_service.dart';
@@ -20,6 +24,7 @@ class _LoginSignupState extends State<LoginSignup> {
   bool isRememberMe = false;
   bool isObscure = true;
   bool _isLoading = false; // Add loading state
+  String? _captchaToken; // Web Turnstile token
 
   // FocusNodes for text fields
   final FocusNode _usernameFocusNode = FocusNode();
@@ -42,6 +47,13 @@ class _LoginSignupState extends State<LoginSignup> {
 
   Future<void> _login() async {
     if (_isLoading) return;
+
+    // On web, ensure CAPTCHA is solved first
+    if (kIsWeb && (_captchaToken == null || _captchaToken!.isEmpty)) {
+      debugPrint('[Login] CAPTCHA token missing, blocking login');
+      _showErrorSnackBar('Please complete the CAPTCHA.');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -156,6 +168,7 @@ class _LoginSignupState extends State<LoginSignup> {
               HardwareKeyboard.instance
                   .isLogicalKeyPressed(LogicalKeyboardKey.enter)) {
             if (!_isLoading) {
+              debugPrint('[Login] Enter key pressed');
               _login();
             }
           }
@@ -235,7 +248,7 @@ class _LoginSignupState extends State<LoginSignup> {
                           children: [
                             // Email Field
                             Text(
-                              'Email',
+                              'Username',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
@@ -244,7 +257,7 @@ class _LoginSignupState extends State<LoginSignup> {
                             ),
                             SizedBox(height: 8),
                             _buildModernTextField(
-                              "Enter your email",
+                              "Enter your username",
                               _usernameController,
                               _usernameFocusNode,
                               Icons.email_outlined,
@@ -273,13 +286,32 @@ class _LoginSignupState extends State<LoginSignup> {
                             ),
                             
                             SizedBox(height: 32),
+
+                            // CAPTCHA (Web only)
+                            if (kIsWeb)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  TurnstileWidget(
+                                    siteKey: dotenv.env['CLOUDFLARE_SITE_KEY'] ?? '',
+                                    onVerified: (token) {
+                                      setState(() {
+                                        _captchaToken = token;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              ),
                             
                             // Login Button
                             SizedBox(
                               width: double.infinity,
                               height: 48,
                               child: ElevatedButton(
-                                onPressed: _isLoading ? null : _login,
+                                onPressed: (_isLoading || (kIsWeb && (_captchaToken == null || _captchaToken!.isEmpty)))
+                                    ? null
+                                    : _login,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF333333),
                                   foregroundColor: Colors.white,
