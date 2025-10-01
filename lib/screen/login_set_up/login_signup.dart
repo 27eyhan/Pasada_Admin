@@ -310,9 +310,7 @@ class _LoginSignupState extends State<LoginSignup> {
                               width: double.infinity,
                               height: 48,
                               child: ElevatedButton(
-                                onPressed: (_isLoading || (kIsWeb && (_captchaToken == null || _captchaToken!.isEmpty)))
-                                    ? null
-                                    : _login,
+                                onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF333333),
                                   foregroundColor: Colors.white,
