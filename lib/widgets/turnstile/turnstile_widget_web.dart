@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
-import 'dart:js_util' as js_util; 
+import 'dart:js_util' as js_util;
 import 'dart:ui_web' as ui;
 import 'dart:async';
 
@@ -50,8 +50,6 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
       }
     }));
 
-    // Register a view factory that injects the Turnstile container
-    // ignore: undefined_prefixed_name
     ui.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
       debugPrint('[Turnstile] registerViewFactory called for viewId=$viewId');
       final wrapper = web.HTMLDivElement()
