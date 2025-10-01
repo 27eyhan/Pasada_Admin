@@ -27,8 +27,9 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
   late final String _callbackName;
   String? _token;
   Timer? _retryTimer;
-  Timer? _responsePoller;
   bool _rendered = false;
+  String? _widgetId;
+  Timer? _pollTokenTimer;
 
   @override
   void initState() {
@@ -103,7 +104,7 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
       if (ts != null) {
         // Prefer explicit render to ensure widget appears for dynamically inserted container
         try {
-          js_util.callMethod(ts, 'render', [
+          final dynamic id = js_util.callMethod(ts, 'render', [
             '#$_containerId',
             js_util.jsify({
               'sitekey': widget.siteKey,
@@ -124,35 +125,11 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
               }),
             })
           ]);
+          _widgetId = id is String ? id : null;
           debugPrint('[Turnstile] render() invoked on #$_containerId');
           _rendered = true;
           _retryTimer?.cancel();
-          // Start polling getResponse in case callback is not invoked but widget shows success
-          _responsePoller?.cancel();
-          _responsePoller = Timer.periodic(const Duration(milliseconds: 300), (t) {
-            try {
-              final resp = js_util.callMethod(ts, 'getResponse', ['#$_containerId']);
-              if (resp is String && resp.isNotEmpty) {
-                if (_token != resp) {
-                  setState(() => _token = resp);
-                  debugPrint('[Turnstile] polled token received (${resp.substring(0, resp.length > 8 ? 8 : resp.length)}...)');
-                  widget.onVerified(resp);
-                }
-                // collapse container to avoid blocking clicks
-                final el = web.document.getElementById(_containerId) as web.HTMLElement?;
-                final parent = el?.parentElement as web.HTMLElement?;
-                if (el != null) {
-                  el.style.display = 'none';
-                  el.style.pointerEvents = 'none';
-                }
-                if (parent != null) {
-                  parent.style.height = '0px';
-                  parent.style.pointerEvents = 'none';
-                }
-                _responsePoller?.cancel();
-              }
-            } catch (_) {}
-          });
+          _startPollingForTokenIfNeeded();
         } catch (_) {
           // ignore and let retry continue
           debugPrint('[Turnstile] render() threw, will retry');
@@ -181,7 +158,38 @@ class _TurnstileWidgetState extends State<TurnstileWidget> {
   @override
   void dispose() {
     _retryTimer?.cancel();
+    _pollTokenTimer?.cancel();
     super.dispose();
+  }
+
+  void _startPollingForTokenIfNeeded() {
+    if (_widgetId == null) return;
+    _pollTokenTimer?.cancel();
+    int attempts = 0;
+    _pollTokenTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
+      attempts += 1;
+      if (_token != null) {
+        timer.cancel();
+        return;
+      }
+      final bool hasTs = js_util.hasProperty(web.window, 'turnstile');
+      if (!hasTs) return;
+      final dynamic ts = js_util.getProperty(web.window, 'turnstile');
+      try {
+        final dynamic resp = js_util.callMethod(ts, 'getResponse', [_widgetId]);
+        if (resp is String && resp.isNotEmpty) {
+          setState(() => _token = resp);
+          debugPrint('[Turnstile] polled token received (${resp.substring(0, resp.length > 8 ? 8 : resp.length)}...)');
+          widget.onVerified(resp);
+          timer.cancel();
+        }
+      } catch (_) {
+        // ignore
+      }
+      if (attempts > 60) {
+        timer.cancel();
+      }
+    });
   }
 
   @override
