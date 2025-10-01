@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Added for LogicalKeyboardKey
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pasada_admin_application/widgets/turnstile/turnstile_widget_stub.dart'
     if (dart.library.html) 'package:pasada_admin_application/widgets/turnstile/turnstile_widget_web.dart';
 import './login_password_util.dart';
@@ -27,7 +27,7 @@ class _LoginSignupState extends State<LoginSignup> {
   String? _captchaToken; // Web Turnstile token
   
   // Development mode check
-  bool get isLocalDev => kDebugMode && kIsWeb && 
+  bool get isLocalDev => kIsWeb && 
       (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1' || Uri.base.host.contains('localhost'));
 
   // FocusNodes for text fields
@@ -315,18 +315,31 @@ class _LoginSignupState extends State<LoginSignup> {
                                 padding: const EdgeInsets.all(12),
                                 margin: const EdgeInsets.only(bottom: 16),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
-                                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Text(
-                                  '🔧 Development Mode: CAPTCHA bypassed for localhost',
-                                  style: TextStyle(
-                                    color: Colors.orange[300],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.build,
+                                      size: 16,
+                                      color: Colors.orange[300],
+                                    ),
+                                    SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Development Mode: CAPTCHA bypassed for localhost',
+                                        style: TextStyle(
+                                          color: Colors.orange[300],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
 

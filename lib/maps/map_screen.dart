@@ -52,9 +52,7 @@ class MapsScreenState extends State<Mapscreen>
   // Custom pin icons cache
   final Map<String, BitmapDescriptor> _customPinIcons = {};
 
-  // Selected driver info for custom overlay
-  Map<String, dynamic>? _selectedDriverInfo;
-  bool _showDriverOverlay = false;
+  // Removed overlay fields since we now use responsive modal
   
   // Filter state
   Set<String>? _currentSelectedStatuses;
@@ -189,10 +187,6 @@ class MapsScreenState extends State<Mapscreen>
   @override
   void dispose() {
     debugPrint('[MapsScreenState] dispose starts.');
-
-    // Hide overlay immediately to prevent rendering issues
-    _showDriverOverlay = false;
-    _selectedDriverInfo = null;
 
     _locationUpdateTimer?.cancel();
     debugPrint('[MapsScreenState] Timer cancelled.');
@@ -373,8 +367,7 @@ class MapsScreenState extends State<Mapscreen>
 
               // Show custom overlay instead of info window
               setState(() {
-                _selectedDriverInfo = driverData;
-                _showDriverOverlay = true;
+                // Removed overlay fields since we now use responsive modal
               });
               debugPrint(
                   '[MapsScreenState] Showing custom overlay for driver $driverId');
@@ -388,16 +381,8 @@ class MapsScreenState extends State<Mapscreen>
           markerId: MarkerId(driverId),
           position: position,
           onTap: () {
-            // Prevent rapid state changes that could cause assertion errors
-            if (mounted && _selectedDriverInfo?['driver_id'] != driverId) {
-              // Show custom driver info overlay
-              setState(() {
-                _selectedDriverInfo = driverData;
-                _showDriverOverlay = true;
-              });
-              debugPrint(
-                  '[MapsScreenState] Marker tapped for driver: $driverId');
-            }
+            // Present responsive modal with driver details
+            _presentDriverDetailsModal(driverData);
           },
           // Use custom pin based on driver status
           icon: _getPinIcon(drivingStatus, isTargetDriver),
@@ -519,36 +504,85 @@ class MapsScreenState extends State<Mapscreen>
               ],
             ),
           ),
-          if (mounted && _showDriverOverlay && _selectedDriverInfo != null)
-            _buildDriverInfoOverlay(),
+          // Remove old overlay usage in favor of responsive modal
+          // if (mounted && _showDriverOverlay && _selectedDriverInfo != null)
+          //   _buildDriverInfoOverlay(),
         ],
       ),
     );
   }
 
-  // Custom driver info overlay widget
-  Widget _buildDriverInfoOverlay() {
-    // Comprehensive safety checks
-    if (!mounted || !_showDriverOverlay || _selectedDriverInfo == null) {
-      return SizedBox.shrink();
+  void _presentDriverDetailsModal(Map<String, dynamic> driver) {
+    final Size size = MediaQuery.of(context).size;
+    final bool isMobile = size.width < 700;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isMobile) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: isDark ? Palette.darkSurface : Palette.lightSurface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: _buildDriverDetailsContent(driver, isDark, maxWidth: size.width),
+            ),
+          );
+        },
+      );
+    } else {
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (ctx) {
+          final double vw = size.width;
+          final double maxDialogWidth = (
+            vw >= 1400 ? vw * 0.35 :
+            vw >= 1100 ? vw * 0.45 :
+            vw >= 900 ? vw * 0.55 : vw * 0.7
+          ).clamp(360.0, 820.0);
+          final double maxDialogHeight = (size.height * 0.85).clamp(420.0, size.height * 0.9);
+          final Color surface = isDark ? Palette.darkSurface : Palette.lightSurface;
+          final Color borderColor = isDark ? Palette.darkBorder : Palette.lightBorder;
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black.withAlpha(120) : Colors.black.withAlpha(40),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: maxDialogWidth,
+                  maxHeight: maxDialogHeight,
+                ),
+                child: _buildDriverDetailsContent(driver, isDark, maxWidth: maxDialogWidth),
+              ),
+            ),
+          );
+        },
+      );
     }
+  }
 
-    final driver = _selectedDriverInfo!;
-
-    // Validate essential data
-    if (driver['driver_id'] == null || driver['position'] == null) {
-      debugPrint('[MapsScreenState] Invalid driver data, hiding overlay');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _showDriverOverlay = false;
-            _selectedDriverInfo = null;
-          });
-        }
-      });
-      return SizedBox.shrink();
-    }
-
+  Widget _buildDriverDetailsContent(Map<String, dynamic> driver, bool isDark, {double? maxWidth}) {
+    final Color textColor = isDark ? const Color(0xFFF5F5F5) : const Color(0xFF121212);
     final String driverName = driver['full_name']?.toString() ?? 'N/A';
     final String driverId = driver['driver_id']?.toString() ?? 'N/A';
     final String vehicleId = driver['vehicle_id']?.toString() ?? 'N/A';
@@ -557,241 +591,139 @@ class MapsScreenState extends State<Mapscreen>
     final String? drivingStatus = driver['driving_status']?.toString();
     final LatLng? position = driver['position'];
 
-    if (position == null) {
-      return SizedBox.shrink();
-    }
+    final Color statusColor = _getStatusColor(drivingStatus);
 
-    Color statusColor = _getStatusColor(drivingStatus);
-
-    final screenSize = MediaQuery.of(context).size;
-    final overlayWidth = screenSize.width * 0.25;
-    final maxOverlayHeight = screenSize.height * 0.4;
-
-    // Position overlay in the center-top area (above where pins typically appear)
-    return Positioned(
-      top: 80, // Position above the typical pin area
-      left: (screenSize.width - overlayWidth) / 2, // Center horizontally
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: overlayWidth,
-          maxHeight: maxOverlayHeight,
-        ),
-        child: Consumer<ThemeProvider>(
-          builder: (context, themeProvider, child) {
-            final isDark = themeProvider.isDarkMode;
-            
-            return SingleChildScrollView(
-              child: Stack(
-                children: [
-                  Positioned(
-                    bottom: -8,
-                    left: overlayWidth / 2 - 8,
-                    child: CustomPaint(
-                      size: Size(16, 8),
-                      painter: ArrowPainter(color: isDark ? Palette.darkSurface : Palette.lightSurface),
-                    ),
-                  ),
-                  // Main card
-                  Material(
-                    borderRadius: BorderRadius.circular(12.0),
-                    elevation: 6.0,
-                    child: Container(
-                      width: overlayWidth,
-                      decoration: BoxDecoration(
-                        color: isDark ? Palette.darkSurface : Palette.lightSurface,
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(
-                            color: statusColor.withAlpha(100), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black.withAlpha(150) : Colors.grey.withAlpha(100),
-                            spreadRadius: 0,
-                            blurRadius: 6,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: EdgeInsets.all(12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Compact header
-                          Row(
-                            children: [
-                              // Status indicator
-                              Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: statusColor,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  driverName,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Palette.darkText : Palette.lightText,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _showDriverOverlay = false;
-                                    _selectedDriverInfo = null;
-                                  });
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Palette.darkCard : Colors.grey[200],
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 16,
-                                    color: isDark ? Palette.darkText : Palette.lightText,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          SizedBox(height: 12),
-
-                          // Compact info in 2 rows
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildCompactInfoItem(
-                                    "ID: $driverId", Icons.badge, statusColor),
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: _buildCompactInfoItem("Vehicle: $vehicleId",
-                                    Icons.directions_car, Palette.orangeColor),
-                              ),
-                            ],
-                          ),
-
-                          SizedBox(height: 10),
-
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildCompactInfoItem("Plate: $plateNumber",
-                                    Icons.credit_card, Palette.yellowColor),
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: _buildCompactInfoItem("Route: $routeId",
-                                    Icons.route, Palette.redColor),
-                              ),
-                            ],
-                          ),
-
-                          SizedBox(height: 10),
-
-                          // Status row
-                          Container(
-                            width: double.infinity,
-                            padding:
-                                EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: statusColor.withAlpha(100),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: statusColor.withAlpha(100)),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(_getStatusIcon(drivingStatus),
-                                    size: 16, color: statusColor),
-                                SizedBox(width: 6),
-                                Text(
-                                  _capitalizeFirstLetter(drivingStatus ?? 'N/A'),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: statusColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          SizedBox(height: 12),
-
-                          // Center button only (call button removed)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                mapController?.animateCamera(
-                                  CameraUpdate.newLatLngZoom(position, 18.0),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                minimumSize: Size(0, 40),
-                              ),
-                              child: Text("Center on Driver",
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
               ),
-            );
-          },
-        ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  driverName,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: textColor),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: Icon(Icons.close, size: 18, color: textColor.withAlpha(200)),
+                tooltip: 'Close',
+              )
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Info chips in a breathable Wrap (weather-like cards)
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _infoChip('ID: $driverId', Icons.badge, statusColor, textColor, isDark, maxWidth: maxWidth),
+              _infoChip('Vehicle: $vehicleId', Icons.directions_car, Palette.orangeColor, textColor, isDark, maxWidth: maxWidth),
+              _infoChip('Plate: $plateNumber', Icons.credit_card, Palette.yellowColor, textColor, isDark, maxWidth: maxWidth),
+              _infoChip('Route: $routeId', Icons.route, Palette.redColor, textColor, isDark, maxWidth: maxWidth),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+            decoration: BoxDecoration(
+              color: statusColor.withAlpha(100),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: statusColor.withAlpha(100)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(_getStatusIcon(drivingStatus), size: 16, color: statusColor),
+                const SizedBox(width: 6),
+                Text(
+                  _capitalizeFirstLetter(drivingStatus ?? 'N/A'),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: statusColor),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: position == null
+                  ? null
+                  : () {
+                      mapController?.animateCamera(
+                        CameraUpdate.newLatLngZoom(position, 18.0),
+                      );
+                      Navigator.of(context).maybePop();
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                minimumSize: const Size(0, 44),
+              ),
+              child: const Text('Center on Driver', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // Simplified compact info item widget
-  Widget _buildCompactInfoItem(String text, IconData icon, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-      decoration: BoxDecoration(
-        color: color.withAlpha(100),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(100), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Palette.blackColor,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
+  Widget _infoChip(String text, IconData icon, Color accent, Color textColor, bool isDark, {double? maxWidth}) {
+    final Color cardColor = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF7F7F7);
+    final double chipWidth = (maxWidth != null) ? (maxWidth / 2) - 26 : 180; // approx two per row
+    return ConstrainedBox(
+      constraints: BoxConstraints(minWidth: 140, maxWidth: chipWidth),
+      child: Material(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        elevation: isDark ? 0 : 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 1),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(40),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 14, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
