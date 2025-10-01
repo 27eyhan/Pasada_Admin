@@ -9,7 +9,10 @@ class SessionService {
   static final SessionService _instance = SessionService._internal();
   factory SessionService() => _instance;
 
-  static String get tableName => dotenv.env['ADMIN_SESSIONS_TABLE'] ?? 'adminSessions';
+  static String get tableName =>
+      dotenv.env['ADMIN_SESSIONS_TABLE'] ??
+      dotenv.env['adminSessionsTable'] ??
+      'adminSessionsTable';
   static const String _deviceIdKey = 'deviceId';
 
   RealtimeChannel? _sessionChannel;
