@@ -82,16 +82,17 @@ class QuotaBentoGrid extends StatelessWidget {
             } else if (constraints.maxWidth >= 700) {
               crossAxisCount = 2;
             } else {
-              crossAxisCount = 1;
+              crossAxisCount = 2;
             }
 
+            final bool isDesktop = constraints.maxWidth >= 900;
             return GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: crossAxisCount,
               crossAxisSpacing: 16.0,
               mainAxisSpacing: 16.0,
-              childAspectRatio: 2.4,
+              childAspectRatio: isDesktop ? 2.4 : 1.4,
               children: [
                 _QuotaCard(
                   title: 'Daily Quota',

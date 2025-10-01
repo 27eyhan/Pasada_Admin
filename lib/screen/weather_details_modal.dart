@@ -20,12 +20,21 @@ class WeatherDetailsModal extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 600;
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
-        width: MediaQuery.of(context).size.width > 800 ? 700 : MediaQuery.of(context).size.width * 0.95,
-        constraints: BoxConstraints(
-          maxWidth: 700,
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8.0 : 40.0,
+        vertical: isMobile ? 12.0 : 24.0,
+      ),
+      child: SafeArea(
+        child: Container(
+          width: isMobile
+              ? double.infinity
+              : (MediaQuery.of(context).size.width > 800
+                  ? 700
+                  : MediaQuery.of(context).size.width * 0.95),
+          constraints: BoxConstraints(
+            maxWidth: 700,
+            maxHeight: MediaQuery.of(context).size.height * (isMobile ? 0.9 : 0.8),
+          ),
         decoration: BoxDecoration(
           color: isDark ? Palette.darkSurface : Palette.lightSurface,
           borderRadius: BorderRadius.circular(16.0),
@@ -34,7 +43,7 @@ class WeatherDetailsModal extends StatelessWidget {
             width: 1.0,
           ),
         ),
-        child: SingleChildScrollView(
+          child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -113,17 +122,17 @@ class WeatherDetailsModal extends StatelessWidget {
                     ),
                     SizedBox(height: isMobile ? 24.0 : 32.0),
                     // Weather details grid - responsive
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isMobile = MediaQuery.of(context).size.width < 600;
-                        return GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: isMobile ? 1 : 2,
-                          crossAxisSpacing: 20.0,
-                          mainAxisSpacing: 20.0,
-                          childAspectRatio: isMobile ? 3.5 : 2.2,
-                          children: [
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isMobile = MediaQuery.of(context).size.width < 600;
+                          return GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: isMobile ? 12.0 : 20.0,
+                            mainAxisSpacing: isMobile ? 12.0 : 20.0,
+                            childAspectRatio: isMobile ? 1.8 : 2.2,
+                            children: [
                             _buildDetailItem(
                               'Humidity',
                               '${weather.humidity.round()}%',
@@ -204,6 +213,7 @@ class WeatherDetailsModal extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

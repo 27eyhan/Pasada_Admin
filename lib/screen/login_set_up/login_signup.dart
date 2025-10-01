@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Added for LogicalKeyboardKey
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:pasada_admin_application/widgets/turnstile/turnstile_widget_stub.dart'
     if (dart.library.html) 'package:pasada_admin_application/widgets/turnstile/turnstile_widget_web.dart';
 import './login_password_util.dart';
@@ -25,6 +25,10 @@ class _LoginSignupState extends State<LoginSignup> {
   bool isObscure = true;
   bool _isLoading = false; // Add loading state
   String? _captchaToken; // Web Turnstile token
+  
+  // Development mode check
+  bool get isLocalDev => kDebugMode && kIsWeb && 
+      (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1' || Uri.base.host.contains('localhost'));
 
   // FocusNodes for text fields
   final FocusNode _usernameFocusNode = FocusNode();
@@ -48,8 +52,8 @@ class _LoginSignupState extends State<LoginSignup> {
   Future<void> _login() async {
     if (_isLoading) return;
 
-    // On web, ensure CAPTCHA is solved first
-    if (kIsWeb && (_captchaToken == null || _captchaToken!.isEmpty)) {
+    // On web, ensure CAPTCHA is solved first (skip in development)
+    if (kIsWeb && !isLocalDev && (_captchaToken == null || _captchaToken!.isEmpty)) {
       debugPrint('[Login] CAPTCHA token missing, blocking login');
       _showErrorSnackBar('Please complete the CAPTCHA.');
       return;
@@ -287,8 +291,8 @@ class _LoginSignupState extends State<LoginSignup> {
                             
                             SizedBox(height: 32),
 
-                            // CAPTCHA (Web only)
-                            if (kIsWeb)
+                            // CAPTCHA (Web only, skip in local dev)
+                            if (kIsWeb && !isLocalDev)
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -305,6 +309,27 @@ class _LoginSignupState extends State<LoginSignup> {
                                 ],
                               ),
                             
+                            // Development bypass message
+                            if (kIsWeb && isLocalDev)
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '🔧 Development Mode: CAPTCHA bypassed for localhost',
+                                  style: TextStyle(
+                                    color: Colors.orange[300],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+
                             // Login Button
                             SizedBox(
                               width: double.infinity,
