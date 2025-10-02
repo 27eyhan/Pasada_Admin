@@ -380,15 +380,22 @@ class MapsScreenState extends State<Mapscreen>
         }
       }
 
-      // Build labeled icon with driver id on top of the pin (include dark mode in cache key)
       final bool isDark = Theme.of(context).brightness == Brightness.dark;
-      final String cacheKey = 'id:$driverId:${(drivingStatus ?? 'offline').toLowerCase()}:dark=$isDark';
+      final bool isMobile = MediaQuery.of(context).size.width < 700;
+      final int? capVal = (driverData['passenger_capacity'] as num?)?.toInt();
+      final String cacheKey = 'id:$driverId:${(drivingStatus ?? 'offline').toLowerCase()}:dark=$isDark:mobile=$isMobile:cap=${capVal ?? 'na'}';
       BitmapDescriptor iconDescriptor;
       if (_labeledIconCache.containsKey(cacheKey)) {
         iconDescriptor = _labeledIconCache[cacheKey]!;
       } else {
         final baseIcon = _getPinIcon(drivingStatus, isTargetDriver);
-        iconDescriptor = await _buildLabeledMarker(baseIcon, driverId, isDark: isDark);
+        iconDescriptor = await _buildLabeledMarker(
+          baseIcon,
+          driverId,
+          isDark: isDark,
+          isMobile: isMobile,
+          capacity: capVal,
+        );
         _labeledIconCache[cacheKey] = iconDescriptor;
       }
 
@@ -422,79 +429,176 @@ class MapsScreenState extends State<Mapscreen>
     return true;
   }
 
-  // Build a labeled marker by composing a small ID label above the base pin
-  Future<BitmapDescriptor> _buildLabeledMarker(BitmapDescriptor basePin, String driverId, {required bool isDark}) async {
-    // Determine canvas size
-    const int pinWidth = 96; // logical px for clarity
-    const int pinHeight = 96;
-    const int labelHeight = 28;
+  // Build a labeled marker with Google landmark pin style
+  Future<BitmapDescriptor> _buildLabeledMarker(
+    BitmapDescriptor basePin,
+    String driverId, {
+    required bool isDark,
+    required bool isMobile,
+    int? capacity,
+  }) async {
+    // Determine canvas size based on layout
+    final int pinWidth = isMobile ? 96 : 120; // Smaller on mobile
+    final int pinHeight = isMobile ? 96 : 120;
+    final int labelHeight = isMobile ? 24 : 32; // Slightly smaller label on mobile
     final int canvasWidth = pinWidth;
-    final int canvasHeight = pinHeight + labelHeight + 6; // spacing
+    final int canvasHeight = pinHeight + labelHeight + 8; // spacing
 
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, canvasWidth.toDouble(), canvasHeight.toDouble()));
 
-    // Draw label background (rounded pill)
+    // Draw label background (rounded pill with shadow)
     final RRect labelRect = RRect.fromLTRBR(
+      12.0,
       8.0,
-      6.0,
-      (canvasWidth - 8).toDouble(),
-      (6 + labelHeight).toDouble(),
-      const Radius.circular(6),
+      (canvasWidth - 12).toDouble(),
+      (8 + labelHeight).toDouble(),
+      Radius.circular(isMobile ? 12 : 16), // More rounded for Google style
     );
+    
+    // Add subtle shadow to label
+    final Paint labelShadow = Paint()
+      ..color = Colors.black.withAlpha(30)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawRRect(labelRect.shift(const Offset(0, 1)), labelShadow);
+    
     final Paint labelPaint = Paint()
-      ..color = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEFEFEF);
+      ..color = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF8F9FA);
     canvas.drawRRect(labelRect, labelPaint);
+
+    // Draw label border
+    final Paint labelBorder = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..color = isDark ? const Color(0xFF404040) : const Color(0xFFE0E0E0);
+    canvas.drawRRect(labelRect, labelBorder);
 
     // Draw label text (driver ID)
     final ui.ParagraphBuilder pb = ui.ParagraphBuilder(
       ui.ParagraphStyle(
         textAlign: TextAlign.center,
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
+        fontSize: isMobile ? 13 : 15,
+        fontWeight: FontWeight.w700,
       ),
-    )..pushStyle(ui.TextStyle(color: isDark ? const Color(0xFFF5F5F5) : const Color(0xFF121212)))
+    )..pushStyle(ui.TextStyle(color: isDark ? const Color(0xFFF5F5F5) : const Color(0xFF1A1A1A)))
      ..addText('#$driverId');
     final ui.Paragraph paragraph = pb.build()
-      ..layout(ui.ParagraphConstraints(width: canvasWidth - 16));
-    canvas.drawParagraph(paragraph, Offset(8, 6 + (labelHeight - paragraph.height) / 2));
+      ..layout(ui.ParagraphConstraints(width: canvasWidth - 24));
+    canvas.drawParagraph(paragraph, Offset(12, 8 + (labelHeight - paragraph.height) / 2));
 
-    // Draw the base pin image centered below the label
-    // We cannot directly draw BitmapDescriptor; instead, load a pin asset that matches basePin color
-    // As a simpler approach, we render a generic pin vector using circles/triangle.
+    // Draw Google landmark style pin
     final double pinCenterX = canvasWidth / 2;
-    final double pinTop = labelHeight + 10;
+    final double pinTop = labelHeight + 16;
 
-    // Pin appearance
-    final Color pinColor = isDark ? const Color(0xFF00CC58) : const Color(0xFF43A047);
+    // Google landmark pin colors based on status
+    final Color pinColor = _getGoogleLandmarkPinColor(driverId, isDark);
+    final Color pinAccent = _getGoogleLandmarkPinAccent(driverId, isDark);
+    
+    // Create the teardrop pin shape (Google landmark style)
+    final Path pinPath = Path();
+    final double pinRadius = isMobile ? 20.0 : 24.0;
+    final double pinBottomY = pinTop + (isMobile ? 50.0 : 60.0);
+    final double pinPointY = pinBottomY + (isMobile ? 16.0 : 20.0);
+    
+    // Create teardrop shape: circle top + pointed bottom
+    pinPath.addArc(
+      Rect.fromCircle(
+        center: Offset(pinCenterX, pinTop + pinRadius),
+        radius: pinRadius,
+      ),
+      0,
+      3.14159 * 2, // Full circle
+    );
+    
+    // Add pointed bottom (teardrop tail)
+    pinPath.moveTo(pinCenterX - (isMobile ? 6 : 8), pinBottomY);
+    pinPath.lineTo(pinCenterX + (isMobile ? 6 : 8), pinBottomY);
+    pinPath.lineTo(pinCenterX, pinPointY);
+    pinPath.close();
+
+    // Add subtle shadow to pin
+    final Paint pinShadow = Paint()
+      ..color = Colors.black.withAlpha(40)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, isMobile ? 2 : 3);
+    canvas.drawPath(pinPath.shift(const Offset(1, 2)), pinShadow);
+
+    // Draw pin body with gradient-like effect
     final Paint pinBody = Paint()..color = pinColor;
+    canvas.drawPath(pinPath, pinBody);
+
+    // Draw pin outline
     final Paint pinOutline = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isDark ? 2.0 : 1.0
-      ..color = isDark ? Colors.white.withAlpha(200) : Colors.black.withAlpha(120);
-    final Paint pinGlow = Paint()..color = pinColor.withAlpha(60);
+      ..strokeWidth = isMobile ? 1.5 : 2.0
+      ..color = isDark ? Colors.white.withAlpha(180) : Colors.black.withAlpha(100);
+    canvas.drawPath(pinPath, pinOutline);
 
-    // Pin circle with subtle glow and outline in dark mode
-    final Offset pinCircleCenter = Offset(pinCenterX, pinTop + 28);
-    if (isDark) {
-      canvas.drawCircle(pinCircleCenter, 26, pinGlow);
+    // Draw inner circle for capacity or status indicator
+    final double innerRadius = isMobile ? 13.0 : 16.0;
+    final Offset innerCenter = Offset(pinCenterX, pinTop + pinRadius);
+    
+    // Inner circle background
+    final Paint innerBg = Paint()..color = pinAccent;
+    canvas.drawCircle(innerCenter, innerRadius, innerBg);
+    
+    // Inner circle border
+    final Paint innerBorder = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = isDark ? Colors.white.withAlpha(200) : Colors.white.withAlpha(180);
+    canvas.drawCircle(innerCenter, innerRadius, innerBorder);
+
+    // Draw capacity text or status icon
+    final String capText = (capacity != null && capacity > 0) ? capacity.toString() : '';
+    if (capText.isNotEmpty) {
+      final ui.ParagraphBuilder cpb = ui.ParagraphBuilder(
+        ui.ParagraphStyle(
+          textAlign: TextAlign.center,
+          fontSize: isMobile ? 14 : 16,
+          fontWeight: FontWeight.w800,
+        ),
+      )..pushStyle(ui.TextStyle(color: Colors.white))
+       ..addText(capText);
+      final ui.Paragraph capPara = cpb.build()
+        ..layout(ui.ParagraphConstraints(width: innerRadius * 2));
+      canvas.drawParagraph(capPara, Offset(innerCenter.dx - innerRadius, innerCenter.dy - capPara.height / 2));
+    } else {
+      // Draw a small dot or icon in the center
+      final Paint centerDot = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(innerCenter, isMobile ? 3 : 4, centerDot);
     }
-    canvas.drawCircle(pinCircleCenter, 22, pinBody);
-    canvas.drawCircle(pinCircleCenter, 22, pinOutline);
-    // Pin tail (triangle)
-    final Path tail = Path()
-      ..moveTo(pinCenterX - 10, pinTop + 28)
-      ..lineTo(pinCenterX + 10, pinTop + 28)
-      ..lineTo(pinCenterX, pinTop + 58)
-      ..close();
-    canvas.drawPath(tail, pinBody);
-    canvas.drawPath(tail, pinOutline);
 
     final ui.Picture picture = recorder.endRecording();
     final ui.Image image = await picture.toImage(canvasWidth, canvasHeight);
     final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     final Uint8List bytes = byteData!.buffer.asUint8List();
-    return BitmapDescriptor.fromBytes(bytes);
+    return BitmapDescriptor.bytes(bytes);
+  }
+
+  // Get Google landmark pin color based on driver status
+  Color _getGoogleLandmarkPinColor(String driverId, bool isDark) {
+    // Use a consistent color scheme similar to Google's landmark pins
+    // Different colors for different driver IDs to make them distinguishable
+    final int hash = driverId.hashCode;
+    final List<Color> googleColors = [
+      const Color(0xFF4285F4), // Google Blue
+      const Color(0xFF34A853), // Google Green  
+      const Color(0xFFEA4335), // Google Red
+      const Color(0xFFFBBC04), // Google Yellow
+      const Color(0xFF9C27B0), // Purple
+      const Color(0xFFFF5722), // Deep Orange
+      const Color(0xFF00BCD4), // Cyan
+      const Color(0xFF795548), // Brown
+    ];
+    return googleColors[hash.abs() % googleColors.length];
+  }
+
+  // Get accent color for the inner circle
+  Color _getGoogleLandmarkPinAccent(String driverId, bool isDark) {
+    final Color baseColor = _getGoogleLandmarkPinColor(driverId, isDark);
+    return Color.lerp(baseColor, Colors.white, 0.3) ?? baseColor;
   }
 
   @override
@@ -594,9 +698,6 @@ class MapsScreenState extends State<Mapscreen>
               ],
             ),
           ),
-          // Remove old overlay usage in favor of responsive modal
-          // if (mounted && _showDriverOverlay && _selectedDriverInfo != null)
-          //   _buildDriverInfoOverlay(),
         ],
       ),
     );
@@ -698,13 +799,16 @@ class MapsScreenState extends State<Mapscreen>
     }
   }
 
-  Widget _buildDriverDetailsContent(Map<String, dynamic> driver, bool isDark, {double? maxWidth}) {
+  Widget _buildDriverDetailsContent(Map<String, dynamic> driver, bool isDark, {double? maxWidth, bool isMobile = false}) {
     final Color textColor = isDark ? const Color(0xFFF5F5F5) : const Color(0xFF121212);
     final String driverName = driver['full_name']?.toString() ?? 'N/A';
     final String driverId = driver['driver_id']?.toString() ?? 'N/A';
     final String vehicleId = driver['vehicle_id']?.toString() ?? 'N/A';
     final String plateNumber = driver['plate_number']?.toString() ?? 'N/A';
     final String routeId = driver['route_id']?.toString() ?? 'N/A';
+    final String passengerCapacity = (driver['passenger_capacity'] ?? driver['capacity'])?.toString() ?? 'N/A';
+    final String sittingPassenger = (driver['sitting_passenger'])?.toString() ?? 'N/A';
+    final String standingPassenger = (driver['standing_passenger'])?.toString() ?? 'N/A';
     final String? drivingStatus = driver['driving_status']?.toString();
     final LatLng? position = driver['position'];
 
@@ -728,7 +832,7 @@ class MapsScreenState extends State<Mapscreen>
               Expanded(
                 child: Text(
                   driverName,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: textColor),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -741,41 +845,32 @@ class MapsScreenState extends State<Mapscreen>
           ),
           const SizedBox(height: 16),
 
-          // Info chips in a breathable Wrap (weather-like cards)
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _infoChip('ID: $driverId', Icons.badge, statusColor, textColor, isDark, maxWidth: maxWidth),
-              _infoChip('Vehicle: $vehicleId', Icons.directions_car, Palette.orangeColor, textColor, isDark, maxWidth: maxWidth),
-              _infoChip('Plate: $plateNumber', Icons.credit_card, Palette.yellowColor, textColor, isDark, maxWidth: maxWidth),
-              _infoChip('Route: $routeId', Icons.route, Palette.redColor, textColor, isDark, maxWidth: maxWidth),
-            ],
+          // Info in symmetrical 2-column grid, including Status on the right
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final List<Widget> gridItems = [
+                _infoChip('ID: $driverId', Icons.badge, statusColor, textColor, isDark, maxWidth: maxWidth),
+                _infoChip('Vehicle: $vehicleId', Icons.directions_car, Palette.orangeColor, textColor, isDark, maxWidth: maxWidth),
+                _infoChip('Plate: $plateNumber', Icons.credit_card, Palette.yellowColor, textColor, isDark, maxWidth: maxWidth),
+                _infoChip('Route: $routeId', Icons.route, Palette.redColor, textColor, isDark, maxWidth: maxWidth),
+                _infoChip('Capacity: $passengerCapacity', Icons.people, isDark ? Palette.darkInfo : Palette.lightInfo, textColor, isDark, maxWidth: maxWidth),
+                _infoChip('Sitting: $sittingPassenger', Icons.event_seat, isDark ? Palette.darkSecondary : Palette.lightSecondary, textColor, isDark, maxWidth: maxWidth),
+                _infoChip('Standing: $standingPassenger', Icons.accessibility_new, isDark ? Palette.darkInfo : Palette.lightInfo, textColor, isDark, maxWidth: maxWidth),
+                _statusInfoChip(drivingStatus, statusColor, textColor),
+              ];
+              return GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 10,
+                childAspectRatio: isMobile ? 4.0 : 6.0,
+                children: gridItems,
+              );
+            },
           ),
 
           const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-            decoration: BoxDecoration(
-              color: statusColor.withAlpha(100),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: statusColor.withAlpha(100)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(_getStatusIcon(drivingStatus), size: 16, color: statusColor),
-                const SizedBox(width: 6),
-                Text(
-                  _capitalizeFirstLetter(drivingStatus ?? 'N/A'),
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: statusColor),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -792,9 +887,9 @@ class MapsScreenState extends State<Mapscreen>
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                minimumSize: const Size(0, 44),
+                minimumSize: const Size(0, 60),
               ),
-              child: const Text('Center on Driver', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text('Center on Driver', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -812,7 +907,7 @@ class MapsScreenState extends State<Mapscreen>
         borderRadius: BorderRadius.circular(12),
         elevation: isDark ? 0 : 1,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder, width: 1),
@@ -821,25 +916,63 @@ class MapsScreenState extends State<Mapscreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 22,
-                height: 22,
+                width: 20,
+                height: 20,
                 decoration: BoxDecoration(
                   color: accent.withAlpha(40),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 14, color: accent),
+                child: Icon(icon, size: 12, color: accent),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   text,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusInfoChip(String? drivingStatus, Color statusColor, Color textColor) {
+    final String label = _capitalizeFirstLetter(drivingStatus ?? 'N/A');
+    return Material(
+      color: statusColor.withAlpha(24),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: statusColor.withAlpha(100), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: statusColor.withAlpha(40),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(_getStatusIcon(drivingStatus), size: 12, color: statusColor),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
         ),
       ),
     );
