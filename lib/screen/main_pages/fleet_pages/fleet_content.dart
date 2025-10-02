@@ -10,6 +10,7 @@ import 'fleet_data.dart';
 import 'analytics/fleet_analytics_graph.dart';
 import 'analytics/booking_frequency_graph.dart';
 import 'package:provider/provider.dart';
+import 'route_details_dialog.dart';
 
 class FleetContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -658,7 +659,21 @@ class _FleetContentState extends State<FleetContent> {
 
     // Determine dominant status color (reserved for future use)
 
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => RouteDetailsDialog(
+            routeId: routeId,
+            supabase: supabase,
+            onManageRoute: () {
+              Navigator.of(ctx).pop();
+              // TODO: route edit screen/dialog
+            },
+          ),
+        );
+      },
+      child: Container(
       decoration: BoxDecoration(
         color: isDark ? Palette.darkCard : Palette.lightCard,
         border: Border.all(
@@ -803,6 +818,7 @@ class _FleetContentState extends State<FleetContent> {
                   ],
                 ),
         ],
+      ),
       ),
     );
   }
