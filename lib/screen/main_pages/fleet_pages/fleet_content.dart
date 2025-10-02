@@ -24,6 +24,11 @@ class _FleetContentState extends State<FleetContent> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> vehicleData = [];
   List<Map<String, dynamic>> filteredVehicleData = [];
+  // Grouped route summaries derived from filtered vehicles
+  List<Map<String, dynamic>> filteredRouteSummaries = [];
+  // All routes from official_routes with names and meta
+  List<Map<String, dynamic>> allRoutes = [];
+  Map<String, Map<String, dynamic>> routeIdToDetails = {};
   bool isLoading = true;
   int totalVehicles = 0;
   int _onlineVehicles = 0;
@@ -41,10 +46,13 @@ class _FleetContentState extends State<FleetContent> {
 
   // View mode: grid or list
   bool isGridView = true;
+  // Toggle between Vehicles and Routes view
+  bool showRoutes = false;
 
   @override
   void initState() {
     super.initState();
+    fetchRoutes();
     fetchVehicleData();
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (timer) {
       fetchVehicleData();
@@ -94,7 +102,83 @@ class _FleetContentState extends State<FleetContent> {
 
         return searchMatch && statusMatch && routeMatch;
       }).toList();
+
+      // Derive route summaries for ALL routes using full vehicle dataset
+      final Map<String, Map<String, dynamic>> routeIdToSummary = {};
+      // Ensure all routes are present even if zero vehicles
+      for (final route in allRoutes) {
+        final String rid = route['officialroute_id']?.toString() ?? '';
+        if (rid.isEmpty) continue;
+        routeIdToSummary[rid] = {
+          'route_id': rid,
+          'route_name': route['route_name']?.toString() ?? 'Route $rid',
+          'origin_name': route['origin_name']?.toString(),
+          'destination_name': route['destination_name']?.toString(),
+          'total': 0,
+          'online': 0,
+          'driving': 0,
+          'idling': 0,
+          'offline': 0,
+          'vehicles': <Map<String, dynamic>>[],
+        };
+      }
+      // Accumulate vehicles into their routes
+      for (final vehicle in vehicleData) {
+        final String routeId = (vehicle['route_id']?.toString() ?? '');
+        if (routeId.isEmpty) continue;
+        final String status = _getVehicleStatus(vehicle).toLowerCase();
+        final summary = routeIdToSummary.putIfAbsent(routeId, () => {
+          'route_id': routeId,
+          'route_name': routeIdToDetails[routeId]?['route_name']?.toString() ?? 'Route $routeId',
+          'origin_name': routeIdToDetails[routeId]?['origin_name']?.toString(),
+          'destination_name': routeIdToDetails[routeId]?['destination_name']?.toString(),
+          'total': 0,
+          'online': 0,
+          'driving': 0,
+          'idling': 0,
+          'offline': 0,
+          'vehicles': <Map<String, dynamic>>[],
+        });
+        summary['total'] = (summary['total'] as int) + 1;
+        if (status == 'online') summary['online'] = (summary['online'] as int) + 1;
+        else if (status == 'driving') summary['driving'] = (summary['driving'] as int) + 1;
+        else if (status == 'idling') summary['idling'] = (summary['idling'] as int) + 1;
+        else summary['offline'] = (summary['offline'] as int) + 1;
+        (summary['vehicles'] as List<Map<String, dynamic>>).add(vehicle);
+      }
+
+      filteredRouteSummaries = routeIdToSummary.values.toList()
+        ..sort((a, b) {
+          final aId = a['route_id']?.toString() ?? '';
+          final bId = b['route_id']?.toString() ?? '';
+          final int? aNum = int.tryParse(aId);
+          final int? bNum = int.tryParse(bId);
+          if (aNum != null && bNum != null) return aNum.compareTo(bNum);
+          return aId.compareTo(bId);
+        });
     });
+  }
+
+  Future<void> fetchRoutes() async {
+    try {
+      final data = await supabase
+          .from('official_routes')
+          .select('officialroute_id, route_name, origin_name, destination_name');
+      final List listData = data as List;
+      allRoutes = listData.cast<Map<String, dynamic>>();
+      routeIdToDetails = {
+        for (final r in allRoutes)
+          (r['officialroute_id']?.toString() ?? ''): r
+      };
+      if (mounted) {
+        setState(() {
+          // Recompute route summaries in case vehicles were already loaded
+          _applyFilters();
+        });
+      }
+    } catch (e) {
+      // silently ignore; routes will be empty
+    }
   }
 
   Future<void> fetchVehicleData() async {
@@ -324,19 +408,49 @@ class _FleetContentState extends State<FleetContent> {
                               ),
                             ),
                             const SizedBox(height: 24.0),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isDark ? Palette.darkCard : Palette.lightCard,
-                                  border: Border.all(
-                                    color: isDark ? Palette.darkBorder : Palette.lightBorder,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                            Row(
                                   children: [
+                                // Left-aligned toggle button to switch Vehicles <-> Routes
+                                OutlinedButton.icon(
+                                        icon: Icon(
+                                    showRoutes ? Icons.directions_bus : Icons.alt_route,
+                                    size: 16,
+                                          color: isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                  label: Text(
+                                    showRoutes ? 'Show Vehicles' : 'Show Routes',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12.0,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+                                    backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
+                                    padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                                  ),
+                                        onPressed: () {
+                                          setState(() {
+                                            showRoutes = !showRoutes;
+                                          });
+                                        },
+                                      ),
+                                const Spacer(),
+                                // Right-aligned grid/list view controls
+                                    Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Palette.darkCard : Palette.lightCard,
+                                    border: Border.all(
+                                      color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
                                     IconButton(
                                       icon: Icon(
                                         Icons.grid_view,
@@ -368,9 +482,13 @@ class _FleetContentState extends State<FleetContent> {
                                   ],
                                 ),
                               ),
+                              ],
                             ),
                             const SizedBox(height: 16.0),
-                            isGridView ? _buildGridView() : _buildListView(),
+                            if (showRoutes)
+                              (isGridView ? _buildRouteGridView() : _buildRouteListView())
+                            else
+                              (isGridView ? _buildGridView() : _buildListView()),
                             const SizedBox(height: 8.0),
                           ],
                         ),
@@ -446,6 +564,66 @@ class _FleetContentState extends State<FleetContent> {
     );
   }
 
+  // Routes grid view implementation
+  Widget _buildRouteGridView() {
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final isTablet = ResponsiveHelper.isTablet(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    double dynamicAspectRatio;
+    if (isMobile) {
+      // Slightly taller for mobile to accommodate compact content
+      dynamicAspectRatio = 2.0;
+    } else if (isTablet) {
+      if (screenWidth < 900) {
+        dynamicAspectRatio = 1.25;
+      } else if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.35;
+      } else {
+        dynamicAspectRatio = 1.45;
+      }
+    } else {
+      if (screenWidth < 1200) {
+        dynamicAspectRatio = 1.35;
+      } else if (screenWidth < 1400) {
+        dynamicAspectRatio = 1.45;
+      } else if (screenWidth < 1600) {
+        dynamicAspectRatio = 1.55;
+      } else if (screenWidth < 1800) {
+        dynamicAspectRatio = 1.65;
+      } else {
+        dynamicAspectRatio = 1.75;
+      }
+    }
+
+    return ResponsiveGrid(
+      mobileColumns: 2,
+      tabletColumns: 2,
+      desktopColumns: 3,
+      largeDesktopColumns: 4,
+      crossAxisSpacing: isMobile ? 12.0 : 24.0,
+      mainAxisSpacing: isMobile ? 12.0 : 24.0,
+      childAspectRatio: dynamicAspectRatio,
+      children: filteredRouteSummaries.map((route) => _buildRouteCard(route)).toList(),
+    );
+  }
+
+  // Routes list view implementation
+  Widget _buildRouteListView() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: filteredRouteSummaries.length,
+      itemBuilder: (context, index) {
+        final route = filteredRouteSummaries[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: _buildRouteListItem(route),
+        );
+      },
+    );
+  }
+
   String _getVehicleStatus(Map<String, dynamic> vehicle) {
     String vehicleStatus = 'Offline';
     final driverData = vehicle['driverTable'];
@@ -461,6 +639,343 @@ class _FleetContentState extends State<FleetContent> {
   // Check if vehicle is active based on status
   bool _isVehicleActive(String status) {
     return status == 'Online' || status == 'Driving' || status == 'Idling';
+  }
+
+  // Route card for grid view - mirrors vehicle card layout
+  Widget _buildRouteCard(Map<String, dynamic> routeSummary) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    final String routeId = routeSummary['route_id']?.toString() ?? 'N/A';
+    final String routeName = routeSummary['route_name']?.toString() ?? 'Route $routeId';
+    final int total = (routeSummary['total'] as int? ?? 0);
+    final int online = (routeSummary['online'] as int? ?? 0);
+    final int driving = (routeSummary['driving'] as int? ?? 0);
+    final int idling = (routeSummary['idling'] as int? ?? 0);
+    final int offline = (routeSummary['offline'] as int? ?? 0);
+
+    // Determine dominant status color (reserved for future use)
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkCard : Palette.lightCard,
+        border: Border.all(
+            color: isDark 
+                ? Palette.darkBorder.withValues(alpha: 77)
+                : Palette.lightBorder.withValues(alpha: 77), 
+            width: 1.0),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      padding: EdgeInsets.all(_getResponsivePadding(screenWidth, isMobile)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(_getResponsiveSpacing(screenWidth, isMobile) * 0.5),
+                decoration: BoxDecoration(
+                  color: isDark ? Palette.darkSurface : Palette.lightSurface,
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(
+                    color: isDark ? Palette.darkBorder : Palette.lightBorder,
+                    width: 1.0,
+                  ),
+                ),
+                child: Icon(
+                  Icons.alt_route,
+                  size: _getResponsiveFontSize(screenWidth, isMobile, 'title') * 0.8,
+                  color: isDark ? Palette.darkText : Palette.lightText,
+                ),
+              ),
+              SizedBox(width: _getResponsiveSpacing(screenWidth, isMobile)),
+              Expanded(
+                child: Text(
+                  routeName,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'title'),
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Palette.darkText : Palette.lightText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true)),
+          Text(
+            'Route ID: $routeId',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'info'),
+              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true) * 0.7),
+          Text(
+            'Vehicles: $total',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: _getResponsiveFontSize(screenWidth, isMobile, 'info'),
+              color: isDark ? Palette.darkText : Palette.lightText,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true) * 0.7),
+          // Status row: mobile shows colored icons only (no backgrounds),
+          // larger screens show chip-like counters
+          isMobile
+              ? Wrap(
+                  spacing: _getResponsiveSpacing(screenWidth, isMobile),
+                  runSpacing: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true),
+                  children: [
+                    _buildStatusIconCountMobile(
+                      icon: Icons.wifi_tethering,
+                      color: Palette.lightSuccess,
+                      count: online,
+                      isDark: isDark,
+                      tooltip: 'Online',
+                      screenWidth: screenWidth,
+                    ),
+                    _buildStatusIconCountMobile(
+                      icon: Icons.directions_bus,
+                      color: Palette.lightSuccess,
+                      count: driving,
+                      isDark: isDark,
+                      tooltip: 'Driving',
+                      screenWidth: screenWidth,
+                    ),
+                    _buildStatusIconCountMobile(
+                      icon: Icons.pause_circle_filled,
+                      color: Palette.lightWarning,
+                      count: idling,
+                      isDark: isDark,
+                      tooltip: 'Idling',
+                      screenWidth: screenWidth,
+                    ),
+                    _buildStatusIconCountMobile(
+                      icon: Icons.power_settings_new,
+                      color: Palette.lightError,
+                      count: offline,
+                      isDark: isDark,
+                      tooltip: 'Offline',
+                      screenWidth: screenWidth,
+                    ),
+                  ],
+                )
+              : Wrap(
+                  spacing: _getResponsiveSpacing(screenWidth, isMobile),
+                  runSpacing: _getResponsiveSpacing(screenWidth, isMobile, isVertical: true),
+                  children: [
+                    _buildStatusIconCount(
+                      icon: Icons.wifi_tethering,
+                      color: Palette.lightSuccess,
+                      count: online,
+                      isDark: isDark,
+                      tooltip: 'Online',
+                    ),
+                    _buildStatusIconCount(
+                      icon: Icons.directions_bus,
+                      color: Palette.lightSuccess,
+                      count: driving,
+                      isDark: isDark,
+                      tooltip: 'Driving',
+                    ),
+                    _buildStatusIconCount(
+                      icon: Icons.pause_circle_filled,
+                      color: Palette.lightWarning,
+                      count: idling,
+                      isDark: isDark,
+                      tooltip: 'Idling',
+                    ),
+                    _buildStatusIconCount(
+                      icon: Icons.power_settings_new,
+                      color: Palette.lightError,
+                      count: offline,
+                      isDark: isDark,
+                      tooltip: 'Offline',
+                    ),
+                  ],
+                ),
+        ],
+      ),
+    );
+  }
+
+  // Mobile-friendly status: icon + count text, no backgrounds; icons colored
+  Widget _buildStatusIconCountMobile({
+    required IconData icon,
+    required Color color,
+    required int count,
+    required bool isDark,
+    String? tooltip,
+    required double screenWidth,
+  }) {
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: _getResponsiveFontSize(screenWidth, true, 'info') + 2, color: color),
+        const SizedBox(width: 6.0),
+        Text(
+          count.toString(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: _getResponsiveFontSize(screenWidth, true, 'info'),
+            fontWeight: FontWeight.w700,
+            color: isDark ? Palette.darkText : Palette.lightText,
+          ),
+        ),
+      ],
+    );
+
+    return tooltip != null ? Tooltip(message: tooltip, child: content) : content;
+  }
+
+  Widget _buildRouteListItem(Map<String, dynamic> routeSummary) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
+    final String routeId = routeSummary['route_id']?.toString() ?? 'N/A';
+    final String routeName = routeSummary['route_name']?.toString() ?? 'Route $routeId';
+    final int total = (routeSummary['total'] as int? ?? 0);
+    final int online = (routeSummary['online'] as int? ?? 0);
+    final int driving = (routeSummary['driving'] as int? ?? 0);
+    final int idling = (routeSummary['idling'] as int? ?? 0);
+    final int offline = (routeSummary['offline'] as int? ?? 0);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkCard : Palette.lightCard,
+        border: Border.all(
+            color: isDark 
+                ? Palette.darkBorder.withValues(alpha: 77)
+                : Palette.lightBorder.withValues(alpha: 77), 
+            width: 1.0),
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 18.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: (isDark ? Palette.darkSurface : Palette.lightSurface),
+            child: Icon(Icons.alt_route, color: isDark ? Palette.darkText : Palette.lightText, size: 20),
+          ),
+          const SizedBox(width: 16.0),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  routeName,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Palette.darkText : Palette.lightText,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4.0),
+                Text(
+                  'Route ID: $routeId',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.0,
+                    color: isDark
+                        ? Palette.darkTextSecondary
+                        : Palette.lightTextSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4.0),
+                Row(
+                  children: [
+                    _buildRouteDotCount('Online', online, Palette.lightSuccess, isDark),
+                    const SizedBox(width: 12.0),
+                    _buildRouteDotCount('Driving', driving, Palette.lightSuccess, isDark),
+                    const SizedBox(width: 12.0),
+                    _buildRouteDotCount('Idling', idling, Palette.lightWarning, isDark),
+                    const SizedBox(width: 12.0),
+                    _buildRouteDotCount('Offline', offline, Palette.lightError, isDark),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12.0),
+          Text(
+            '$total vehicles',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13.0,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Palette.darkText : Palette.lightText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildRouteDotCount(String label, int count, Color color, bool isDark) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 6.0),
+        Text(
+          '$label: $count',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusIconCount({
+    required IconData icon,
+    required Color color,
+    required int count,
+    required bool isDark,
+    String? tooltip,
+  }) {
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: Colors.white),
+        const SizedBox(width: 6.0),
+        Text(
+          count.toString(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Palette.darkText : Palette.lightText,
+          ),
+        ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+      decoration: BoxDecoration(
+        color: isDark ? (color.withValues(alpha: 20)) : (color.withValues(alpha: 16)),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+      ),
+      child: tooltip != null ? Tooltip(message: tooltip, child: content) : content,
+    );
   }
 
   // Get status color based on vehicle status
