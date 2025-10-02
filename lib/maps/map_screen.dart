@@ -380,14 +380,15 @@ class MapsScreenState extends State<Mapscreen>
         }
       }
 
-      // Build labeled icon with driver id on top of the pin
-      final String cacheKey = 'id:$driverId:${(drivingStatus ?? 'offline').toLowerCase()}';
+      // Build labeled icon with driver id on top of the pin (include dark mode in cache key)
+      final bool isDark = Theme.of(context).brightness == Brightness.dark;
+      final String cacheKey = 'id:$driverId:${(drivingStatus ?? 'offline').toLowerCase()}:dark=$isDark';
       BitmapDescriptor iconDescriptor;
       if (_labeledIconCache.containsKey(cacheKey)) {
         iconDescriptor = _labeledIconCache[cacheKey]!;
       } else {
         final baseIcon = _getPinIcon(drivingStatus, isTargetDriver);
-        iconDescriptor = await _buildLabeledMarker(baseIcon, driverId);
+        iconDescriptor = await _buildLabeledMarker(baseIcon, driverId, isDark: isDark);
         _labeledIconCache[cacheKey] = iconDescriptor;
       }
 
@@ -422,7 +423,7 @@ class MapsScreenState extends State<Mapscreen>
   }
 
   // Build a labeled marker by composing a small ID label above the base pin
-  Future<BitmapDescriptor> _buildLabeledMarker(BitmapDescriptor basePin, String driverId) async {
+  Future<BitmapDescriptor> _buildLabeledMarker(BitmapDescriptor basePin, String driverId, {required bool isDark}) async {
     // Determine canvas size
     const int pinWidth = 96; // logical px for clarity
     const int pinHeight = 96;
@@ -442,7 +443,7 @@ class MapsScreenState extends State<Mapscreen>
       const Radius.circular(6),
     );
     final Paint labelPaint = Paint()
-      ..color = const Color(0xFF2A2A2A);
+      ..color = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEFEFEF);
     canvas.drawRRect(labelRect, labelPaint);
 
     // Draw label text (driver ID)
@@ -452,7 +453,7 @@ class MapsScreenState extends State<Mapscreen>
         fontSize: 14,
         fontWeight: FontWeight.w600,
       ),
-    )..pushStyle(ui.TextStyle(color: const Color(0xFFF5F5F5)))
+    )..pushStyle(ui.TextStyle(color: isDark ? const Color(0xFFF5F5F5) : const Color(0xFF121212)))
      ..addText('#$driverId');
     final ui.Paragraph paragraph = pb.build()
       ..layout(ui.ParagraphConstraints(width: canvasWidth - 16));
@@ -464,9 +465,22 @@ class MapsScreenState extends State<Mapscreen>
     final double pinCenterX = canvasWidth / 2;
     final double pinTop = labelHeight + 10;
 
-    final Paint pinBody = Paint()..color = const Color(0xFF43A047); // green default
-    // Pin circle
-    canvas.drawCircle(Offset(pinCenterX, pinTop + 28), 22, pinBody);
+    // Pin appearance
+    final Color pinColor = isDark ? const Color(0xFF00CC58) : const Color(0xFF43A047);
+    final Paint pinBody = Paint()..color = pinColor;
+    final Paint pinOutline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = isDark ? 2.0 : 1.0
+      ..color = isDark ? Colors.white.withAlpha(200) : Colors.black.withAlpha(120);
+    final Paint pinGlow = Paint()..color = pinColor.withAlpha(60);
+
+    // Pin circle with subtle glow and outline in dark mode
+    final Offset pinCircleCenter = Offset(pinCenterX, pinTop + 28);
+    if (isDark) {
+      canvas.drawCircle(pinCircleCenter, 26, pinGlow);
+    }
+    canvas.drawCircle(pinCircleCenter, 22, pinBody);
+    canvas.drawCircle(pinCircleCenter, 22, pinOutline);
     // Pin tail (triangle)
     final Path tail = Path()
       ..moveTo(pinCenterX - 10, pinTop + 28)
@@ -474,6 +488,7 @@ class MapsScreenState extends State<Mapscreen>
       ..lineTo(pinCenterX, pinTop + 58)
       ..close();
     canvas.drawPath(tail, pinBody);
+    canvas.drawPath(tail, pinOutline);
 
     final ui.Picture picture = recorder.endRecording();
     final ui.Image image = await picture.toImage(canvasWidth, canvasHeight);
