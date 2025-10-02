@@ -54,6 +54,9 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   late AnimationController _loadingController;
   late Animation<double> _loadingAnimation;
   
+  // Horizontal scroll controller for data table
+  final ScrollController _tableHorizontalController = ScrollController();
+  
   // Pagination state
   int currentPage = 1;
   int itemsPerPage = 25;
@@ -80,6 +83,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   @override
   void dispose() {
     _loadingController.dispose();
+    _tableHorizontalController.dispose();
     super.dispose();
   }
 
@@ -235,6 +239,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
         ),
       ),
     );
+    
   }
 
   Widget _buildHeader(bool isDark) {
@@ -1057,11 +1062,18 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 800),
-            child: DataTable(
+        child: Scrollbar(
+          controller: _tableHorizontalController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          interactive: true,
+          scrollbarOrientation: ScrollbarOrientation.bottom,
+          child: SingleChildScrollView(
+            controller: _tableHorizontalController,
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 800),
+              child: DataTable(
               columnSpacing: 24.0,
               horizontalMargin: 16.0,
               headingRowHeight: 56.0,
@@ -1118,6 +1130,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           ),
         ),
       ),
+    ),
     );
   }
 
