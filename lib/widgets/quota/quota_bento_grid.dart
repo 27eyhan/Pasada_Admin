@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:provider/provider.dart';
 
 class QuotaBentoGrid extends StatelessWidget {
@@ -55,7 +56,13 @@ class QuotaBentoGrid extends StatelessWidget {
               ),
               onPressed: onEdit,
               icon: const Icon(Icons.edit, size: 16),
-              label: const Text('New Quota'),
+              label: Text(
+                'New Quota',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 12, tablet: 13, desktop: 14),
+                ),
+              ),
             ),
             if (onUpdate != null)
               const SizedBox(width: 8),
@@ -67,7 +74,13 @@ class QuotaBentoGrid extends StatelessWidget {
                 ),
                 onPressed: onUpdate,
                 icon: const Icon(Icons.manage_accounts, size: 16),
-                label: const Text('Edit Quota'),
+                label: Text(
+                  'Edit Quota',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 12, tablet: 13, desktop: 14),
+                  ),
+                ),
               ),
           ],
         ),
@@ -185,7 +198,7 @@ class _QuotaCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
-                    fontSize: 12,
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 10, tablet: 11, desktop: 12),
                     color: isDark ? Palette.darkText : Palette.lightText,
                   ),
                 ),
@@ -206,7 +219,7 @@ class _QuotaCard extends StatelessWidget {
                       title,
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 13,
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 12, tablet: 13, desktop: 14),
                         letterSpacing: 0.3,
                         color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                       ),
@@ -218,7 +231,7 @@ class _QuotaCard extends StatelessWidget {
                   "₱${value.toStringAsFixed(2)}",
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 20,
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 18, tablet: 20, desktop: 22),
                     fontWeight: FontWeight.w700,
                     color: isDark ? Palette.darkText : Palette.lightText,
                   ),
@@ -228,7 +241,7 @@ class _QuotaCard extends StatelessWidget {
                   "Target: ₱${target.toStringAsFixed(0)}",
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 11, tablet: 12, desktop: 13),
                     color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                   ),
                 ),
