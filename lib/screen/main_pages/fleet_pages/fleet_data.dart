@@ -107,7 +107,7 @@ class _FleetDataState extends State<FleetData> {
           isDark,
         ),
         
-        SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 16, desktop: 16)),
+        SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 16, desktop: 8)),
         
         // Driver Information Card
         vehicle['driverTable'] != null &&
@@ -152,7 +152,7 @@ class _FleetDataState extends State<FleetData> {
                 isDark,
               ),
         
-        SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 16, desktop: 16)),
+        SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 16, desktop: 8)),
         
         // Action button
         _buildResponsiveActionButton(isDark),
@@ -250,7 +250,7 @@ class _FleetDataState extends State<FleetData> {
           ],
         ),
         
-        SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 16, desktop: 16)),
+        SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 16, desktop: 8)),
         
         // Action button
         _buildResponsiveActionButton(isDark),
@@ -261,7 +261,10 @@ class _FleetDataState extends State<FleetData> {
   // Build responsive detail card
   Widget _buildResponsiveDetailCard(String title, List<Widget> children, bool isDark) {
     return Container(
-      height: ResponsiveHelper.isMobile(context) ? 250 : 300,
+      // Let height adapt; cap with maxHeight so it doesn't overflow
+      constraints: BoxConstraints(
+        maxHeight: ResponsiveHelper.isMobile(context) ? 300 : 380,
+      ),
       decoration: BoxDecoration(
         color: isDark ? Palette.darkCard : Palette.lightCard,
         borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveBorderRadius(context)),
@@ -286,7 +289,7 @@ class _FleetDataState extends State<FleetData> {
             ),
           ),
           SizedBox(height: ResponsiveHelper.getResponsiveSpacing(context, mobile: 6, tablet: 8, desktop: 8)),
-          Expanded(
+          Flexible(
             child: SingleChildScrollView(
               child: Column(
                 children: children,
@@ -302,55 +305,57 @@ class _FleetDataState extends State<FleetData> {
   Widget _buildResponsiveActionButton(bool isDark) {
     return ResponsiveDialogActions(
       children: [
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
-            foregroundColor: isDark ? Palette.darkText : Palette.lightText,
-            elevation: 0,
-            shadowColor: Colors.transparent,
-            side: BorderSide(
-              color: isDark 
-                  ? Palette.darkBorder.withValues(alpha: 77)
-                  : Palette.lightBorder.withValues(alpha: 77),
-              width: 1.0,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveBorderRadius(context)),
-            ),
-            padding: EdgeInsets.symmetric(
-              vertical: ResponsiveHelper.getResponsiveSpacing(context, mobile: 10, tablet: 12, desktop: 12),
-              horizontal: ResponsiveHelper.getResponsiveSpacing(context, mobile: 16, tablet: 20, desktop: 20),
-            ),
-          ),
-          onPressed: () {
-            Navigator.of(context).pop();
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return EditVehicleDialog(
-                  supabase: widget.supabase,
-                  onVehicleActionComplete: widget.onVehicleActionComplete,
-                  vehicleData: widget.vehicle,
-                  openedFromFleetData: true,
-                );
-              },
-            );
-          },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.edit, size: ResponsiveHelper.getResponsiveIconSize(context, mobile: 16, tablet: 18, desktop: 18)),
-              SizedBox(width: ResponsiveHelper.getResponsiveSpacing(context, mobile: 6, tablet: 8, desktop: 8)),
-              Text(
-                "Manage Vehicle",
-                style: TextStyle(
-                  fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 14, tablet: 16, desktop: 16),
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                ),
+        // Manage Vehicle button (full-width)
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00CC58),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              side: BorderSide(
+                color: const Color(0xFF00CC58),
+                width: 1.0,
               ),
-            ],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveBorderRadius(context)),
+              ),
+              padding: EdgeInsets.symmetric(
+                vertical: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 14, desktop: 20),
+                horizontal: ResponsiveHelper.getResponsiveSpacing(context, mobile: 16, tablet: 20, desktop: 20),
+              ),
+            ),
+            onPressed: () {
+              Navigator.of(context).pop();
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return EditVehicleDialog(
+                    supabase: widget.supabase,
+                    onVehicleActionComplete: widget.onVehicleActionComplete,
+                    vehicleData: widget.vehicle,
+                    openedFromFleetData: true,
+                  );
+                },
+              );
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.edit, size: ResponsiveHelper.getResponsiveIconSize(context, mobile: 16, tablet: 18, desktop: 18)),
+                SizedBox(width: ResponsiveHelper.getResponsiveSpacing(context, mobile: 6, tablet: 8, desktop: 8)),
+                Text(
+                  "Manage Vehicle",
+                  style: TextStyle(
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 14, tablet: 16, desktop: 16),
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

@@ -16,7 +16,7 @@ class DriverLocationService {
             vehicle_id, 
             current_location, 
             driving_status,
-            vehicleTable(plate_number, route_id)
+            vehicleTable(plate_number, route_id, passenger_capacity, sitting_passenger, standing_passenger)
           ''');
 
       debugPrint('[DriverLocationService] Supabase response: $response');
@@ -54,16 +54,25 @@ class DriverLocationService {
             debugPrint(
                 '[DriverLocationService] VehicleData type: ${vehicleData.runtimeType}, Data: $vehicleData');
 
+            int? passengerCapacity;
+            int? sittingPassenger;
+            int? standingPassenger;
             if (vehicleData != null) {
               if (vehicleData is List && vehicleData.isNotEmpty) {
                 final vehicleInfo = vehicleData.first as Map<String, dynamic>;
                 plateNumber = vehicleInfo['plate_number']?.toString() ?? 'N/A';
                 routeId = vehicleInfo['route_id']?.toString() ?? 'N/A';
+                passengerCapacity = (vehicleInfo['passenger_capacity'] as num?)?.toInt();
+                sittingPassenger = (vehicleInfo['sitting_passenger'] as num?)?.toInt();
+                standingPassenger = (vehicleInfo['standing_passenger'] as num?)?.toInt();
                 debugPrint(
                     '[DriverLocationService] Extracted from List - Plate: $plateNumber, Route: $routeId');
               } else if (vehicleData is Map<String, dynamic>) {
                 plateNumber = vehicleData['plate_number']?.toString() ?? 'N/A';
                 routeId = vehicleData['route_id']?.toString() ?? 'N/A';
+                passengerCapacity = (vehicleData['passenger_capacity'] as num?)?.toInt();
+                sittingPassenger = (vehicleData['sitting_passenger'] as num?)?.toInt();
+                standingPassenger = (vehicleData['standing_passenger'] as num?)?.toInt();
                 debugPrint(
                     '[DriverLocationService] Extracted from Map - Plate: $plateNumber, Route: $routeId');
               }
@@ -81,6 +90,9 @@ class DriverLocationService {
                   drivingStatus, // Include driving status for custom pins
               'plate_number': plateNumber,
               'route_id': routeId,
+              'passenger_capacity': passengerCapacity,
+              'sitting_passenger': sittingPassenger,
+              'standing_passenger': standingPassenger,
             });
           } else {
             debugPrint(

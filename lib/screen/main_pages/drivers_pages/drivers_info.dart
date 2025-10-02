@@ -655,93 +655,24 @@ class _DriverInfoState extends State<DriverInfo> {
   Widget _buildResponsiveActionButtons(bool isDark) {
     return ResponsiveDialogActions(
       children: [
-        // Cancel/Contact Driver button
-        ElevatedButton(
+        // Save/Manage Driver button (full-width)
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: _isEditMode 
-                ? Colors.red.shade400 
-                : (isDark ? Palette.darkSurface : Palette.lightSurface),
-            foregroundColor: _isEditMode 
-                ? Colors.white 
-                : (isDark ? Palette.darkText : Palette.lightText),
+            backgroundColor: const Color(0xFF00CC58),
+            foregroundColor: Colors.white,
             elevation: 0,
             shadowColor: Colors.transparent,
             side: BorderSide(
-              color: _isEditMode
-                  ? Colors.red.shade400
-                  : (isDark ? Palette.darkBorder.withValues(alpha: 77) : Palette.lightBorder.withValues(alpha: 77)),
+              color: const Color(0xFF00CC58),
               width: 1.0,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveBorderRadius(context)),
             ),
             padding: EdgeInsets.symmetric(
-              vertical: ResponsiveHelper.getResponsiveSpacing(context, mobile: 10, tablet: 12, desktop: 12),
-              horizontal: ResponsiveHelper.getResponsiveSpacing(context, mobile: 16, tablet: 20, desktop: 20),
-            ),
-          ),
-          onPressed: () {
-             if (_isEditMode) {
-               // Reset the text controllers to original values
-               _fullNameController.text = widget.driver['full_name'] ?? '';
-               _driverNumberController.text = widget.driver['driver_number'] ?? '';
-               _vehicleIdController.text = widget.driver['vehicle_id']?.toString() ?? '';
-
-               // Exit edit mode
-               setState(() {
-                 _isEditMode = false;
-               });
-
-               // If dialog was opened directly in edit mode, close it
-               if (widget.initialEditMode) {
-                 Navigator.of(context).pop();
-               }
-             } else {
-               // Contact driver logic here
-             }
-          },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(_isEditMode ? Icons.cancel : Icons.phone, size: ResponsiveHelper.getResponsiveIconSize(context, mobile: 16, tablet: 18, desktop: 18)),
-              SizedBox(width: ResponsiveHelper.getResponsiveSpacing(context, mobile: 6, tablet: 8, desktop: 8)),
-              Text(
-                _isEditMode ? "Cancel" : "Contact Driver",
-                style: TextStyle(
-                  fontSize: ResponsiveHelper.getResponsiveFontSize(context, mobile: 12, tablet: 14, desktop: 14),
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        SizedBox(width: ResponsiveHelper.getResponsiveSpacing(context, mobile: 8, tablet: 12, desktop: 12)),
-        
-        // Save/Manage Driver button
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _isEditMode 
-                ? Palette.greenColor 
-                : (isDark ? Palette.darkSurface : Palette.lightSurface),
-            foregroundColor: _isEditMode 
-                ? Colors.white 
-                : (isDark ? Palette.darkText : Palette.lightText),
-            elevation: 0,
-            shadowColor: Colors.transparent,
-            side: BorderSide(
-              color: _isEditMode
-                  ? Palette.greenColor
-                  : (isDark ? Palette.darkBorder.withValues(alpha: 77) : Palette.lightBorder.withValues(alpha: 77)),
-              width: 1.0,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getResponsiveBorderRadius(context)),
-            ),
-            padding: EdgeInsets.symmetric(
-              vertical: ResponsiveHelper.getResponsiveSpacing(context, mobile: 10, tablet: 12, desktop: 12),
+              vertical: ResponsiveHelper.getResponsiveSpacing(context, mobile: 12, tablet: 14, desktop: 20),
               horizontal: ResponsiveHelper.getResponsiveSpacing(context, mobile: 16, tablet: 20, desktop: 20),
             ),
           ),
@@ -762,7 +693,7 @@ class _DriverInfoState extends State<DriverInfo> {
               ),
             ],
           ),
-        ),
+        )),
       ],
     );
   }
