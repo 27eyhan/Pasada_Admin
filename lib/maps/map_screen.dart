@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -51,6 +53,8 @@ class MapsScreenState extends State<Mapscreen>
 
   // Custom pin icons cache
   final Map<String, BitmapDescriptor> _customPinIcons = {};
+  // Cache for labeled icons by driver id and status key
+  final Map<String, BitmapDescriptor> _labeledIconCache = {};
 
   // Removed overlay fields since we now use responsive modal
   
@@ -376,6 +380,17 @@ class MapsScreenState extends State<Mapscreen>
         }
       }
 
+      // Build labeled icon with driver id on top of the pin
+      final String cacheKey = 'id:$driverId:${(drivingStatus ?? 'offline').toLowerCase()}';
+      BitmapDescriptor iconDescriptor;
+      if (_labeledIconCache.containsKey(cacheKey)) {
+        iconDescriptor = _labeledIconCache[cacheKey]!;
+      } else {
+        final baseIcon = _getPinIcon(drivingStatus, isTargetDriver);
+        iconDescriptor = await _buildLabeledMarker(baseIcon, driverId);
+        _labeledIconCache[cacheKey] = iconDescriptor;
+      }
+
       updatedMarkers.add(
         Marker(
           markerId: MarkerId(driverId),
@@ -384,8 +399,7 @@ class MapsScreenState extends State<Mapscreen>
             // Present responsive modal with driver details
             _presentDriverDetailsModal(driverData);
           },
-          // Use custom pin based on driver status
-          icon: _getPinIcon(drivingStatus, isTargetDriver),
+          icon: iconDescriptor,
         ),
       );
     }
@@ -405,6 +419,67 @@ class MapsScreenState extends State<Mapscreen>
       });
     }
     return true;
+  }
+
+  // Build a labeled marker by composing a small ID label above the base pin
+  Future<BitmapDescriptor> _buildLabeledMarker(BitmapDescriptor basePin, String driverId) async {
+    // Determine canvas size
+    const int pinWidth = 96; // logical px for clarity
+    const int pinHeight = 96;
+    const int labelHeight = 28;
+    final int canvasWidth = pinWidth;
+    final int canvasHeight = pinHeight + labelHeight + 6; // spacing
+
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder, Rect.fromLTWH(0, 0, canvasWidth.toDouble(), canvasHeight.toDouble()));
+
+    // Draw label background (rounded pill)
+    final RRect labelRect = RRect.fromLTRBR(
+      8.0,
+      6.0,
+      (canvasWidth - 8).toDouble(),
+      (6 + labelHeight).toDouble(),
+      const Radius.circular(6),
+    );
+    final Paint labelPaint = Paint()
+      ..color = const Color(0xFF2A2A2A);
+    canvas.drawRRect(labelRect, labelPaint);
+
+    // Draw label text (driver ID)
+    final ui.ParagraphBuilder pb = ui.ParagraphBuilder(
+      ui.ParagraphStyle(
+        textAlign: TextAlign.center,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+    )..pushStyle(ui.TextStyle(color: const Color(0xFFF5F5F5)))
+     ..addText('#$driverId');
+    final ui.Paragraph paragraph = pb.build()
+      ..layout(ui.ParagraphConstraints(width: canvasWidth - 16));
+    canvas.drawParagraph(paragraph, Offset(8, 6 + (labelHeight - paragraph.height) / 2));
+
+    // Draw the base pin image centered below the label
+    // We cannot directly draw BitmapDescriptor; instead, load a pin asset that matches basePin color
+    // As a simpler approach, we render a generic pin vector using circles/triangle.
+    final double pinCenterX = canvasWidth / 2;
+    final double pinTop = labelHeight + 10;
+
+    final Paint pinBody = Paint()..color = const Color(0xFF43A047); // green default
+    // Pin circle
+    canvas.drawCircle(Offset(pinCenterX, pinTop + 28), 22, pinBody);
+    // Pin tail (triangle)
+    final Path tail = Path()
+      ..moveTo(pinCenterX - 10, pinTop + 28)
+      ..lineTo(pinCenterX + 10, pinTop + 28)
+      ..lineTo(pinCenterX, pinTop + 58)
+      ..close();
+    canvas.drawPath(tail, pinBody);
+
+    final ui.Picture picture = recorder.endRecording();
+    final ui.Image image = await picture.toImage(canvasWidth, canvasHeight);
+    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final Uint8List bytes = byteData!.buffer.asUint8List();
+    return BitmapDescriptor.fromBytes(bytes);
   }
 
   @override
@@ -526,13 +601,25 @@ class MapsScreenState extends State<Mapscreen>
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
         builder: (ctx) {
-          return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
-              ),
-              child: _buildDriverDetailsContent(driver, isDark, maxWidth: size.width),
-            ),
+          return LayoutBuilder(
+            builder: (ctx, constraints) {
+              // Auto-switch to dialog when viewport becomes wider
+              if (constraints.maxWidth >= 700) {
+                Future.microtask(() {
+                  if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+                  _presentDriverDetailsModal(driver);
+                });
+                return const SizedBox.shrink();
+              }
+              return SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                  ),
+                  child: _buildDriverDetailsContent(driver, isDark, maxWidth: constraints.maxWidth),
+                ),
+              );
+            },
           );
         },
       );
@@ -541,40 +628,55 @@ class MapsScreenState extends State<Mapscreen>
         context: context,
         barrierDismissible: true,
         builder: (ctx) {
-          final double vw = size.width;
-          final double maxDialogWidth = (
-            vw >= 1400 ? vw * 0.35 :
-            vw >= 1100 ? vw * 0.45 :
-            vw >= 900 ? vw * 0.55 : vw * 0.7
-          ).clamp(360.0, 820.0);
-          final double maxDialogHeight = (size.height * 0.85).clamp(420.0, size.height * 0.9);
-          final Color surface = isDark ? Palette.darkSurface : Palette.lightSurface;
-          final Color borderColor = isDark ? Palette.darkBorder : Palette.lightBorder;
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: borderColor, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark ? Colors.black.withAlpha(120) : Colors.black.withAlpha(40),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 8),
-                  )
-                ],
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: maxDialogWidth,
-                  maxHeight: maxDialogHeight,
+          return LayoutBuilder(
+            builder: (ctx, constraints) {
+              // Auto-switch to bottom sheet if viewport becomes small
+              if (constraints.maxWidth < 700) {
+                // Close this dialog and open bottom sheet
+                Future.microtask(() {
+                  if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+                  _presentDriverDetailsModal(driver);
+                });
+                return const SizedBox.shrink();
+              }
+
+              final double vw = constraints.maxWidth;
+              final double vh = MediaQuery.of(ctx).size.height;
+              final double maxDialogWidth = (
+                vw >= 1400 ? vw * 0.6 :
+                vw >= 1100 ? vw * 0.7 :
+                vw >= 900 ? vw * 0.8 : vw
+              ).clamp(360.0, 920.0);
+              final double maxDialogHeight = (vh * 0.85).clamp(420.0, vh * 0.9);
+              final Color surface = isDark ? Palette.darkSurface : Palette.lightSurface;
+              final Color borderColor = isDark ? Palette.darkBorder : Palette.lightBorder;
+              return Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: borderColor, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark ? Colors.black.withAlpha(120) : Colors.black.withAlpha(40),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: maxDialogWidth,
+                      maxHeight: maxDialogHeight,
+                    ),
+                    child: _buildDriverDetailsContent(driver, isDark, maxWidth: maxDialogWidth),
+                  ),
                 ),
-                child: _buildDriverDetailsContent(driver, isDark, maxWidth: maxDialogWidth),
-              ),
-            ),
+              );
+            },
           );
         },
       );
