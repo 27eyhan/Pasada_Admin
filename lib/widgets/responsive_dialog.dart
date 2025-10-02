@@ -208,7 +208,14 @@ class ResponsiveDialogActions extends StatelessWidget {
     final isDark = themeProvider.isDarkMode;
 
     return Container(
-      padding: EdgeInsets.all(ResponsiveHelper.getResponsiveCardPadding(context)),
+      padding: EdgeInsets.only(
+        left: ResponsiveHelper.getResponsiveCardPadding(context),
+        right: ResponsiveHelper.getResponsiveCardPadding(context),
+        top: ResponsiveHelper.getResponsiveCardPadding(context),
+        bottom: ResponsiveHelper.isMobile(context) 
+            ? ResponsiveHelper.getResponsiveCardPadding(context)
+            : ResponsiveHelper.getResponsiveCardPadding(context) * 0.6,
+      ),
       decoration: BoxDecoration(
         color: isDark ? Palette.darkCard : Palette.lightCard,
         borderRadius: BorderRadius.only(
@@ -233,10 +240,16 @@ class ResponsiveDialogActions extends StatelessWidget {
                 ),
               ).toList(),
             )
-          : Row(
-              mainAxisAlignment: alignment,
-              children: children,
-            ),
+          : (children.length == 1
+              ? Row(
+                  children: [
+                    Expanded(child: children.first),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: alignment,
+                  children: children,
+                )),
     );
   }
 }

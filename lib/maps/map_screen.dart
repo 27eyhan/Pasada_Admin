@@ -732,7 +732,7 @@ class MapsScreenState extends State<Mapscreen>
                   padding: EdgeInsets.only(
                     bottom: MediaQuery.of(ctx).viewInsets.bottom,
                   ),
-                  child: _buildDriverDetailsContent(driver, isDark, maxWidth: constraints.maxWidth),
+                  child: _buildDriverDetailsContent(driver, isDark, maxWidth: constraints.maxWidth, isMobile: isMobile),
                 ),
               );
             },
@@ -788,7 +788,7 @@ class MapsScreenState extends State<Mapscreen>
                       maxWidth: maxDialogWidth,
                       maxHeight: maxDialogHeight,
                     ),
-                    child: _buildDriverDetailsContent(driver, isDark, maxWidth: maxDialogWidth),
+                    child: _buildDriverDetailsContent(driver, isDark, maxWidth: maxDialogWidth, isMobile: isMobile),
                   ),
                 ),
               );
