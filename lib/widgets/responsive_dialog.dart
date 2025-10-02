@@ -38,8 +38,9 @@ class ResponsiveDialog extends StatelessWidget {
         : ResponsiveHelper.isTablet(context)
             ? screenSize.width * 0.7
             : screenSize.width * 0.5;
-    
-    final double dialogHeight = ResponsiveHelper.isMobile(context)
+
+    // Use as maxHeight only so the dialog can shrink to fit content
+    final double dialogMaxHeight = ResponsiveHelper.isMobile(context)
         ? screenSize.height * 0.9
         : ResponsiveHelper.isTablet(context)
             ? screenSize.height * 0.8
@@ -57,19 +58,18 @@ class ResponsiveDialog extends StatelessWidget {
       backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
       child: Container(
         width: dialogWidth,
-        height: dialogHeight,
         constraints: BoxConstraints(
-          maxWidth: maxWidth ?? double.infinity,
-          maxHeight: maxHeight ?? double.infinity,
+          maxWidth: maxWidth ?? dialogWidth,
+          maxHeight: maxHeight ?? dialogMaxHeight,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Responsive header
             _buildResponsiveHeader(context, isDark),
-            
+
             // Content area
-            Expanded(
+            Flexible(
               child: SingleChildScrollView(
                 padding: padding ?? EdgeInsets.all(ResponsiveHelper.getResponsiveCardPadding(context)),
                 child: child,
@@ -214,7 +214,7 @@ class ResponsiveDialogActions extends StatelessWidget {
         top: ResponsiveHelper.getResponsiveCardPadding(context),
         bottom: ResponsiveHelper.isMobile(context) 
             ? ResponsiveHelper.getResponsiveCardPadding(context)
-            : ResponsiveHelper.getResponsiveCardPadding(context) * 0.6,
+            : ResponsiveHelper.getResponsiveCardPadding(context) * 0.4,
       ),
       decoration: BoxDecoration(
         color: isDark ? Palette.darkCard : Palette.lightCard,
