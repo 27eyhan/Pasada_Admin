@@ -18,11 +18,6 @@ function computeRoutePolyline(origin, destination, waypoints, cb) {
       return;
     }
 
-    console.log('Computing route with Google Routes API v2');
-    console.log('Origin:', origin);
-    console.log('Destination:', destination);
-    console.log('Waypoints:', waypoints);
-
     // Build request body for Google Routes API v2
     const requestBody = {
       origin: {
@@ -60,9 +55,6 @@ function computeRoutePolyline(origin, destination, waypoints, cb) {
 
     const url = `https://routes.googleapis.com/directions/v2:computeRoutes?key=${apiKey}`;
 
-    console.log('Routes API v2 URL:', url);
-    console.log('Request body:', requestBody);
-
     fetch(url, {
       method: 'POST',
       headers: {
@@ -71,35 +63,25 @@ function computeRoutePolyline(origin, destination, waypoints, cb) {
       },
       body: JSON.stringify(requestBody),
     })
-    .then(response => {
-      console.log('Routes API Response Status:', response.status);
-      return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-      console.log('Routes API Response:', data);
-      
       if (data.routes && data.routes.length > 0) {
         const route = data.routes[0];
         const polyline = route.polyline;
         
         if (polyline && polyline.encodedPolyline) {
-          console.log('Found encoded polyline:', polyline.encodedPolyline);
           cb(polyline.encodedPolyline, null);
         } else {
-          console.log('No encoded polyline found in response');
           cb(null, 'No encoded polyline found in Routes API response');
         }
       } else {
-        console.log('No routes found in response');
         cb(null, 'No routes found in Routes API response');
       }
     })
     .catch(error => {
-      console.error('Routes API Error:', error);
       cb(null, 'Routes API Error: ' + error.message);
     });
   } catch (e) {
-    console.error('computeRoutePolyline exception:', e);
     cb(null, 'computeRoutePolyline exception: ' + e);
   }
 }

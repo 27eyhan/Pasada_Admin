@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 // ignore_for_file: avoid_web_libraries_in_flutter
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -92,10 +91,8 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
     final List<LatLng> waypoints = [];
     final dynamic inter = route!['intermediate_coordinates'];
     try {
-      print('Intermediate coordinates raw data: $inter');
       final dynamic data = inter is String ? jsonDecode(inter) : inter;
       if (data is List) {
-        print('Found ${data.length} intermediate coordinates');
         for (final item in data) {
           if (item is Map) {
             final lat = item['lat'];
@@ -103,60 +100,39 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
             final ll = _parseLatLng(lat, lng);
             if (ll != null) {
               waypoints.add(ll);
-              print('Added waypoint: ${ll.latitude}, ${ll.longitude}');
-            } else {
-              print('Failed to parse waypoint: lat=$lat, lng=$lng');
             }
           }
         }
-      } else {
-        print('Intermediate coordinates is not a list: ${data.runtimeType}');
       }
     } catch (e) {
-      print('Error parsing intermediate coordinates: $e');
+      // Silently handle parsing errors
     }
 
     // Get road-aligned polyline using Google Routes API v2
     if (origin != null && destination != null) {
-      print('Building polyline from origin: ${origin.latitude}, ${origin.longitude} to destination: ${destination.latitude}, ${destination.longitude}');
-      print('Waypoints: ${waypoints.length}');
-      
+        
       setState(() {
         _isLoadingPolyline = true;
       });
       
       _getRoadAlignedPolyline(origin, destination, waypoints).then((points) {
-        print('Polyline API returned ${points.length} points');
         if (points.isNotEmpty && mounted) {
-          // Check if the decoded points make sense (not all going in one direction)
-          bool pointsLookValid = _validatePolylinePoints(points, origin, destination);
-          
-          if (pointsLookValid) {
-            final polyline = Polyline(
-              polylineId: const PolylineId('route_polyline'),
-              color: const Color(0xFF00CC58),
-              width: 4,
-              points: points,
-            );
-            setState(() {
-              _polylines = {polyline};
-              _isLoadingPolyline = false;
-              print('Polyline added to map with ${points.length} points');
-            });
-          } else {
-            print('Decoded points look invalid, using fallback polyline');
-            _createFallbackPolyline(origin, destination, waypoints);
-          }
+          final polyline = Polyline(
+            polylineId: const PolylineId('route_polyline'),
+            color: const Color(0xFF00CC58),
+            width: 4,
+            points: points,
+          );
+          setState(() {
+            _polylines = {polyline};
+            _isLoadingPolyline = false;
+          });
         } else {
-          print('No polyline points received from API, creating fallback polyline');
           _createFallbackPolyline(origin, destination, waypoints);
         }
       }).catchError((error) {
-        print('Error in polyline generation: $error');
         _createFallbackPolyline(origin, destination, waypoints);
       });
-    } else {
-      print('Cannot build polyline: origin=$origin, destination=$destination');
     }
 
     // Initial camera/bounds
@@ -219,14 +195,8 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
 
       final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? dotenv.env['GOOGLE_API_KEY'] ?? '';
       if (apiKey.isEmpty) {
-        print('Warning: Google Maps API key is not configured');
         return [];
       }
-
-      print('Getting road-aligned polyline using Google Directions API');
-      print('Origin: ${origin.latitude}, ${origin.longitude}');
-      print('Destination: ${destination.latitude}, ${destination.longitude}');
-      print('Waypoints: ${waypoints.length}');
 
       // Build waypoints string for Google Directions API
       String waypointsParam = '';
@@ -246,12 +216,9 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
       // Use a CORS proxy to avoid CORS issues in web browsers
       final url = 'https://api.allorigins.win/get?url=${Uri.encodeComponent(baseUrl)}';
 
-      print('Directions API URL: $url');
 
       final response = await http.get(Uri.parse(url));
 
-      print('Directions API Response Status: ${response.statusCode}');
-      print('Directions API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final proxyResponse = jsonDecode(response.body);
@@ -279,22 +246,16 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
             }
             
             if (allPoints.isNotEmpty) {
-              print('Google Directions API returned ${allPoints.length} points');
-              print('First point: ${allPoints.first.latitude}, ${allPoints.first.longitude}');
-              print('Last point: ${allPoints.last.latitude}, ${allPoints.last.longitude}');
               return allPoints;
             }
           } else {
-            print('Directions API Error: ${data['status']} - ${data['error_message'] ?? 'Unknown error'}');
           }
         } else {
-          print('CORS Proxy Error: ${proxyResponse['error'] ?? 'Unknown error'}');
         }
       } else {
-        print('HTTP Error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Error getting road-aligned polyline: $e');
+      throw Exception('Error getting road-aligned polyline: $e');
     }
     return [];
   }
@@ -315,7 +276,6 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
             final pts = _decodePolyline(encoded);
             completer.complete(pts);
           } else {
-            print('computeRoutePolyline error: $error');
             completer.complete(<LatLng>[]);
           }
         } catch (e) {
@@ -329,7 +289,6 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
       final result = await completer.future.timeout(const Duration(seconds: 10), onTimeout: () => <LatLng>[]);
       return result;
     } catch (e) {
-      print('Web polyline error: $e');
       return [];
     }
   }
@@ -340,7 +299,6 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
     int lat = 0;
     int lng = 0;
 
-    print('Decoding polyline: $encoded');
 
     while (index < encoded.length) {
       // Decode latitude
@@ -370,91 +328,21 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
       double latitude = lat / 1e5;
       double longitude = lng / 1e5;
       
-      print('Decoded point: lat=$latitude, lng=$longitude');
       points.add(LatLng(latitude, longitude));
     }
-
-    print('Total decoded points: ${points.length}');
-    if (points.isNotEmpty) {
-      print('First point: ${points.first.latitude}, ${points.first.longitude}');
-      print('Last point: ${points.last.latitude}, ${points.last.longitude}');
-    }
-
     return points;
   }
 
-  bool _validatePolylinePoints(List<LatLng> points, LatLng origin, LatLng destination) {
-    if (points.isEmpty) return false;
-    
-    // Check if the first point is reasonably close to origin
-    final firstPoint = points.first;
-    final distanceFromOrigin = _calculateDistance(origin, firstPoint);
-    print('Distance from origin to first point: $distanceFromOrigin km');
-    
-    // Check if the last point is reasonably close to destination
-    final lastPoint = points.last;
-    final distanceToDestination = _calculateDistance(lastPoint, destination);
-    print('Distance from last point to destination: $distanceToDestination km');
-    
-    // Check if points are not all going in the same direction (indicating decoding error)
-    if (points.length > 2) {
-      double totalLatChange = 0;
-      double totalLngChange = 0;
-      
-      for (int i = 1; i < points.length; i++) {
-        totalLatChange += (points[i].latitude - points[i-1].latitude).abs();
-        totalLngChange += (points[i].longitude - points[i-1].longitude).abs();
-      }
-      
-      print('Total lat change: $totalLatChange, Total lng change: $totalLngChange');
-      
-      // If all points are going in one direction, it's likely a decoding error
-      if (totalLatChange < 0.001 && totalLngChange < 0.001) {
-        print('Points appear to be in the same location - likely decoding error');
-        return false;
-      }
-    }
-    
-    // If first point is too far from origin or last point is too far from destination, use fallback
-    if (distanceFromOrigin > 10 || distanceToDestination > 10) {
-      print('Polyline points are too far from origin/destination - using fallback');
-      return false;
-    }
-    
-    return true;
-  }
-
-  double _calculateDistance(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371; // Earth's radius in kilometers
-    final double lat1Rad = point1.latitude * (pi / 180);
-    final double lat2Rad = point2.latitude * (pi / 180);
-    final double deltaLat = (point2.latitude - point1.latitude) * (pi / 180);
-    final double deltaLng = (point2.longitude - point1.longitude) * (pi / 180);
-
-    final double a = sin(deltaLat / 2) * sin(deltaLat / 2) +
-        cos(lat1Rad) * cos(lat2Rad) *
-        sin(deltaLng / 2) * sin(deltaLng / 2);
-    final double c = 2 * asin(sqrt(a));
-
-    return earthRadius * c;
-  }
 
   void _createFallbackPolyline(LatLng origin, LatLng destination, List<LatLng> waypoints) {
     if (!mounted) return;
     
-    print('Creating fallback polyline with ${waypoints.length} waypoints');
-    print('Origin: ${origin.latitude}, ${origin.longitude}');
-    print('Destination: ${destination.latitude}, ${destination.longitude}');
     
     // Create a simple polyline connecting origin -> waypoints -> destination
     final List<LatLng> fallbackPoints = [origin];
     fallbackPoints.addAll(waypoints);
     fallbackPoints.add(destination);
     
-    print('Fallback polyline points:');
-    for (int i = 0; i < fallbackPoints.length; i++) {
-      print('  Point $i: ${fallbackPoints[i].latitude}, ${fallbackPoints[i].longitude}');
-    }
     
     final polyline = Polyline(
       polylineId: const PolylineId('route_polyline'),
@@ -466,7 +354,6 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
     setState(() {
       _polylines = {polyline};
       _isLoadingPolyline = false;
-      print('Fallback polyline created with ${fallbackPoints.length} points');
     });
   }
 
