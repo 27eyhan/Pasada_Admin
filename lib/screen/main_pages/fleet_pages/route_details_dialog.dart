@@ -188,77 +188,24 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
 
   Future<List<LatLng>> _getRoadAlignedPolyline(LatLng origin, LatLng destination, List<LatLng> waypoints) async {
     try {
+      // Validate coordinates
+      if (origin.latitude.isNaN || origin.longitude.isNaN || 
+          destination.latitude.isNaN || destination.longitude.isNaN) {
+        return [];
+      }
+
       // On web, use the JS DirectionsService directly to avoid CORS
       if (kIsWeb) {
         final points = await _getPolylineWeb(origin, destination, waypoints);
         if (points.isNotEmpty) return points;
       }
 
-      final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? dotenv.env['GOOGLE_API_KEY'] ?? '';
-      if (apiKey.isEmpty) {
-        return [];
-      }
-
-      // Build waypoints string for Google Directions API
-      String waypointsParam = '';
-      if (waypoints.isNotEmpty) {
-        final waypointStrings = waypoints.map((wp) => '${wp.latitude},${wp.longitude}').join('|');
-        waypointsParam = '&waypoints=$waypointStrings';
-      }
-
-      // Use Google Directions API with CORS proxy to avoid CORS issues
-      final baseUrl = 'https://maps.googleapis.com/maps/api/directions/json'
-          '?origin=${origin.latitude},${origin.longitude}'
-          '&destination=${destination.latitude},${destination.longitude}'
-          '$waypointsParam'
-          '&mode=driving'
-          '&key=$apiKey';
-
-      // Use a CORS proxy to avoid CORS issues in web browsers
-      final url = 'https://api.allorigins.win/get?url=${Uri.encodeComponent(baseUrl)}';
-
-
-      final response = await http.get(Uri.parse(url));
-
-
-      if (response.statusCode == 200) {
-        final proxyResponse = jsonDecode(response.body);
-        
-        // The CORS proxy wraps the response in a 'contents' field
-        if (proxyResponse['contents'] != null) {
-          final data = jsonDecode(proxyResponse['contents']);
-          
-          if (data['status'] == 'OK' && data['routes'] != null && data['routes'].isNotEmpty) {
-            final route = data['routes'][0];
-            final legs = route['legs'] as List;
-            
-            List<LatLng> allPoints = [];
-            
-            for (final leg in legs) {
-              final steps = leg['steps'] as List;
-              for (final step in steps) {
-                final polyline = step['polyline'];
-                if (polyline != null && polyline['points'] != null) {
-                  final encodedPolyline = polyline['points'];
-                  final decodedPoints = _decodePolyline(encodedPolyline);
-                  allPoints.addAll(decodedPoints);
-                }
-              }
-            }
-            
-            if (allPoints.isNotEmpty) {
-              return allPoints;
-            }
-          } else {
-          }
-        } else {
-        }
-      } else {
-      }
+      // For non-web platforms, use server-side approach or fallback
+      return await _getFallbackRoadPolyline(origin, destination, waypoints);
     } catch (e) {
-      throw Exception('Error getting road-aligned polyline: $e');
+      // If main API fails, try fallback with Google Directions API
+      return await _getFallbackRoadPolyline(origin, destination, waypoints);
     }
-    return [];
   }
 
   Future<List<LatLng>> _getPolylineWeb(LatLng origin, LatLng destination, List<LatLng> waypoints) async {
@@ -335,26 +282,118 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
   }
 
 
+  Future<List<LatLng>> _getFallbackRoadPolyline(LatLng origin, LatLng destination, List<LatLng> waypoints) async {
+    try {
+      // For web platforms, this should not be called as we use JS API
+      if (kIsWeb) {
+        return [];
+      }
+
+      final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? dotenv.env['GOOGLE_API_KEY'] ?? '';
+      if (apiKey.isEmpty) {
+        return [];
+      }
+
+      // Build waypoints string for Google Directions API
+      String waypointsParam = '';
+      if (waypoints.isNotEmpty) {
+        final waypointStrings = waypoints.map((wp) => '${wp.latitude},${wp.longitude}').join('|');
+        waypointsParam = '&waypoints=$waypointStrings';
+      }
+
+      // Use Google Directions API directly (only works on mobile platforms)
+      final url = 'https://maps.googleapis.com/maps/api/directions/json'
+          '?origin=${origin.latitude},${origin.longitude}'
+          '&destination=${destination.latitude},${destination.longitude}'
+          '$waypointsParam'
+          '&mode=driving'
+          '&key=$apiKey';
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (data['status'] == 'OK' && data['routes'] != null && data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+          final legs = route['legs'] as List;
+          
+          List<LatLng> allPoints = [];
+          
+          for (final leg in legs) {
+            final steps = leg['steps'] as List;
+            for (final step in steps) {
+              final polyline = step['polyline'];
+              if (polyline != null && polyline['points'] != null) {
+                final encodedPolyline = polyline['points'];
+                final decodedPoints = _decodePolyline(encodedPolyline);
+                allPoints.addAll(decodedPoints);
+              }
+            }
+          }
+          
+          if (allPoints.isNotEmpty) {
+            return allPoints;
+          }
+        }
+      }
+    } catch (e) {
+      // If all else fails, return empty list
+    }
+    return [];
+  }
+
   void _createFallbackPolyline(LatLng origin, LatLng destination, List<LatLng> waypoints) {
     if (!mounted) return;
     
-    
-    // Create a simple polyline connecting origin -> waypoints -> destination
-    final List<LatLng> fallbackPoints = [origin];
-    fallbackPoints.addAll(waypoints);
-    fallbackPoints.add(destination);
-    
-    
-    final polyline = Polyline(
-      polylineId: const PolylineId('route_polyline'),
-      color: const Color(0xFF00CC58),
-      width: 4,
-      points: fallbackPoints,
-    );
-    
-    setState(() {
-      _polylines = {polyline};
-      _isLoadingPolyline = false;
+    // Try to get road-aligned polyline using Google Directions API
+    _getFallbackRoadPolyline(origin, destination, waypoints).then((points) {
+      if (points.isNotEmpty && mounted) {
+        final polyline = Polyline(
+          polylineId: const PolylineId('route_polyline'),
+          color: const Color(0xFF00CC58),
+          width: 4,
+          points: points,
+        );
+        setState(() {
+          _polylines = {polyline};
+          _isLoadingPolyline = false;
+        });
+      } else {
+        // Final fallback: straight line between points
+        final List<LatLng> fallbackPoints = [origin];
+        fallbackPoints.addAll(waypoints);
+        fallbackPoints.add(destination);
+        
+        final polyline = Polyline(
+          polylineId: const PolylineId('route_polyline'),
+          color: const Color(0xFF00CC58),
+          width: 4,
+          points: fallbackPoints,
+        );
+        
+        setState(() {
+          _polylines = {polyline};
+          _isLoadingPolyline = false;
+        });
+      }
+    }).catchError((error) {
+      // Final fallback: straight line between points
+      final List<LatLng> fallbackPoints = [origin];
+      fallbackPoints.addAll(waypoints);
+      fallbackPoints.add(destination);
+      
+      final polyline = Polyline(
+        polylineId: const PolylineId('route_polyline'),
+        color: const Color(0xFF00CC58),
+        width: 4,
+        points: fallbackPoints,
+      );
+      
+      setState(() {
+        _polylines = {polyline};
+        _isLoadingPolyline = false;
+      });
     });
   }
 
