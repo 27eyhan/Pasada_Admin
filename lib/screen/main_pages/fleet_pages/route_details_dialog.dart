@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'edit_route_dialog.dart';
 
 class RouteDetailsDialog extends StatefulWidget {
   final String routeId;
@@ -357,6 +358,26 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
     });
   }
 
+  void _showEditRouteDialog() {
+    if (route == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => EditRouteDialog(
+        routeId: widget.routeId,
+        routeData: route!,
+        supabase: widget.supabase,
+        onRouteUpdated: () {
+          // Refresh the route data when updated
+          _fetchRoute();
+          if (widget.onManageRoute != null) {
+            widget.onManageRoute!();
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -420,11 +441,8 @@ class _RouteDetailsDialogState extends State<RouteDetailsDialog> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
-                  if (widget.onManageRoute != null) {
-                    widget.onManageRoute!();
-                  } else {
-                    Navigator.of(context).pop();
-                  }
+                  Navigator.of(context).pop();
+                  _showEditRouteDialog();
                 },
               ),
             ),
