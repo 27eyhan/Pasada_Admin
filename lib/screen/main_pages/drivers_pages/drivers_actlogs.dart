@@ -55,8 +55,8 @@ class DriverActivityLogs {
         }
         
         // Always create a new activity log for active statuses
-        // Generate a unique log_id
-        final int logId = DateTime.now().millisecondsSinceEpoch * 100 + (driverId % 100);
+        // Generate a unique log_id using seconds timestamp to avoid PostgreSQL integer overflow
+        final int logId = DateTime.now().millisecondsSinceEpoch ~/ 1000 + (driverId % 1000);
         
         debugPrint('Creating new activity log with ID $logId for driver $driverId with driving status $drivingStatus');
         

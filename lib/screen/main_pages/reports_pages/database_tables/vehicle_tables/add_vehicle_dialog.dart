@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
+import 'package:pasada_admin_application/services/notification_service.dart';
+import 'package:pasada_admin_application/services/notification_trigger_service.dart';
 import 'package:provider/provider.dart';
 
 class AddVehicleDialog extends StatefulWidget {
@@ -23,8 +25,6 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
   final _plateNumberController = TextEditingController();
   final _routeIdController = TextEditingController();
   final _passengerCapacityController = TextEditingController();
-  // Vehicle Location might be handled differently (e.g., GPS)
-  // For now, let's make it an optional text field
   final _vehicleLocationController = TextEditingController();
 
   bool _isLoading = false;
@@ -51,7 +51,6 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
       final int? capacity = int.tryParse(capacityText);
 
       try {
-        // 0. Validate route_id exists in driverRouteTable
         if (routeId != null) {
           final routeCheckResponse = await widget.supabase
               .from('official_routes') // Correct table name
@@ -80,8 +79,6 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
           return;
         }
 
-        // 1. Find the highest current vehicle_id (optional, could let DB handle)
-        // For consistency with AddDriverDialog, we'll generate it.
         final List<dynamic> response = await widget.supabase
             .from('vehicleTable')
             .select('vehicle_id')
@@ -96,10 +93,8 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
           }
         }
 
-        // 2. Get current timestamp
         final String createdAt = DateTime.now().toIso8601String();
 
-        // 3. Prepare data for insertion
         final newVehicleData = {
           'vehicle_id': nextVehicleId,
           'plate_number': _plateNumberController.text.trim(),
@@ -108,8 +103,39 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
           'created_at': createdAt,
         };
 
-        // 4. Insert into Supabase
         await widget.supabase.from('vehicleTable').insert(newVehicleData);
+
+        if (capacity != null && capacity > 32) {
+          await NotificationService.checkCapacityNotification(
+            driverId: 'system', // Use system as driverId for admin actions
+            totalPassengers: capacity,
+            sittingPassengers: capacity > 27 ? 27 : capacity, // Assume max sitting
+            standingPassengers: capacity > 27 ? capacity - 27 : 0, // Remaining as standing
+          );
+          
+          // Show immediate alert for capacity over limit
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('WARNING: Capacity $capacity exceeds maximum allowed (32 passengers)'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'DISMISS',
+                textColor: Colors.white,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
+            ),
+          );
+        }
+
+        // Trigger immediate notification monitoring for vehicle changes
+        try {
+          await NotificationTriggerService.monitorVehicleCapacityChanges();
+        } catch (e) {
+          // Handle error silently
+        }
 
         setState(() {
           _isLoading = false;
@@ -303,6 +329,13 @@ class _AddVehicleDialogState extends State<AddVehicleDialog> {
                               }
                               if (int.tryParse(value) == null) {
                                 return 'Please enter a valid number';
+                              }
+                              final capacity = int.parse(value);
+                              if (capacity > 32) {
+                                return 'Capacity cannot exceed 32 passengers (current: $capacity)';
+                              }
+                              if (capacity <= 0) {
+                                return 'Capacity must be greater than 0';
                               }
                               return null;
                             },

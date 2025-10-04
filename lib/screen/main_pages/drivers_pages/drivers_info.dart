@@ -6,6 +6,7 @@ import 'package:pasada_admin_application/widgets/responsive_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pasada_admin_application/services/notification_trigger_service.dart';
 import 'drivers_actlogs.dart';
 
 class DriverInfo extends StatefulWidget {
@@ -147,6 +148,13 @@ class _DriverInfoState extends State<DriverInfo> {
             '_saveChanges: Explicitly logged activity for status $currentStatus');
       } else {
         debugPrint('_saveChanges: No status available to log activity');
+      }
+
+      // Trigger immediate notification monitoring for driver changes
+      try {
+        await NotificationTriggerService.monitorDriverStatusChanges();
+      } catch (e) {
+        // Handle error silently
       }
 
       // Close loading dialog
@@ -332,6 +340,13 @@ class _DriverInfoState extends State<DriverInfo> {
 
       // Log this activity
       await _activityLogs.logDriverActivity(newStatus, now);
+
+      // Trigger immediate notification monitoring for driver status changes
+      try {
+        await NotificationTriggerService.monitorDriverStatusChanges();
+      } catch (e) {
+        // Handle error silently
+      }
 
       // Refresh UI
       setState(() {});

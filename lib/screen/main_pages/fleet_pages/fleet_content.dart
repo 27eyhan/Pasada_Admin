@@ -668,7 +668,6 @@ class _FleetContentState extends State<FleetContent> {
             supabase: supabase,
             onManageRoute: () {
               Navigator.of(ctx).pop();
-              // TODO: route edit screen/dialog
             },
           ),
         );

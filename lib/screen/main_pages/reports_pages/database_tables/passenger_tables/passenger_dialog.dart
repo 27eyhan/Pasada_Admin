@@ -50,21 +50,6 @@ class _PassengerDialogState extends State<PassengerDialog> {
   Future<void> _savePassenger() async {
     if (_formKey.currentState!.validate()) {
       
-      // --- Handle Add Mode (Show Under Development Message) ---
-      if (!widget.isEditMode) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Add Passenger functionality is under development.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-        // Optionally pop the dialog or reset state here if desired
-        // Navigator.of(context).pop(); 
-        return; // Stop execution for Add mode
-      }
-      // --- End Add Mode Handling ---
-
-      // Proceed with saving only if in Edit mode
       setState(() { _isLoading = true; });
 
       try {
@@ -74,17 +59,31 @@ class _PassengerDialogState extends State<PassengerDialog> {
           'passenger_email': _emailController.text.trim(),
         };
 
-        final passengerId = widget.passengerData!['id'];
-        await widget.supabase
-            .from('passenger')
-            .update(passengerDetails)
-            .match({'id': passengerId});
+        if (widget.isEditMode) {
+          // Edit mode - update existing passenger
+          final passengerId = widget.passengerData!['id'];
+          await widget.supabase
+              .from('passenger')
+              .update(passengerDetails)
+              .match({'id': passengerId});
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Passenger $passengerId updated successfully!')),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Passenger $passengerId updated successfully!')),
+          );
+        } else {
+          // Add mode - create new passenger
+          final response = await widget.supabase
+              .from('passenger')
+              .insert(passengerDetails)
+              .select();
 
-        // No longer need the 'else' block for adding here
+          if (response.isNotEmpty) {
+            final newPassengerId = response[0]['id'];
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Passenger $newPassengerId added successfully!')),
+            );
+          }
+        }
 
         setState(() { _isLoading = false; });
         widget.onPassengerActionComplete(); // Refresh the table
@@ -93,7 +92,7 @@ class _PassengerDialogState extends State<PassengerDialog> {
       } catch (e) {
         setState(() { _isLoading = false; });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating passenger: ${e.toString()}')),
+          SnackBar(content: Text('Error ${widget.isEditMode ? 'updating' : 'adding'} passenger: ${e.toString()}')),
         );
       }
     }

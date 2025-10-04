@@ -142,7 +142,6 @@ class _SelectTableContentState extends State<SelectTableContent> {
               const SizedBox(height: 24.0),
               Expanded(
                 child: ResponsiveGrid(
-                  children: tableData.map((table) => _buildTableCard(table, isDark)).toList(),
                   mobileColumns: 1,
                   tabletColumns: 2,
                   desktopColumns: 3,
@@ -152,6 +151,7 @@ class _SelectTableContentState extends State<SelectTableContent> {
                   childAspectRatio: isMobile
                       ? 2.0
                       : (isTablet ? 1.6 : 1.2),
+                  children: tableData.map((table) => _buildTableCard(table, isDark)).toList(),
                 ),
               ),
             ],

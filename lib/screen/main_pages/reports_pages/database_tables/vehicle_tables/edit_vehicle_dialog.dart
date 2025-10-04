@@ -4,6 +4,8 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:pasada_admin_application/screen/main_pages/fleet_pages/fleet_data.dart'; // Import FleetData
+import 'package:pasada_admin_application/services/notification_service.dart';
+import 'package:pasada_admin_application/services/notification_trigger_service.dart';
 import 'package:provider/provider.dart';
 
 class EditVehicleDialog extends StatefulWidget {
@@ -109,6 +111,39 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
             .from('vehicleTable')
             .update(vehicleDetails)
             .match({'vehicle_id': vehicleId});
+
+        // Check capacity and send notification if needed
+        if (capacity != null && capacity > 32) {
+          await NotificationService.checkCapacityNotification(
+            driverId: 'system', // Use system as driverId for admin actions
+            totalPassengers: capacity,
+            sittingPassengers: capacity > 27 ? 27 : capacity, // Assume max sitting
+            standingPassengers: capacity > 27 ? capacity - 27 : 0, // Remaining as standing
+          );
+          
+          // Show immediate alert for capacity over limit
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('WARNING: Capacity $capacity exceeds maximum allowed (32 passengers)'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'DISMISS',
+                textColor: Colors.white,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
+            ),
+          );
+        }
+
+        // Trigger immediate notification monitoring for vehicle changes
+        try {
+          await NotificationTriggerService.monitorVehicleCapacityChanges();
+        } catch (e) {
+          // Handle error silently
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Vehicle $vehicleId updated successfully!')),
@@ -335,6 +370,13 @@ class _EditVehicleDialogState extends State<EditVehicleDialog> {
                               }
                               if (int.tryParse(value) == null) {
                                 return 'Please enter a valid number';
+                              }
+                              final capacity = int.parse(value);
+                              if (capacity > 32) {
+                                return 'Capacity cannot exceed 32 passengers (current: $capacity)';
+                              }
+                              if (capacity <= 0) {
+                                return 'Capacity must be greater than 0';
                               }
                               return null;
                             },

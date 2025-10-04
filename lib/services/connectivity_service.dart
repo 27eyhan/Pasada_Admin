@@ -27,7 +27,6 @@ class ConnectivityService extends ChangeNotifier {
   static const double _verySlowConnectionThreshold = 0.5; // 0.5 Mbps
   
   void initialize() {
-    debugPrint('ConnectivityService: Initializing...');
     _startConnectivityMonitoring();
   }
   
@@ -39,11 +38,7 @@ class ConnectivityService extends ChangeNotifier {
   }
   
   void _startConnectivityMonitoring() {
-    debugPrint('ConnectivityService: Starting connectivity monitoring...');
-    debugPrint('ConnectivityService: kIsWeb = $kIsWeb');
-    
     if (kIsWeb) {
-      debugPrint('ConnectivityService: Running on web, testing internet connectivity directly...');
       _testInternetConnectivity();
       
       // For web, set up periodic connectivity monitoring since we can't rely on connectivity_plus
@@ -52,7 +47,6 @@ class ConnectivityService extends ChangeNotifier {
       // For mobile/desktop, use connectivity_plus
       _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
         (List<ConnectivityResult> results) {
-          debugPrint('ConnectivityService: Connectivity changed: $results');
           _handleConnectivityChange(results);
         },
       );
@@ -64,28 +58,21 @@ class ConnectivityService extends ChangeNotifier {
   
   Future<void> _checkInitialConnectivity() async {
     try {
-      debugPrint('ConnectivityService: Checking initial connectivity...');
       final results = await _connectivity.checkConnectivity();
-      debugPrint('ConnectivityService: Initial connectivity results: $results');
       _handleConnectivityChange(results);
     } catch (e) {
-      debugPrint('ConnectivityService: Error checking initial connectivity: $e');
+      // Error checking initial connectivity
     }
   }
   
   void _handleConnectivityChange(List<ConnectivityResult> results) {
-    debugPrint('ConnectivityService: Handling connectivity change: $results');
-    
     // Check if we have any network connection
     final hasNetworkConnection = results.isNotEmpty && results.any((result) => result != ConnectivityResult.none);
-    debugPrint('ConnectivityService: Has network connection: $hasNetworkConnection');
     
     if (hasNetworkConnection) {
       // Test actual internet connectivity
-      debugPrint('ConnectivityService: Testing internet connectivity...');
       _testInternetConnectivity();
     } else {
-      debugPrint('ConnectivityService: No network connection detected');
       _isConnected = false;
       _isSlowConnection = false;
       _connectionSpeed = 0.0;
@@ -94,35 +81,30 @@ class ConnectivityService extends ChangeNotifier {
   }
   
   void _startWebConnectivityMonitoring() {
-    debugPrint('ConnectivityService: Starting web connectivity monitoring...');
     // Check connectivity every 30 seconds for web
     _webConnectivityTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      debugPrint('ConnectivityService: Periodic web connectivity check...');
       _testInternetConnectivity();
     });
   }
   
   Future<void> _testInternetConnectivity() async {
     try {
-      debugPrint('ConnectivityService: Testing internet connectivity...');
-      debugPrint('ConnectivityService: Platform is web: $kIsWeb');
       
       // For web, use a more reliable approach with multiple fallback URLs
       final testUrls = kIsWeb ? [
         'https://www.google.com/favicon.ico', // Google favicon - very reliable
-        'https://httpbin.org/get',
         'https://jsonplaceholder.typicode.com/posts/1',
         'https://api.github.com/zen',
         'https://www.cloudflare.com/favicon.ico' // Cloudflare favicon as final fallback
       ] : [
-        'https://httpbin.org/get'
+        'https://www.google.com/favicon.ico',
+        'https://jsonplaceholder.typicode.com/posts/1'
       ];
       
       bool connectionSuccessful = false;
       
       for (final url in testUrls) {
         try {
-          debugPrint('ConnectivityService: Testing with $url...');
           
           if (kIsWeb) {
             // Use http package for web platforms
@@ -131,10 +113,7 @@ class ConnectivityService extends ChangeNotifier {
               headers: {'User-Agent': 'Mozilla/5.0 (compatible; ConnectivityTest/1.0)'},
             ).timeout(const Duration(seconds: 3));
             
-            debugPrint('ConnectivityService: Internet test response code: ${response.statusCode}');
-            
             if (response.statusCode == 200) {
-              debugPrint('ConnectivityService: Internet connectivity confirmed with $url');
               _isConnected = true;
               connectionSuccessful = true;
               break;
@@ -149,17 +128,13 @@ class ConnectivityService extends ChangeNotifier {
             
             client.close();
             
-            debugPrint('ConnectivityService: Internet test response code: ${response.statusCode}');
-            
             if (response.statusCode == 200) {
-              debugPrint('ConnectivityService: Internet connectivity confirmed with $url');
               _isConnected = true;
               connectionSuccessful = true;
               break;
             }
           }
         } catch (e) {
-          debugPrint('ConnectivityService: Test failed with $url: $e');
           continue;
         }
       }
@@ -173,12 +148,9 @@ class ConnectivityService extends ChangeNotifier {
         // Now test actual speed
         _testConnectionSpeed();
       } else {
-        debugPrint('ConnectivityService: All internet connectivity tests failed');
-        
         // For web, if all tests fail, assume we have connectivity but it's slow
         // This prevents the "No Connection" issue on web platforms
         if (kIsWeb) {
-          debugPrint('ConnectivityService: Web platform - assuming connectivity with slow speed');
           _isConnected = true;
           _isSlowConnection = true;
           _connectionSpeed = 1.0; // Assume slow but connected
@@ -190,11 +162,8 @@ class ConnectivityService extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('ConnectivityService: Internet connectivity test failed: $e');
-      
       // For web, if connectivity test fails completely, assume we have connectivity but it's slow
       if (kIsWeb) {
-        debugPrint('ConnectivityService: Web platform - assuming connectivity with slow speed due to test failure');
         _isConnected = true;
         _isSlowConnection = true;
         _connectionSpeed = 1.0; // Assume slow but connected
@@ -209,13 +178,12 @@ class ConnectivityService extends ChangeNotifier {
   
   Future<void> _testConnectionSpeed() async {
     try {
-      debugPrint('ConnectivityService: Testing connection speed...');
       final stopwatch = Stopwatch()..start();
       
       // For web, use a more reliable speed test
       final testUrl = kIsWeb 
           ? 'https://jsonplaceholder.typicode.com/posts' // Returns JSON data
-          : 'https://httpbin.org/bytes/1024';
+          : 'https://jsonplaceholder.typicode.com/posts/1';
       
       if (kIsWeb) {
         // Use http package for web platforms
@@ -253,16 +221,13 @@ class ConnectivityService extends ChangeNotifier {
             _connectionSpeed = estimatedSpeed;
             _isSlowConnection = estimatedSpeed < _slowConnectionThreshold;
             
-            debugPrint('ConnectivityService: Connection speed: ${estimatedSpeed.toStringAsFixed(2)} Mbps (${durationInSeconds.toStringAsFixed(2)}s)');
             notifyListeners();
           } else {
-            debugPrint('ConnectivityService: Speed test completed too quickly');
             _connectionSpeed = kIsWeb ? 15.0 : 10.0; // Assume good speed
             _isSlowConnection = false;
             notifyListeners();
           }
         } else {
-          debugPrint('ConnectivityService: Speed test failed with status: ${response.statusCode}');
           _isSlowConnection = true;
           _connectionSpeed = 0.0;
           notifyListeners();
@@ -287,23 +252,19 @@ class ConnectivityService extends ChangeNotifier {
             _connectionSpeed = estimatedSpeed;
             _isSlowConnection = estimatedSpeed < _slowConnectionThreshold;
             
-            debugPrint('ConnectivityService: Connection speed: ${estimatedSpeed.toStringAsFixed(2)} Mbps (${durationInSeconds.toStringAsFixed(2)}s)');
             notifyListeners();
           } else {
-            debugPrint('ConnectivityService: Speed test completed too quickly');
             _connectionSpeed = 10.0; // Assume good speed
             _isSlowConnection = false;
             notifyListeners();
           }
         } else {
-          debugPrint('ConnectivityService: Speed test failed with status: ${response.statusCode}');
           _isSlowConnection = true;
           _connectionSpeed = 0.0;
           notifyListeners();
         }
       }
     } catch (e) {
-      debugPrint('ConnectivityService: Error testing connection speed: $e');
       // If speed test fails, assume slow connection
       _isSlowConnection = true;
       _connectionSpeed = 0.0;
@@ -313,14 +274,11 @@ class ConnectivityService extends ChangeNotifier {
   
   // Manual speed test method
   Future<void> performSpeedTest() async {
-    debugPrint('Manual speed test initiated');
     await _testConnectionSpeed();
   }
   
   // Force a complete connectivity refresh
   Future<void> refreshConnectivity() async {
-    debugPrint('ConnectivityService: Refreshing connectivity status...');
-    
     if (kIsWeb) {
       // For web, just test internet connectivity directly
       await _testInternetConnectivity();
@@ -328,17 +286,15 @@ class ConnectivityService extends ChangeNotifier {
       // For mobile/desktop, use connectivity_plus
       try {
         final results = await _connectivity.checkConnectivity();
-        debugPrint('ConnectivityService: Refresh results: $results');
         _handleConnectivityChange(results);
       } catch (e) {
-        debugPrint('ConnectivityService: Error refreshing connectivity: $e');
+        // Error refreshing connectivity
       }
     }
   }
   
   // Force a manual connection test
   Future<void> forceConnectionTest() async {
-    debugPrint('ConnectivityService: Forcing connection test...');
     _isConnected = false;
     _isSlowConnection = false;
     _connectionSpeed = 0.0;

@@ -65,17 +65,81 @@ class _PassengerArchTableScreenState extends State<PassengerArchTableScreen> {
     }
   }
 
-  // --- Action Handlers (Placeholders) ---
-   void _handleRestorePassenger(Map<String, dynamic> selectedArchiveData) {
-    // Adjust key if needed
-    _showInfoSnackBar('Restore Passenger functionality not yet implemented.');
-    // Possibly call fetchArchiveData() again after restoration
+  // --- Action Handlers ---
+   void _handleRestorePassenger(Map<String, dynamic> selectedArchiveData) async {
+    try {
+      setState(() { isLoading = true; });
+      
+      // Get the archived passenger data
+      final archiveId = selectedArchiveData['id'];
+      final displayName = selectedArchiveData['display_name'];
+      final contactNumber = selectedArchiveData['contact_number'];
+      final passengerEmail = selectedArchiveData['passenger_email'];
+      
+      // Create passenger data for restoration
+      final passengerData = {
+        'display_name': displayName,
+        'contact_number': contactNumber,
+        'passenger_email': passengerEmail,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      
+      // Insert the passenger back into the main passenger table
+      await supabase.from('passenger').insert(passengerData);
+      
+      // Delete from archive table
+      await supabase.from('passengerArchives').delete().eq('id', archiveId);
+      
+      setState(() { isLoading = false; });
+      _showInfoSnackBar('Passenger restored successfully!');
+      fetchArchiveData(); // Refresh the archive data
+      
+    } catch (e) {
+      setState(() { isLoading = false; });
+      _showInfoSnackBar('Error restoring passenger: ${e.toString()}');
+    }
   }
 
-  void _handleDeletePassengerPermanent(Map<String, dynamic> selectedArchiveData) {
-    // Adjust key if needed
-    _showInfoSnackBar('Permanent Delete Passenger functionality not yet implemented.');
-    // Possibly call fetchArchiveData() again after deletion
+  void _handleDeletePassengerPermanent(Map<String, dynamic> selectedArchiveData) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Permanent Delete'),
+        content: Text('Are you sure you want to permanently delete this passenger? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      try {
+        setState(() { isLoading = true; });
+        
+        final archiveId = selectedArchiveData['id'];
+        final displayName = selectedArchiveData['display_name'];
+        
+        // Delete from archive table
+        await supabase.from('passengerArchives').delete().eq('id', archiveId);
+        
+        setState(() { isLoading = false; });
+        _showInfoSnackBar('Passenger $displayName permanently deleted!');
+        fetchArchiveData(); // Refresh the archive data
+        
+      } catch (e) {
+        setState(() { isLoading = false; });
+        _showInfoSnackBar('Error permanently deleting passenger: ${e.toString()}');
+      }
+    }
   }
 
   void _showInfoSnackBar(String message) {

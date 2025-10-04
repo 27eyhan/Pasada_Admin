@@ -6,6 +6,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pasada_admin_application/maps/google_maps_api.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/services/connectivity_service.dart';
+import 'package:pasada_admin_application/services/notification_service.dart';
+import 'package:pasada_admin_application/services/notification_history_service.dart';
+import 'package:pasada_admin_application/services/notification_trigger_service.dart';
+import 'package:pasada_admin_application/config/firebase_config.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/screen/login_set_up/login_signup.dart';
@@ -33,6 +37,38 @@ Future<void> main() async {
       storageOptions: const StorageClientOptions(
         retryAttempts: 10,
       ));
+
+  // Initialize Firebase
+  try {
+    debugPrint('Initializing Firebase...');
+    await FirebaseConfig.initialize();
+    debugPrint('Firebase initialization completed');
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
+    debugPrint('The app will continue to work, but notifications will not be available.');
+  }
+  
+  // Initialize notification services only if Firebase is ready
+  if (FirebaseConfig.isInitialized) {
+    try {
+      // Initialize notifications
+      await NotificationService.initialize();
+      
+      // Initialize notification history
+      await NotificationHistoryService.initialize();
+      
+      // Start notification monitoring (with a longer interval for testing)
+      NotificationTriggerService.setupPeriodicMonitoring(
+        interval: const Duration(minutes: 1), // Check every minute for testing
+        startImmediately: true,
+      );
+      
+      debugPrint('Notification system fully initialized');
+    } catch (e) {
+      debugPrint('Notification system initialization failed: $e');
+      debugPrint('Notifications will not be available');
+    }
+  }
 
   // Initialize Google Maps API for web platform
   if (kIsWeb) {
@@ -121,6 +157,7 @@ class SessionWatcher extends StatefulWidget {
 
 class _SessionWatcherState extends State<SessionWatcher> {
   Timer? _timer;
+  Timer? _notificationTimer;
   DateTime _lastActivity = DateTime.now();
 
   void _bumpActivity() {
@@ -217,15 +254,28 @@ class _SessionWatcherState extends State<SessionWatcher> {
     });
   }
 
+  void _startNotificationMonitoring() {
+    _notificationTimer?.cancel();
+    // Use the new structured periodic monitoring
+    NotificationTriggerService.setupPeriodicMonitoring(
+      interval: const Duration(minutes: 2),
+      startImmediately: true,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _startTimer();
+    _startNotificationMonitoring();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _notificationTimer?.cancel();
+    // Stop the structured periodic monitoring
+    NotificationTriggerService.stopPeriodicMonitoring();
     SessionService().stopWatch();
     super.dispose();
   }

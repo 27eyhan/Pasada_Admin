@@ -66,16 +66,83 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
     }
   }
 
-  // --- Action Handlers (Placeholders) ---
-  void _handleRestoreAdmin(Map<String, dynamic> selectedArchiveData) {
-    _showInfoSnackBar('Restore Admin functionality not yet implemented.');
-    // Possibly call fetchArchiveData() again after restoration
+  // --- Action Handlers ---
+  void _handleRestoreAdmin(Map<String, dynamic> selectedArchiveData) async {
+    try {
+      setState(() { isLoading = true; });
+      
+      // Get the archived admin data
+      final archiveId = selectedArchiveData['id'];
+      final adminId = selectedArchiveData['admin_id'];
+      final fullName = selectedArchiveData['full_name'];
+      final email = selectedArchiveData['email'];
+      final role = selectedArchiveData['role'];
+      
+      // Create admin data for restoration
+      final adminData = {
+        'admin_id': adminId,
+        'full_name': fullName,
+        'email': email,
+        'role': role,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      
+      // Insert the admin back into the main admin table
+      await supabase.from('adminTable').insert(adminData);
+      
+      // Delete from archive table
+      await supabase.from('adminArchives').delete().eq('id', archiveId);
+      
+      setState(() { isLoading = false; });
+      _showInfoSnackBar('Admin restored successfully!');
+      fetchArchiveData(); // Refresh the archive data
+      
+    } catch (e) {
+      setState(() { isLoading = false; });
+      _showInfoSnackBar('Error restoring admin: ${e.toString()}');
+    }
   }
 
-  void _handleDeleteAdminPermanent(Map<String, dynamic> selectedArchiveData) {
-    _showInfoSnackBar(
-        'Permanent Delete Admin functionality not yet implemented.');
-    // Possibly call fetchArchiveData() again after deletion
+  void _handleDeleteAdminPermanent(Map<String, dynamic> selectedArchiveData) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Permanent Delete'),
+        content: Text('Are you sure you want to permanently delete this admin? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      try {
+        setState(() { isLoading = true; });
+        
+        final archiveId = selectedArchiveData['id'];
+        final fullName = selectedArchiveData['full_name'];
+        
+        // Delete from archive table
+        await supabase.from('adminArchives').delete().eq('id', archiveId);
+        
+        setState(() { isLoading = false; });
+        _showInfoSnackBar('Admin $fullName permanently deleted!');
+        fetchArchiveData(); // Refresh the archive data
+        
+      } catch (e) {
+        setState(() { isLoading = false; });
+        _showInfoSnackBar('Error permanently deleting admin: ${e.toString()}');
+      }
+    }
   }
 
   void _showInfoSnackBar(String message) {
