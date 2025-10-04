@@ -3,6 +3,8 @@ import 'package:pasada_admin_application/config/palette.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/widgets/weather_widget.dart';
 import 'package:pasada_admin_application/widgets/signal_indicator.dart';
+import 'package:pasada_admin_application/services/notification_history_service.dart';
+import 'package:pasada_admin_application/screen/notification_history/notification_history_page.dart';
 import 'package:provider/provider.dart';
 
 typedef FilterCallback = void Function();
@@ -29,6 +31,36 @@ class AppBarSearch extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _AppBarSearchState extends State<AppBarSearch> {
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final count = NotificationHistoryService.getUnreadCount();
+    if (mounted) {
+      setState(() {
+        _unreadCount = count;
+      });
+    }
+  }
+
+  void _showNotificationHistory() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => NotificationHistoryPage(
+        onNotificationRead: () {
+          _loadUnreadCount();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -68,6 +100,46 @@ class _AppBarSearchState extends State<AppBarSearch> {
             const Spacer(),
             // Signal indicator
             const SignalIndicator(),
+            const SizedBox(width: 8.0),
+            // Notification button
+            Stack(
+              children: [
+                IconButton(
+                  onPressed: _showNotificationHistory,
+                  icon: Icon(
+                    Icons.notifications_outlined,
+                    color: isDark ? Palette.darkText : Palette.lightText,
+                    size: 20.0,
+                  ),
+                  tooltip: 'Notifications',
+                ),
+                if (_unreadCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        _unreadCount > 99 ? '99+' : _unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(width: 8.0),
             // Profile button styled like "Docs" link
             TextButton(

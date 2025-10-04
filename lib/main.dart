@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pasada_admin_application/maps/google_maps_api.dart';
 import 'package:pasada_admin_application/services/auth_service.dart';
 import 'package:pasada_admin_application/services/connectivity_service.dart';
+import 'package:pasada_admin_application/services/notification_service.dart';
+import 'package:pasada_admin_application/services/notification_history_service.dart';
+import 'package:pasada_admin_application/config/firebase_config.dart';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/screen/login_set_up/login_signup.dart';
@@ -33,6 +36,20 @@ Future<void> main() async {
       storageOptions: const StorageClientOptions(
         retryAttempts: 10,
       ));
+
+  // Initialize Firebase
+  try {
+    await FirebaseConfig.initialize();
+    
+    // Initialize notifications
+    await NotificationService.initialize();
+    
+    // Initialize notification history
+    await NotificationHistoryService.initialize();
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
+    debugPrint('Notifications will not be available');
+  }
 
   // Initialize Google Maps API for web platform
   if (kIsWeb) {
