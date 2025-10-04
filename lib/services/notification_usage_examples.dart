@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:pasada_admin_application/services/notification_service.dart';
 
 /// Example usage of the NotificationService
@@ -81,10 +82,10 @@ class NotificationUsageExamples {
   static void exampleGetPreferences() {
     final preferences = NotificationService.getNotificationPreferences();
     
-    print('Quota Notifications: ${preferences['quotaNotifications']}');
-    print('Capacity Notifications: ${preferences['capacityNotifications']}');
-    print('Route Change Notifications: ${preferences['routeChangeNotifications']}');
-    print('Weather Notifications: ${preferences['weatherNotifications']}');
+    debugPrint('Quota Notifications: ${preferences['quotaNotifications']}');
+    debugPrint('Capacity Notifications: ${preferences['capacityNotifications']}');
+    debugPrint('Route Change Notifications: ${preferences['routeChangeNotifications']}');
+    debugPrint('Weather Notifications: ${preferences['weatherNotifications']}');
   }
   
   /// Example: Check if notifications are enabled
@@ -92,8 +93,8 @@ class NotificationUsageExamples {
     bool isEnabled = NotificationService.isNotificationsEnabled;
     String? fcmToken = NotificationService.fcmToken;
     
-    print('Notifications Enabled: $isEnabled');
-    print('FCM Token: $fcmToken');
+    debugPrint('Notifications Enabled: $isEnabled');
+    debugPrint('FCM Token: $fcmToken');
   }
 }
 

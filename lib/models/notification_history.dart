@@ -35,23 +35,59 @@ class NotificationHistoryItem {
 
   factory NotificationHistoryItem.fromJson(Map<String, dynamic> json) {
     return NotificationHistoryItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      body: json['body'] as String,
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      body: json['body']?.toString() ?? '',
       type: NotificationType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) => e.name == json['type']?.toString(),
         orElse: () => NotificationType.systemAlert,
       ),
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      timestamp: parseTimestamp(json['timestamp']),
       status: NotificationStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) => e.name == json['status']?.toString(),
         orElse: () => NotificationStatus.sent,
       ),
       data: json['data'] as Map<String, dynamic>?,
-      driverId: json['driver_id'] as String?,
-      routeId: json['route_id'] as String?,
+      driverId: json['driver_id']?.toString(),
+      routeId: json['route_id']?.toString(),
       isRead: json['is_read'] as bool? ?? false,
     );
+  }
+
+  /// Parse timestamp from various formats
+  static DateTime parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) {
+      return DateTime.now();
+    }
+    
+    if (timestamp is int) {
+      // Check if it's milliseconds or seconds
+      if (timestamp > 2147483647) {
+        // It's in milliseconds, convert to seconds
+        return DateTime.fromMillisecondsSinceEpoch(timestamp);
+      } else {
+        // It's in seconds
+        return DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      }
+    } else if (timestamp is String) {
+      try {
+        // Try to parse as ISO string
+        return DateTime.parse(timestamp);
+      } catch (e) {
+        // If parsing fails, try to parse as Unix timestamp string
+        final intValue = int.tryParse(timestamp);
+        if (intValue != null) {
+          return parseTimestamp(intValue);
+        }
+        return DateTime.now();
+      }
+    } else if (timestamp is DateTime) {
+      // Already a DateTime object
+      return timestamp;
+    } else {
+      // Fallback to current time
+      return DateTime.now();
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -60,7 +96,7 @@ class NotificationHistoryItem {
       'title': title,
       'body': body,
       'type': type.name,
-      'timestamp': timestamp.toIso8601String(),
+      'timestamp': timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to Unix timestamp in seconds
       'status': status.name,
       'data': data,
       'driver_id': driverId,

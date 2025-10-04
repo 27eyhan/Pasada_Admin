@@ -94,12 +94,16 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
+      height: isMobile ? MediaQuery.of(context).size.height * 0.8 : null,
       decoration: BoxDecoration(
         color: isDark ? Palette.darkSurface : Palette.lightSurface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: isMobile 
+            ? const BorderRadius.vertical(top: Radius.circular(20))
+            : BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Palette.darkBorder : Palette.lightBorder,
         ),
@@ -176,9 +180,10 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: Icon(
-                    Icons.close,
+                    isMobile ? Icons.close : Icons.close,
                     color: isDark ? Palette.darkText : Palette.lightText,
                   ),
+                  tooltip: 'Close',
                 ),
               ],
             ),

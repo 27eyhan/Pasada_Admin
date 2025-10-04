@@ -32,7 +32,14 @@ class NotificationHistoryService {
 
       _notifications.clear();
       for (final item in response) {
-        _notifications.add(NotificationHistoryItem.fromJson(item));
+        try {
+          _notifications.add(NotificationHistoryItem.fromJson(item));
+        } catch (e) {
+          debugPrint('Error parsing notification item: $e');
+          debugPrint('Item data: $item');
+          // Skip this item and continue with others
+          continue;
+        }
       }
       
       debugPrint('Loaded ${_notifications.length} notifications from history');
@@ -52,7 +59,7 @@ class NotificationHistoryService {
   }) async {
     try {
       final notification = NotificationHistoryItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: 'notif_${DateTime.now().millisecondsSinceEpoch ~/ 1000}_${DateTime.now().microsecond}',
         title: title,
         body: body,
         type: type,

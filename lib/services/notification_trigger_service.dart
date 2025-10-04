@@ -568,7 +568,7 @@ class NotificationTriggerService {
       }
       // After simulated failures, call the real monitoring
       await startMonitoring();
-    };
+    }
     
     try {
       // Override the monitoring call for testing

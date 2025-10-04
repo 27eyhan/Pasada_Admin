@@ -40,24 +40,34 @@ Future<void> main() async {
 
   // Initialize Firebase
   try {
+    debugPrint('Initializing Firebase...');
     await FirebaseConfig.initialize();
-    
-    // Initialize notifications
-    await NotificationService.initialize();
-    
-    // Initialize notification history
-    await NotificationHistoryService.initialize();
-    
-    // Start notification monitoring (with a longer interval for testing)
-    NotificationTriggerService.setupPeriodicMonitoring(
-      interval: const Duration(minutes: 1), // Check every minute for testing
-      startImmediately: true,
-    );
-    
-    debugPrint('Notification system fully initialized');
+    debugPrint('Firebase initialization completed');
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
-    debugPrint('Notifications will not be available');
+    debugPrint('The app will continue to work, but notifications will not be available.');
+  }
+  
+  // Initialize notification services only if Firebase is ready
+  if (FirebaseConfig.isInitialized) {
+    try {
+      // Initialize notifications
+      await NotificationService.initialize();
+      
+      // Initialize notification history
+      await NotificationHistoryService.initialize();
+      
+      // Start notification monitoring (with a longer interval for testing)
+      NotificationTriggerService.setupPeriodicMonitoring(
+        interval: const Duration(minutes: 1), // Check every minute for testing
+        startImmediately: true,
+      );
+      
+      debugPrint('Notification system fully initialized');
+    } catch (e) {
+      debugPrint('Notification system initialization failed: $e');
+      debugPrint('Notifications will not be available');
+    }
   }
 
   // Initialize Google Maps API for web platform

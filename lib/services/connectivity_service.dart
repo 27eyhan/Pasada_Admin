@@ -93,12 +93,12 @@ class ConnectivityService extends ChangeNotifier {
       // For web, use a more reliable approach with multiple fallback URLs
       final testUrls = kIsWeb ? [
         'https://www.google.com/favicon.ico', // Google favicon - very reliable
-        'https://httpbin.org/get',
         'https://jsonplaceholder.typicode.com/posts/1',
         'https://api.github.com/zen',
         'https://www.cloudflare.com/favicon.ico' // Cloudflare favicon as final fallback
       ] : [
-        'https://httpbin.org/get'
+        'https://www.google.com/favicon.ico',
+        'https://jsonplaceholder.typicode.com/posts/1'
       ];
       
       bool connectionSuccessful = false;
@@ -183,7 +183,7 @@ class ConnectivityService extends ChangeNotifier {
       // For web, use a more reliable speed test
       final testUrl = kIsWeb 
           ? 'https://jsonplaceholder.typicode.com/posts' // Returns JSON data
-          : 'https://httpbin.org/bytes/1024';
+          : 'https://jsonplaceholder.typicode.com/posts/1';
       
       if (kIsWeb) {
         // Use http package for web platforms

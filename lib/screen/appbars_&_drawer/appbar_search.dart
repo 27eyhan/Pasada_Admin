@@ -5,6 +5,7 @@ import 'package:pasada_admin_application/widgets/weather_widget.dart';
 import 'package:pasada_admin_application/widgets/signal_indicator.dart';
 import 'package:pasada_admin_application/services/notification_history_service.dart';
 import 'package:pasada_admin_application/screen/notification_history/notification_history_page.dart';
+import 'package:pasada_admin_application/utils/responsive_utils.dart';
 import 'package:provider/provider.dart';
 
 typedef FilterCallback = void Function();
@@ -49,11 +50,9 @@ class _AppBarSearchState extends State<AppBarSearch> {
   }
 
   void _showNotificationHistory() {
-    showModalBottomSheet(
+    ResponsiveUtils.showResponsiveDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => NotificationHistoryPage(
+      child: NotificationHistoryPage(
         onNotificationRead: () {
           _loadUnreadCount();
         },

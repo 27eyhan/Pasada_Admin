@@ -65,6 +65,47 @@ class _NotificationsContentState extends State<NotificationsContent> {
     }
   }
 
+  Future<void> _refreshPermissionStatus() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Force refresh the permission status
+      final updatedStatus = await NotificationService.refreshPermissionStatus();
+      
+      if (mounted) {
+        setState(() {
+          _permissionsGranted = updatedStatus['status'] == AuthorizationStatus.authorized;
+          _permissionStatus = updatedStatus;
+          _isLoading = false;
+        });
+        
+        if (updatedStatus['status'] == AuthorizationStatus.authorized) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Notifications are now enabled!"),
+              backgroundColor: Palette.greenColor,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error refreshing status: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _requestPermissions() async {
     setState(() {
       _requestingPermissions = true;
@@ -147,14 +188,24 @@ class _NotificationsContentState extends State<NotificationsContent> {
                     size: 24,
                   ),
                   SizedBox(width: 12),
-                  Text(
-                    "Notification Permissions",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: widget.isDark ? Palette.darkText : Palette.lightText,
-                      fontFamily: 'Inter',
+                  Expanded(
+                    child: Text(
+                      "Notification Permissions",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDark ? Palette.darkText : Palette.lightText,
+                        fontFamily: 'Inter',
+                      ),
                     ),
+                  ),
+                  IconButton(
+                    onPressed: _refreshPermissionStatus,
+                    icon: Icon(
+                      Icons.refresh,
+                      color: widget.isDark ? Palette.darkText : Palette.lightText,
+                    ),
+                    tooltip: "Refresh permission status",
                   ),
                 ],
               ),
