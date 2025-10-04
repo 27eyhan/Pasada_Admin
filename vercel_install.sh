@@ -63,5 +63,46 @@ set_kv CLOUDFLARE_SITE_KEY "${CLOUDFLARE_SITE_KEY:-}"
 set_kv CLOUDFLARE_SECRET_KEY "${CLOUDFLARE_SECRET_KEY:-}"
 set_kv ADMIN_SESSIONS_TABLE "${ADMIN_SESSIONS_TABLE:-}"
 set_kv adminSessionsTable "${adminSessionsTable:-}"
+set_kv PASADA_WEB_APP_KEY "${PASADA_WEB_APP_KEY:-}"
+set_kv AUTH_DOMAIN "${AUTH_DOMAIN:-}"
+set_kv WEB_PROJECT_ID "${WEB_PROJECT_ID:-}"
+set_kv STORAGE_BUCKET "${STORAGE_BUCKET:-}"
+set_kv MESSAGING_SENDER_ID "${MESSAGING_SENDER_ID:-}"
+set_kv WEB_APP_ID "${WEB_APP_ID:-}"
+set_kv FCM_API_KEY "${FCM_API_KEY:-}"
 
+# Source the .env file to access the variables
+source assets/.env
 
+# Check if required Firebase environment variables are set
+required_vars=("PASADA_WEB_APP_KEY" "AUTH_DOMAIN" "WEB_PROJECT_ID" "STORAGE_BUCKET" "MESSAGING_SENDER_ID" "WEB_APP_ID")
+
+for var in "${required_vars[@]}"; do
+    if [ -z "${!var:-}" ]; then
+        echo "Warning: $var is not set in .env file"
+    fi
+done
+
+# Create firebase-config.js with actual values
+cat > web/firebase-config.js << EOF
+// Firebase configuration for web
+// Generated automatically - do not edit manually
+const firebaseConfig = {
+  apiKey: "${PASADA_WEB_APP_KEY:-}",
+  authDomain: "${AUTH_DOMAIN:-}",
+  projectId: "${WEB_PROJECT_ID:-}",
+  storageBucket: "${STORAGE_BUCKET:-}",
+  messagingSenderId: "${MESSAGING_SENDER_ID:-}",
+  appId: "${WEB_APP_ID:-}"
+};
+
+// Export for use in other files
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = firebaseConfig;
+} else if (typeof window !== 'undefined') {
+  window.firebaseConfig = firebaseConfig;
+}
+EOF
+
+echo "Firebase configuration injected successfully"
+echo "Generated web/firebase-config.js with environment variables"

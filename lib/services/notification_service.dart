@@ -352,12 +352,28 @@ class NotificationService {
     ));
   }
 
+  /// Send system alert notification
+  static Future<void> sendSystemAlert({
+    required String title,
+    required String message,
+    required String severity,
+  }) async {
+    await _sendNotification(NotificationData(
+      title: title,
+      body: message,
+      type: NotificationType.systemAlert,
+      data: {
+        'severity': severity,
+      },
+    ));
+  }
+
   /// Send notification to Supabase for server-side processing
   static Future<void> _sendNotification(NotificationData notificationData) async {
     try {
       // Send to Supabase for server-side notification processing
       await Supabase.instance.client
-          .from('notification_queue')
+          .from('notificationQueueTable')
           .insert({
             'title': notificationData.title,
             'body': notificationData.body,

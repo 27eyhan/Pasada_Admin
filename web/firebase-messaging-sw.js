@@ -1,17 +1,10 @@
 // Firebase Cloud Messaging Service Worker
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+importScripts('./firebase-config.js');
 
 // Initialize Firebase in the service worker
-const firebaseConfig = {
-  // Your Firebase config will be injected here
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "your-app-id"
-};
+// Firebase config is loaded from firebase-config.js
 
 firebase.initializeApp(firebaseConfig);
 

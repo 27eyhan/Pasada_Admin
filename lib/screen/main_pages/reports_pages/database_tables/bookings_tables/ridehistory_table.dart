@@ -67,10 +67,47 @@ class _BookingsTableScreenState extends State<BookingsTableScreen> {
     }
   }
 
-  // --- Action Handlers (Placeholders) ---
-  void _handleDeleteBooking(Map<String, dynamic> selectedBookingData) {
-    _showInfoSnackBar('Delete Booking functionality not yet implemented.');
-    // Possibly call fetchBookingsData() again after deletion
+  // --- Action Handlers ---
+  void _handleDeleteBooking(Map<String, dynamic> selectedBookingData) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Booking'),
+        content: Text('Are you sure you want to delete this booking? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      try {
+        setState(() { isLoading = true; });
+        
+        final bookingId = selectedBookingData['id'];
+        final passengerName = selectedBookingData['passenger_name'] ?? 'Unknown';
+        
+        // Delete the booking
+        await supabase.from('bookings').delete().eq('id', bookingId);
+        
+        setState(() { isLoading = false; });
+        _showInfoSnackBar('Booking for $passengerName deleted successfully!');
+        fetchBookingsData(); // Refresh the bookings data
+        
+      } catch (e) {
+        setState(() { isLoading = false; });
+        _showInfoSnackBar('Error deleting booking: ${e.toString()}');
+      }
+    }
   }
 
   void _showInfoSnackBar(String message) {

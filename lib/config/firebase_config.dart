@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
@@ -6,35 +5,32 @@ import 'package:flutter/foundation.dart';
 class FirebaseConfig {
   static Future<void> initialize() async {
     try {
-      // Get Firebase config from environment variables
-      final firebaseConfig = dotenv.env['WEB_FIREBASE_KEY'];
+      // Get Firebase config from individual environment variables
+      final apiKey = dotenv.env['PASADA_WEB_APP_KEY'];
+      final authDomain = dotenv.env['AUTH_DOMAIN'];
+      final projectId = dotenv.env['WEB_PROJECT_ID'];
+      final storageBucket = dotenv.env['STORAGE_BUCKET'];
+      final messagingSenderId = dotenv.env['MESSAGING_SENDER_ID'];
+      final appId = dotenv.env['WEB_APP_ID'];
       
-      if (firebaseConfig == null || firebaseConfig.isEmpty) {
-        debugPrint('WEB_FIREBASE_KEY not found, using default Firebase config');
+      if (apiKey == null || authDomain == null || projectId == null || 
+          storageBucket == null || messagingSenderId == null || appId == null) {
+        debugPrint('Firebase environment variables not found, using default Firebase config');
         await _initializeWithDefaults();
         return;
       }
       
-      // Try to parse the JSON config
-      try {
-        final config = json.decode(firebaseConfig) as Map<String, dynamic>;
-        
-        await Firebase.initializeApp(
-          options: FirebaseOptions(
-            apiKey: config['apiKey'] as String,
-            authDomain: config['authDomain'] as String,
-            projectId: config['projectId'] as String,
-            storageBucket: config['storageBucket'] as String,
-            messagingSenderId: config['messagingSenderId'] as String,
-            appId: config['appId'] as String,
-          ),
-        );
-        debugPrint('Firebase initialized with environment config');
-      } catch (e) {
-        debugPrint('Error parsing WEB_FIREBASE_KEY JSON: $e');
-        debugPrint('Falling back to default Firebase config');
-        await _initializeWithDefaults();
-      }
+      await Firebase.initializeApp(
+        options: FirebaseOptions(
+          apiKey: apiKey,
+          authDomain: authDomain,
+          projectId: projectId,
+          storageBucket: storageBucket,
+          messagingSenderId: messagingSenderId,
+          appId: appId,
+        ),
+      );
+      debugPrint('Firebase initialized with environment config');
     } catch (e) {
       debugPrint('Error initializing Firebase: $e');
       await _initializeWithDefaults();

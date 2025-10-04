@@ -25,7 +25,7 @@ class NotificationHistoryService {
   static Future<void> _loadNotificationsFromSupabase() async {
     try {
       final response = await Supabase.instance.client
-          .from('notification_history')
+          .from('notificationHistoryTable')
           .select()
           .order('timestamp', ascending: false)
           .limit(100);
@@ -68,7 +68,7 @@ class NotificationHistoryService {
 
       // Save to Supabase
       await Supabase.instance.client
-          .from('notification_history')
+          .from('notificationHistoryTable')
           .insert(notification.toJson());
 
       debugPrint('Notification added to history: ${notification.title}');
@@ -106,7 +106,7 @@ class NotificationHistoryService {
         
         // Update in Supabase
         await Supabase.instance.client
-            .from('notification_history')
+            .from('notificationHistoryTable')
             .update({'is_read': true})
             .eq('id', notificationId);
       }
@@ -126,7 +126,7 @@ class NotificationHistoryService {
       
       // Update all in Supabase
       await Supabase.instance.client
-          .from('notification_history')
+          .from('notificationHistoryTable')
           .update({'is_read': true})
           .eq('is_read', false);
     } catch (e) {
@@ -141,7 +141,7 @@ class NotificationHistoryService {
       
       // Delete from Supabase
       await Supabase.instance.client
-          .from('notification_history')
+          .from('notificationHistoryTable')
           .delete()
           .eq('id', notificationId);
     } catch (e) {
@@ -156,7 +156,7 @@ class NotificationHistoryService {
       
       // Clear from Supabase
       await Supabase.instance.client
-          .from('notification_history')
+          .from('notificationHistoryTable')
           .delete()
           .neq('id', '');
     } catch (e) {

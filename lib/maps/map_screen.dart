@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/maps/maps_call_driver.dart'; // Import the service
 import 'package:pasada_admin_application/config/palette.dart'; // Import palette for consistent colors
@@ -75,7 +74,6 @@ class MapsScreenState extends State<Mapscreen>
   @override
   void initState() {
     super.initState();
-    debugPrint('[MapsScreenState] initState called.');
 
     // Initialize filter state
     _currentSelectedStatuses = widget.selectedStatuses;
@@ -85,19 +83,8 @@ class MapsScreenState extends State<Mapscreen>
     // Load custom pin icons
     _loadCustomPinIcons();
 
-    // Log if we should focus on a specific driver
-    if (widget.driverToFocus != null) {
-      debugPrint(
-          '[MapsScreenState] Should focus on driver: ${widget.driverToFocus}');
-    }
-
     // For web platform, we need to ensure the Google Maps API is loaded
     if (kIsWeb) {
-      // Check if API key is set
-      final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
-      if (apiKey.isEmpty) {
-        debugPrint('Warning: GOOGLE_MAPS_API_KEY is not set in .env file');
-      }
       // Set a delay to ensure the API is loaded
       // We still need this delay for the map widget itself on web
       Future.delayed(Duration(milliseconds: 500), () {
@@ -115,7 +102,6 @@ class MapsScreenState extends State<Mapscreen>
   // Load custom pin icons from assets
   Future<void> _loadCustomPinIcons() async {
     try {
-      debugPrint('[MapsScreenState] Loading custom pin icons...');
 
       _customPinIcons['idling'] = await BitmapDescriptor.asset(
         ImageConfiguration(size: Size(48, 48)),
@@ -137,9 +123,7 @@ class MapsScreenState extends State<Mapscreen>
         'assets/pinOffline.png',
       );
 
-      debugPrint('[MapsScreenState] Custom pin icons loaded successfully');
     } catch (e) {
-      debugPrint('[MapsScreenState] Error loading custom pin icons: $e');
       // Fallback to default markers if custom icons fail to load
     }
   }
@@ -190,10 +174,8 @@ class MapsScreenState extends State<Mapscreen>
 
   @override
   void dispose() {
-    debugPrint('[MapsScreenState] dispose starts.');
 
     _locationUpdateTimer?.cancel();
-    debugPrint('[MapsScreenState] Timer cancelled.');
 
     // The GoogleMap widget itself handles the disposal of its controller and JS resources
     // when it's removed from the widget tree. Explicitly meddling here is often not necessary
@@ -201,13 +183,11 @@ class MapsScreenState extends State<Mapscreen>
 
     // Ensure super.dispose() is called synchronously.
     super.dispose();
-    debugPrint('[MapsScreenState] dispose finished (super.dispose() called).');
   }
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
     // _internalMapController = controller; // Remove if not used elsewhere
-    debugPrint('[MapsScreenState] _onMapCreated called.');
 
     // Apply initial map style based on current theme
     try {
@@ -218,8 +198,6 @@ class MapsScreenState extends State<Mapscreen>
     }
 
     if (_locationUpdateTimer == null || !_locationUpdateTimer!.isActive) {
-      debugPrint(
-          '[MapsScreenState] Map controller ready, starting location updates.');
       _startLocationUpdates();
     }
   }
@@ -227,12 +205,10 @@ class MapsScreenState extends State<Mapscreen>
   void _startLocationUpdates() {
     // Fetch immediately first time
     _updateDriverMarkers();
-    debugPrint('[MapsScreenState] Initial marker update requested.');
 
     // Start periodic updates (e.g., every 15 seconds)
     _locationUpdateTimer?.cancel(); // Cancel existing timer just in case
     _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
-      debugPrint('[MapsScreenState] Timer fired. Requesting marker update.');
       if (!mounted) return;
       final ok = await _updateDriverMarkers();
       if (!mounted) return;
@@ -324,21 +300,15 @@ class MapsScreenState extends State<Mapscreen>
   }
 
   Future<bool> _updateDriverMarkers() async {
-    debugPrint('[MapsScreenState] _updateDriverMarkers called.');
     List<Map<String, dynamic>> driverLocations = [];
     try {
       driverLocations = await _driverLocationService.fetchDriverLocations();
     } catch (e) {
-      debugPrint('[MapsScreenState] fetchDriverLocations error: $e');
       return false;
     }
-    debugPrint(
-        '[MapsScreenState] Received driver locations: ${driverLocations.length} drivers.');
 
     // Apply filters to driver locations
     List<Map<String, dynamic>> filteredDriverLocations = _applyFiltersToDrivers(driverLocations);
-    debugPrint(
-        '[MapsScreenState] After filtering: ${filteredDriverLocations.length} drivers.');
 
     Set<Marker> updatedMarkers = {};
     bool foundFocusDriver = false;
@@ -356,8 +326,6 @@ class MapsScreenState extends State<Mapscreen>
       if (isTargetDriver) {
         _driverLocation = position;
         foundFocusDriver = true;
-        debugPrint(
-            '[MapsScreenState] Found target driver $driverId at position: $position');
 
         // Focus on this driver's location if this is the first update
         if (widget.initialShowDriverInfo && mounted) {
@@ -373,8 +341,6 @@ class MapsScreenState extends State<Mapscreen>
               setState(() {
                 // Removed overlay fields since we now use responsive modal
               });
-              debugPrint(
-                  '[MapsScreenState] Showing custom overlay for driver $driverId');
             }
           });
         }
@@ -416,13 +382,10 @@ class MapsScreenState extends State<Mapscreen>
       setState(() {
         _markers.clear();
         _markers.addAll(updatedMarkers);
-        debugPrint(
-            '[MapsScreenState] setState called with ${updatedMarkers.length} markers.');
 
         // If we're looking for a specific driver but couldn't find them, log it
         if (widget.driverToFocus != null && !foundFocusDriver) {
-          debugPrint(
-              '[MapsScreenState] Warning: Could not find driver ${widget.driverToFocus} in location data.');
+          throw Exception('Could not find driver ${widget.driverToFocus} in location data.');
         }
       });
     }
@@ -604,7 +567,6 @@ class MapsScreenState extends State<Mapscreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    debugPrint('[MapsScreenState] build called.');
 
     if (!_isMapReady && kIsWeb) {
       return Scaffold(

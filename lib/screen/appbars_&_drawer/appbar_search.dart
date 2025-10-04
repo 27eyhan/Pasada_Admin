@@ -174,6 +174,4 @@ class _AppBarSearchState extends State<AppBarSearch> {
       ),
     );
   }
-
-  // Dropdown removed; Profile button now redirects directly to Settings (Profile tab)
 }
