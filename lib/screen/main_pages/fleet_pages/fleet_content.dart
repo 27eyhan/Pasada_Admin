@@ -11,6 +11,7 @@ import 'analytics/fleet_analytics_graph.dart';
 import 'analytics/booking_frequency_graph.dart';
 import 'package:provider/provider.dart';
 import 'route_details_dialog.dart';
+import 'add_route_dialog.dart';
 
 class FleetContent extends StatefulWidget {
   final Function(String, {Map<String, dynamic>? args})? onNavigateToPage;
@@ -439,6 +440,35 @@ class _FleetContentState extends State<FleetContent> {
                                           });
                                         },
                                       ),
+                                // Add Route button (only show when in routes view)
+                                if (showRoutes) ...[
+                                  const SizedBox(width: 12.0),
+                                  OutlinedButton.icon(
+                                    icon: Icon(
+                                      Icons.add_road,
+                                      size: 16,
+                                      color: isDark ? Palette.darkText : Palette.lightText,
+                                    ),
+                                    label: Text(
+                                      'Add a Route',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 12.0,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Palette.darkText : Palette.lightText,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+                                      backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
+                                      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                                    ),
+                                    onPressed: () {
+                                      _showAddRouteDialog();
+                                    },
+                                  ),
+                                ],
                                 const Spacer(),
                                 // Right-aligned grid/list view controls
                                     Container(
@@ -1425,5 +1455,20 @@ class _FleetContentState extends State<FleetContent> {
     else if (screenWidth < 1600) return isVertical ? 5.0 : 8.0;
     else if (screenWidth < 1800) return isVertical ? 6.0 : 9.0;
     else return isVertical ? 6.0 : 8.0;
+  }
+
+  // Show add route dialog
+  void _showAddRouteDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AddRouteDialog(
+        supabase: supabase,
+        onRouteAdded: () {
+          // Refresh routes and vehicle data when a new route is added
+          fetchRoutes();
+          fetchVehicleData();
+        },
+      ),
+    );
   }
 }
