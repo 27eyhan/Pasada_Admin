@@ -19,6 +19,14 @@ Future<void> showNotificationDetailsDialog(
   await showDialog(
     context: context,
     builder: (context) {
+      final width = MediaQuery.of(context).size.width;
+      final double titleFontSize = width < 360
+          ? 16
+          : width < 600
+              ? 18
+              : width < 1024
+                  ? 20
+                  : 22;
       return Dialog(
         insetPadding: EdgeInsets.symmetric(
           horizontal: isMobile ? 16 : media.size.width * 0.2,
@@ -62,6 +70,7 @@ Future<void> showNotificationDetailsDialog(
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
                           color: isDark ? Palette.darkText : Palette.lightText,
+                          fontSize: titleFontSize,
                         ),
                       ),
                     ),
