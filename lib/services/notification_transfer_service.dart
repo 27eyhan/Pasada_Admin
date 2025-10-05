@@ -136,7 +136,6 @@ class NotificationTransferService {
           await Supabase.instance.client
               .from('notificationHistoryTable')
               .insert({
-                'id': notification['id'],
                 'title': notification['title'],
                 'body': notification['body'],
                 'type': notification['type'],
