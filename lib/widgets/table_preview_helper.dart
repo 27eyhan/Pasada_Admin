@@ -10,6 +10,8 @@ class TablePreviewHelper {
     Widget? customActions,
     bool includeNavigation = true,
     VoidCallback? onBackPressed,
+    VoidCallback? onArchive,
+    ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
   }) {
     return TablePreviewWidget(
       tableName: 'Admin',
@@ -40,6 +42,9 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      onArchive: onArchive,
+      enableRowSelection: true,
+      onSelectionChanged: onSelectionChanged,
       includeNavigation: includeNavigation,
       onBackPressed: onBackPressed,
     );
@@ -52,6 +57,8 @@ class TablePreviewHelper {
     Widget? customActions,
     bool includeNavigation = true,
     VoidCallback? onBackPressed,
+    VoidCallback? onArchive,
+    ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver',
@@ -93,6 +100,9 @@ class TablePreviewHelper {
       showFilterButton: true,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      onArchive: onArchive,
+      enableRowSelection: true,
+      onSelectionChanged: onSelectionChanged,
       includeNavigation: includeNavigation,
       onBackPressed: onBackPressed,
     );
@@ -251,6 +261,8 @@ class TablePreviewHelper {
     Widget? customActions,
     bool includeNavigation = true,
     VoidCallback? onBackPressed,
+    VoidCallback? onArchive,
+    ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
   }) {
     return TablePreviewWidget(
       tableName: 'Bookings',
@@ -305,6 +317,9 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
+      onArchive: onArchive,
+      enableRowSelection: true,
+      onSelectionChanged: onSelectionChanged,
       includeNavigation: includeNavigation,
       onBackPressed: onBackPressed,
     );
@@ -479,6 +494,8 @@ class TablePreviewHelper {
         DataColumn(label: Text('Driver Number')),
         DataColumn(label: Text('Last Vehicle Used')),
         DataColumn(label: Text('Archived At')),
+        DataColumn(label: Text('Total Earnings')),
+        DataColumn(label: Text('Total Bookings')),
       ],
       rowBuilder: (data) => data.map((archive) {
         return DataRow(
@@ -489,6 +506,8 @@ class TablePreviewHelper {
             DataCell(Text(archive['driver_number']?.toString() ?? 'N/A')),
             DataCell(Text(archive['last_vehicle_used']?.toString() ?? 'N/A')),
             DataCell(Text(archive['archived_at']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['total_earnings']?.toString() ?? 'N/A')),
+            DataCell(Text(archive['total_bookings']?.toString() ?? 'N/A')),
           ],
         );
       }).toList(),

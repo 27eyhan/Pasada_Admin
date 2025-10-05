@@ -19,6 +19,14 @@ class TablePreviewWidget extends StatefulWidget {
   final bool showFilterButton;
   final VoidCallback? onFilterPressed;
   final Widget? customActions;
+  // Archive actions
+  final VoidCallback? onRecover; // When provided, shows a Recover action
+  final void Function(bool alsoDownloadPdf)? onDelete; // Shows Delete with confirmation; bool indicates whether to also download PDF
+  final VoidCallback? onDownloadPdf; // Optional separate Download PDF action
+  final VoidCallback? onArchive; // Optional Archive action
+  // Selection
+  final bool enableRowSelection; // When true, allows selecting a single row
+  final ValueChanged<Map<String, dynamic>?>? onSelectionChanged; // Emits selected row (or null)
   final bool includeNavigation; // New parameter to control navigation inclusion
   final VoidCallback? onBackPressed; // Callback for back button navigation
 
@@ -36,6 +44,12 @@ class TablePreviewWidget extends StatefulWidget {
     this.showFilterButton = false,
     this.onFilterPressed,
     this.customActions,
+    this.onRecover,
+    this.onDelete,
+    this.onDownloadPdf,
+    this.onArchive,
+    this.enableRowSelection = false,
+    this.onSelectionChanged,
     this.includeNavigation = true, // Default to true for backward compatibility
     this.onBackPressed, // Callback for back button navigation
   });
@@ -53,6 +67,8 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   String? errorMessage;
   late AnimationController _loadingController;
   late Animation<double> _loadingAnimation;
+  bool _deleteAlsoDownloadPdf = false; // state for delete confirmation option
+  int? _selectedGlobalIndex; // selected index within tableData (global, not just current page)
   
   // Horizontal scroll controller for data table
   final ScrollController _tableHorizontalController = ScrollController();
@@ -507,6 +523,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   }
 
   Widget _buildActionsRow(bool isDark) {
+    final bool hasSelection = _selectedGlobalIndex != null;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -530,9 +547,244 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           ),
         ),
         
-        // Filter button removed
+        // Right-side actions for archives (Recover, Download PDF, Delete)
+        Row(
+          children: [
+            if (widget.onArchive != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: OutlinedButton.icon(
+                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : widget.onArchive,
+                  icon: const Icon(Icons.archive_outlined),
+                  label: const Text('Archive'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? Palette.darkText : Palette.lightText,
+                    side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+                    padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                  ),
+                ),
+              ),
+            if (widget.onRecover != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : widget.onRecover,
+                  icon: const Icon(Icons.restore),
+                  label: const Text('Recover'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? Palette.darkPrimary : Palette.lightPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                  ),
+                ),
+              ),
+            if (widget.onDownloadPdf != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: OutlinedButton.icon(
+                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : widget.onDownloadPdf,
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('Download PDF'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? Palette.darkText : Palette.lightText,
+                    side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+                    padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                  ),
+                ),
+              ),
+            if (widget.onDelete != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : _showDeleteConfirmation,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Palette.lightError,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+                  ),
+                ),
+              ),
+            if (widget.customActions != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: widget.customActions!,
+              ),
+          ],
+        ),
       ],
     );
+  }
+
+  void _showDeleteConfirmation() async {
+    _deleteAlsoDownloadPdf = false;
+    final bool isMobile = ResponsiveHelper.isMobile(context);
+
+    if (!isMobile) {
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) {
+          final bool localIsDark = Provider.of<ThemeProvider>(context).isDarkMode;
+          return AlertDialog(
+            backgroundColor: localIsDark ? Palette.darkCard : Palette.lightCard,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+            title: Text(
+              'Delete ${widget.tableName}?',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+                color: localIsDark ? Palette.darkText : Palette.lightText,
+              ),
+            ),
+            content: StatefulBuilder(
+              builder: (context, setStateDialog) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This action cannot be undone. Are you sure you want to continue?',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: localIsDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16.0),
+                    CheckboxListTile(
+                      value: _deleteAlsoDownloadPdf,
+                      onChanged: (v) {
+                        setStateDialog(() {
+                          _deleteAlsoDownloadPdf = v ?? false;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Also download full information as PDF'),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ],
+                );
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Palette.lightError),
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed == true) {
+        widget.onDelete?.call(_deleteAlsoDownloadPdf);
+      }
+    } else {
+      // Mobile: bottom sheet
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: false,
+        backgroundColor: Colors.transparent,
+        builder: (context) {
+          final bool localIsDark = Provider.of<ThemeProvider>(context).isDarkMode;
+          return Container(
+            decoration: BoxDecoration(
+              color: localIsDark ? Palette.darkCard : Palette.lightCard,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: StatefulBuilder(
+              builder: (context, setStateSheet) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: localIsDark ? Palette.darkDivider : Palette.lightDivider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.delete_outline, color: Palette.lightError),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Delete ${widget.tableName}?',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: localIsDark ? Palette.darkText : Palette.lightText,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'This action cannot be undone.',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: localIsDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      value: _deleteAlsoDownloadPdf,
+                      onChanged: (v) {
+                        setStateSheet(() {
+                          _deleteAlsoDownloadPdf = v ?? false;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Also download full information as PDF'),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              widget.onDelete?.call(_deleteAlsoDownloadPdf);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Palette.lightError,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Delete'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+    }
   }
 
   Widget _buildTableContent(bool isDark) {
@@ -1079,7 +1331,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
               headingRowHeight: 56.0,
               dataRowMinHeight: 48.0,
               dataRowMaxHeight: 64.0,
-              showCheckboxColumn: false,
+              showCheckboxColumn: widget.enableRowSelection,
               headingRowColor: WidgetStateProperty.resolveWith<Color?>(
                 (Set<WidgetState> states) {
                   return isDark 
@@ -1100,38 +1352,69 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
                   ),
                 );
               }).toList(),
-              rows: widget.rowBuilder(paginatedData).map((row) {
-                return DataRow(
-                  color: WidgetStateProperty.resolveWith<Color?>(
-                    (Set<WidgetState> states) {
-                      if (states.contains(WidgetState.hovered)) {
-                        return isDark 
-                            ? Palette.darkBorder.withValues(alpha: 0.3)
-                            : Palette.lightBorder.withValues(alpha: 0.3);
-                      }
-                      return null;
-                    },
-                  ),
-                  cells: row.cells.map((cell) {
-                    return DataCell(
-                      DefaultTextStyle(
-                        style: TextStyle(
-                          fontSize: 14.0,
-                          fontFamily: 'Inter',
-                          color: isDark ? Palette.darkText : Palette.lightText,
-                        ),
-                        child: cell.child,
-                      ),
-                    );
-                  }).toList(),
-                );
-              }).toList(),
+              rows: _buildSelectableRows(isDark),
             ),
           ),
         ),
       ),
     ),
     );
+  }
+
+  List<DataRow> _buildSelectableRows(bool isDark) {
+    final List<DataRow> builtRows = widget.rowBuilder(paginatedData).toList();
+    final int pageStartIndex = (currentPage - 1) * itemsPerPage;
+    return List<DataRow>.generate(builtRows.length, (int localIndex) {
+      final DataRow src = builtRows[localIndex];
+      final int globalIndex = pageStartIndex + localIndex;
+      final bool isSelected = widget.enableRowSelection && (_selectedGlobalIndex == globalIndex);
+      return DataRow(
+        selected: isSelected,
+        onSelectChanged: widget.enableRowSelection
+            ? (bool? value) {
+                setState(() {
+                  if (value == true) {
+                    _selectedGlobalIndex = globalIndex;
+                  } else {
+                    _selectedGlobalIndex = null;
+                  }
+                });
+                if (widget.onSelectionChanged != null) {
+                  widget.onSelectionChanged!.call(
+                    _selectedGlobalIndex != null && _selectedGlobalIndex! >= 0 && _selectedGlobalIndex! < tableData.length
+                        ? tableData[_selectedGlobalIndex!]
+                        : null,
+                  );
+                }
+              }
+            : null,
+        color: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          if (states.contains(WidgetState.selected)) {
+            return isDark
+                ? Palette.darkPrimary.withValues(alpha: 0.15)
+                : Palette.lightPrimary.withValues(alpha: 0.15);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return isDark
+                ? Palette.darkBorder.withValues(alpha: 0.3)
+                : Palette.lightBorder.withValues(alpha: 0.3);
+          }
+          return null;
+        }),
+        cells: src.cells.map((cell) {
+          return DataCell(
+            DefaultTextStyle(
+              style: TextStyle(
+                fontSize: 14.0,
+                fontFamily: 'Inter',
+                color: isDark ? Palette.darkText : Palette.lightText,
+              ),
+              child: cell.child,
+            ),
+          );
+        }).toList(),
+      );
+    });
   }
 
   Widget _buildCompactMetric(String label, dynamic value, Color valueColor, bool isDark) {
