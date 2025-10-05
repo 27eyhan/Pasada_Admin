@@ -687,6 +687,30 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                               builder: (context) => SyncProgressDialog(
                                 title: 'Synchronizing Traffic Data',
                                 syncFunction: _synchronizeData,
+                                cancelFunction: () async {
+                                  try {
+                                    setState(() {
+                                      _syncStatus = 'Cancelling...';
+                                    });
+                                    final resp = await _analyticsService.cancelMigration();
+                                    if (resp.statusCode == 202) {
+                                      _showSuccessSnackBar('Migration cancellation requested');
+                                    } else {
+                                      _showErrorSnackBar('Cancel failed: ${resp.statusCode}');
+                                    }
+                                  } catch (e) {
+                                    _showErrorSnackBar('Cancel error: $e');
+                                  } finally {
+                                    setState(() {
+                                      _isSyncing = false;
+                                      _syncProgress = 0.0;
+                                      _syncStatus = '';
+                                      _loading = false;
+                                    });
+                                    // Refresh collection status so UI reflects rollback
+                                    _fetchCollectionStatus();
+                                  }
+                                },
                                 onComplete: () {
                                   setState(() {
                                     _isSyncing = false;

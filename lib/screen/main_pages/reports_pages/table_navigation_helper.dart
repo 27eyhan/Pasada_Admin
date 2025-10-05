@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/widgets/table_preview_helper.dart';
+import 'package:pasada_admin_application/services/archive_service.dart';
 
 class TableNavigationHelper {
   static final SupabaseClient _supabase = Supabase.instance.client;
@@ -40,6 +41,7 @@ class TableNavigationHelper {
 
   // Factory methods for creating table widgets using the centralized system
   static Widget _createAdminTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    Map<String, dynamic>? selected;
     return TablePreviewHelper.createAdminTable(
       dataFetcher: () async {
         final data = await _supabase.from('adminTable').select('*');
@@ -47,6 +49,24 @@ class TableNavigationHelper {
       },
       onRefresh: () {
         debugPrint('Admin table refreshed');
+      },
+      onSelectionChanged: (row) {
+        selected = row;
+      },
+      onArchive: () {
+        final id = selected?['admin_id'];
+        if (id is int) {
+          ArchiveService.archiveAdmin(adminId: id).then((_) {}).catchError((e) {
+            debugPrint('Archive admin error: $e');
+          });
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            ArchiveService.archiveAdmin(adminId: parsed).then((_) {}).catchError((e) {
+              debugPrint('Archive admin error: $e');
+            });
+          }
+        }
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -58,6 +78,7 @@ class TableNavigationHelper {
   }
 
   static Widget _createDriverTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    Map<String, dynamic>? selected;
     return TablePreviewHelper.createDriverTable(
       dataFetcher: () async {
         final data = await _supabase.from('driverTable').select('*');
@@ -68,6 +89,24 @@ class TableNavigationHelper {
       },
       onFilterPressed: () {
         debugPrint('Driver filter pressed');
+      },
+      onSelectionChanged: (row) {
+        selected = row;
+      },
+      onArchive: () {
+        final id = selected?['driver_id'];
+        if (id is int) {
+          ArchiveService.archiveDriver(driverId: id).then((_) {}).catchError((e) {
+            debugPrint('Archive driver error: $e');
+          });
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            ArchiveService.archiveDriver(driverId: parsed).then((_) {}).catchError((e) {
+              debugPrint('Archive driver error: $e');
+            });
+          }
+        }
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -133,6 +172,7 @@ class TableNavigationHelper {
   }
 
   static Widget _createBookingsTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    Map<String, dynamic>? selected;
     return TablePreviewHelper.createBookingsTable(
       dataFetcher: () async {
         final data = await _supabase.from('bookings').select('*');
@@ -140,6 +180,24 @@ class TableNavigationHelper {
       },
       onRefresh: () {
         debugPrint('Bookings table refreshed');
+      },
+      onSelectionChanged: (row) {
+        selected = row;
+      },
+      onArchive: () {
+        final id = selected?['booking_id'];
+        if (id is int) {
+          ArchiveService.archiveBooking(bookingId: id).then((_) {}).catchError((e) {
+            debugPrint('Archive booking error: $e');
+          });
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            ArchiveService.archiveBooking(bookingId: parsed).then((_) {}).catchError((e) {
+              debugPrint('Archive booking error: $e');
+            });
+          }
+        }
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {

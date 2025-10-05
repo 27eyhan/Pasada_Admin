@@ -107,6 +107,10 @@ class AnalyticsService {
     return http.post(_u('/api/admin/migration/run'));
   }
 
+  Future<http.Response> cancelMigration() {
+    return http.post(_u('/api/admin/migration/cancel'));
+  }
+
   // Daily traffic collection status
   Future<http.Response> getDailyCollectionStatus() {
     return http.get(_u('/api/analytics/admin/collection-status'));
