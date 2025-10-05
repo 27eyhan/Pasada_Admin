@@ -6,6 +6,7 @@ import 'package:pasada_admin_application/services/notification_history_service.d
 import 'package:pasada_admin_application/services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:pasada_admin_application/screen/notification_history/notification_details_dialog.dart';
 
 class NotificationHistoryPage extends StatefulWidget {
   final VoidCallback? onNotificationRead;
@@ -138,44 +139,103 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                   ),
                 ),
                 const Spacer(),
-                if (_notifications.isNotEmpty) ...[
-                  IconButton(
-                    onPressed: _markAllAsRead,
+                if (isMobile)
+                  PopupMenuButton<String>(
                     icon: Icon(
-                      Icons.mark_email_read,
+                      Icons.more_vert,
                       color: isDark ? Palette.darkText : Palette.lightText,
                     ),
-                    tooltip: 'Mark all as read',
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text('Clear All Notifications'),
-                          content: Text('Are you sure you want to clear all notifications?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _clearAllNotifications();
-                              },
-                              child: Text('Clear All'),
-                            ),
-                          ],
+                    itemBuilder: (context) => [
+                      if (_notifications.isNotEmpty)
+                        PopupMenuItem(
+                          value: 'mark_all',
+                          child: Row(
+                            children: [
+                              Icon(Icons.mark_email_read, size: 18),
+                              const SizedBox(width: 8),
+                              Text('Mark all as read'),
+                            ],
+                          ),
                         ),
-                      );
+                      if (_notifications.isNotEmpty)
+                        PopupMenuItem(
+                          value: 'clear_all',
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear_all, size: 18, color: Colors.red),
+                              const SizedBox(width: 8),
+                              Text('Clear all', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'mark_all') {
+                        _markAllAsRead();
+                      } else if (value == 'clear_all') {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Clear All Notifications'),
+                            content: Text('Are you sure you want to clear all notifications?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _clearAllNotifications();
+                                },
+                                child: Text('Clear All'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                     },
-                    icon: Icon(
-                      Icons.clear_all,
-                      color: Colors.red,
+                  )
+                else ...[
+                  if (_notifications.isNotEmpty)
+                    IconButton(
+                      onPressed: _markAllAsRead,
+                      icon: Icon(
+                        Icons.mark_email_read,
+                        color: isDark ? Palette.darkText : Palette.lightText,
+                      ),
+                      tooltip: 'Mark all as read',
                     ),
-                    tooltip: 'Clear all',
-                  ),
+                  if (_notifications.isNotEmpty)
+                    IconButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Clear All Notifications'),
+                            content: Text('Are you sure you want to clear all notifications?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _clearAllNotifications();
+                                },
+                                child: Text('Clear All'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      icon: Icon(
+                        Icons.clear_all,
+                        color: Colors.red,
+                      ),
+                      tooltip: 'Clear all',
+                    ),
                 ],
                 IconButton(
                   onPressed: () => Navigator.pop(context),
@@ -252,35 +312,50 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           Expanded(
             child: _isLoading
                 ? Center(child: CircularProgressIndicator(color: Palette.greenColor))
-                : _filteredNotifications.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.notifications_none,
-                              size: 64,
-                              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No notifications',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _filteredNotifications.length,
-                        itemBuilder: (context, index) {
-                          final notification = _filteredNotifications[index];
-                          return _buildNotificationItem(notification, isDark);
-                        },
-                      ),
+                : RefreshIndicator(
+                    color: Palette.greenColor,
+                    onRefresh: _loadNotifications,
+                    child: _filteredNotifications.isEmpty
+                        ? LayoutBuilder(
+                            builder: (context, constraints) {
+                              return SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.notifications_none,
+                                          size: 64,
+                                          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'No notifications',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            itemCount: _filteredNotifications.length,
+                            itemBuilder: (context, index) {
+                              final notification = _filteredNotifications[index];
+                              return _buildNotificationItem(notification, isDark);
+                            },
+                          ),
+                  ),
           ),
         ],
       ),
@@ -288,98 +363,185 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
   }
 
   Widget _buildNotificationItem(NotificationHistoryItem notification, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: notification.isRead 
-            ? (isDark ? Palette.darkCard : Palette.lightCard)
-            : (isDark ? Palette.darkCard.withValues(alpha: 0.8) : Palette.lightCard.withValues(alpha: 0.8)),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: notification.isRead 
-              ? (isDark ? Palette.darkBorder : Palette.lightBorder)
-              : Palette.greenColor.withValues(alpha: 0.3),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
+    return Dismissible(
+      key: ValueKey(notification.id),
+      background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Row(
+          children: [
+            Icon(Icons.mark_email_read, color: Colors.green),
+            const SizedBox(width: 8),
+            Text('Mark as read', style: TextStyle(color: Colors.green)),
+          ],
         ),
       ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _getTypeColor(notification.type).withValues(alpha: 0.1),
-          child: Icon(
-            _getTypeIcon(notification.type),
-            color: _getTypeColor(notification.type),
-            size: 20,
-          ),
+      secondaryBackground: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
         ),
-        title: Text(
-          notification.title,
-          style: TextStyle(
-            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w600,
-            color: isDark ? Palette.darkText : Palette.lightText,
-            fontFamily: 'Inter',
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text(
-              notification.body,
-              style: TextStyle(
-                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                fontFamily: 'Inter',
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('MMM dd, yyyy • HH:mm').format(notification.timestamp),
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                fontFamily: 'Inter',
-              ),
-            ),
+            Text('Delete', style: TextStyle(color: Colors.red)),
+            const SizedBox(width: 8),
+            Icon(Icons.delete, color: Colors.red),
           ],
         ),
-        trailing: PopupMenuButton(
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'read',
-              child: Row(
-                children: [
-                  Icon(Icons.mark_email_read, size: 16),
-                  const SizedBox(width: 8),
-                  Text(notification.isRead ? 'Mark as unread' : 'Mark as read'),
-                ],
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          if (!notification.isRead) {
+            await _markAsRead(notification);
+          }
+          return false; // keep item after action
+        }
+        if (direction == DismissDirection.endToStart) {
+          await _deleteNotification(notification);
+          return true; // remove immediately
+        }
+        return false;
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: notification.isRead 
+              ? (isDark ? Palette.darkCard : Palette.lightCard)
+              : (isDark ? Palette.darkCard.withValues(alpha: 0.8) : Palette.lightCard.withValues(alpha: 0.8)),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: notification.isRead 
+                ? (isDark ? Palette.darkBorder : Palette.lightBorder)
+                : Palette.greenColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          leading: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                backgroundColor: _getTypeColor(notification.type).withValues(alpha: 0.1),
+                child: Icon(
+                  _getTypeIcon(notification.type),
+                  color: _getTypeColor(notification.type),
+                  size: 20,
+                ),
               ),
+              if (!notification.isRead)
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Palette.greenColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isDark ? Palette.darkSurface : Palette.lightSurface, width: 1),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          title: Text(
+            notification.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w600,
+              color: isDark ? Palette.darkText : Palette.lightText,
+              fontFamily: 'Inter',
             ),
-            PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, size: 16, color: Colors.red),
-                  const SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
-                ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                notification.body,
+                style: TextStyle(
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  fontFamily: 'Inter',
+                ),
+                maxLines: isMobile ? 2 : 3,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
-          onSelected: (value) {
-            if (value == 'read') {
+              const SizedBox(height: 4),
+              Text(
+                isMobile
+                    ? _formatTimestampShort(notification.timestamp)
+                    : DateFormat('MMM dd, yyyy • HH:mm').format(notification.timestamp),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+          trailing: isMobile
+              ? Icon(Icons.chevron_right, color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary)
+              : PopupMenuButton(
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'read',
+                      child: Row(
+                        children: [
+                          Icon(Icons.mark_email_read, size: 16),
+                          const SizedBox(width: 8),
+                          Text(notification.isRead ? 'Mark as unread' : 'Mark as read'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 16, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Text('Delete', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'read') {
+                      _markAsRead(notification);
+                    } else if (value == 'delete') {
+                      _deleteNotification(notification);
+                    }
+                  },
+                ),
+          onTap: () {
+            if (!notification.isRead) {
               _markAsRead(notification);
-            } else if (value == 'delete') {
-              _deleteNotification(notification);
             }
+            showNotificationDetailsDialog(context, notification);
           },
         ),
-        onTap: () {
-          if (!notification.isRead) {
-            _markAsRead(notification);
-          }
-          _showNotificationDetails(notification);
-        },
       ),
     );
+  }
+
+  String _formatTimestampShort(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return DateFormat('MMM d').format(timestamp);
   }
 
   String _getTypeDisplayName(NotificationType type) {
@@ -427,200 +589,4 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
     }
   }
 
-  void _showNotificationDetails(NotificationHistoryItem notification) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDark = themeProvider.isDarkMode;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Row(
-            children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: _getTypeColor(notification.type).withValues(alpha: 0.1),
-                child: Icon(
-                  _getTypeIcon(notification.type),
-                  color: _getTypeColor(notification.type),
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  notification.title,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Palette.darkText : Palette.lightText,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Body
-                Text(
-                  notification.body,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    color: isDark ? Palette.darkText : Palette.lightText,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Meta info
-                _DetailRow(
-                  label: 'Type',
-                  value: _getTypeDisplayName(notification.type),
-                  isDark: isDark,
-                ),
-                _DetailRow(
-                  label: 'Status',
-                  value: notification.status.name,
-                  isDark: isDark,
-                ),
-                _DetailRow(
-                  label: 'Timestamp',
-                  value: DateFormat('yyyy-MM-dd HH:mm:ss').format(notification.timestamp),
-                  isDark: isDark,
-                ),
-                if (notification.driverId != null && notification.driverId!.isNotEmpty)
-                  _DetailRow(
-                    label: 'Driver ID',
-                    value: notification.driverId!,
-                    isDark: isDark,
-                  ),
-                if (notification.routeId != null && notification.routeId!.isNotEmpty)
-                  _DetailRow(
-                    label: 'Route ID',
-                    value: notification.routeId!,
-                    isDark: isDark,
-                  ),
-                if (notification.data != null && notification.data!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Additional Data',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Palette.darkText : Palette.lightText,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? Palette.darkSurface : Palette.lightSurface,
-                      border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: notification.data!.entries.map((e) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 100,
-                                child: Text(
-                                  e.key,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: SelectableText(
-                                  _stringify(e.value),
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    color: isDark ? Palette.darkText : Palette.lightText,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  String _stringify(dynamic value) {
-    try {
-      if (value == null) return 'null';
-      if (value is String) return value;
-      return value.toString();
-    } catch (_) {
-      return '';
-    }
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool isDark;
-
-  const _DetailRow({
-    required this.label,
-    required this.value,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                color: isDark ? Palette.darkText : Palette.lightText,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
