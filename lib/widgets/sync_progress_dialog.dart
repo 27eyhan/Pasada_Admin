@@ -8,6 +8,7 @@ class SyncProgressDialog extends StatefulWidget {
   final Future<void> Function() syncFunction;
   final VoidCallback? onComplete;
   final VoidCallback? onError;
+  final Future<void> Function()? cancelFunction;
 
   const SyncProgressDialog({
     super.key,
@@ -15,6 +16,7 @@ class SyncProgressDialog extends StatefulWidget {
     required this.syncFunction,
     this.onComplete,
     this.onError,
+    this.cancelFunction,
   });
 
   @override
@@ -27,6 +29,7 @@ class _SyncProgressDialogState extends State<SyncProgressDialog> {
   bool _isCompleted = false;
   bool _hasError = false;
   String? _errorMessage;
+  bool _isCancelling = false;
 
   @override
   void initState() {
@@ -196,17 +199,39 @@ class _SyncProgressDialogState extends State<SyncProgressDialog> {
             // Cancel button (only show if not completed and no error)
             if (!_isCompleted && !_hasError)
               TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14.0,
-                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
-                  ),
-                ),
+                onPressed: _isCancelling
+                    ? null
+                    : () async {
+                        try {
+                          setState(() {
+                            _isCancelling = true;
+                            _statusText = 'Requesting cancellation...';
+                          });
+                          if (widget.cancelFunction != null) {
+                            await widget.cancelFunction!.call();
+                          }
+                        } catch (_) {
+                          // ignore UI-level errors here
+                        } finally {
+                          if (mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        }
+                      },
+                child: _isCancelling
+                    ? SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14.0,
+                          color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                        ),
+                      ),
               ),
           ],
         ),
