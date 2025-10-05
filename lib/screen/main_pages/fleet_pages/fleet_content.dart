@@ -284,6 +284,7 @@ class _FleetContentState extends State<FleetContent> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final isMobile = ResponsiveHelper.isMobile(context);
     
     return Container(
       color: isDark ? Palette.darkSurface : Palette.lightSurface,
@@ -440,34 +441,54 @@ class _FleetContentState extends State<FleetContent> {
                                           });
                                         },
                                       ),
-                                // Add Route button (only show when in routes view)
+                                // Add Route control (only show when in routes view)
                                 if (showRoutes) ...[
                                   const SizedBox(width: 12.0),
-                                  OutlinedButton.icon(
-                                    icon: Icon(
-                                      Icons.add_road,
-                                      size: 16,
-                                      color: isDark ? Palette.darkText : Palette.lightText,
-                                    ),
-                                    label: Text(
-                                      'Add a Route',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 12.0,
-                                        fontWeight: FontWeight.w600,
+                                  if (isMobile)
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Palette.darkCard : Palette.lightCard,
+                                        border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+                                        borderRadius: BorderRadius.circular(8.0),
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(
+                                          Icons.add_road,
+                                          size: 18,
+                                          color: isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                        tooltip: 'Add a Route',
+                                        onPressed: () {
+                                          _showAddRouteDialog();
+                                        },
+                                      ),
+                                    )
+                                  else
+                                    OutlinedButton.icon(
+                                      icon: Icon(
+                                        Icons.add_road,
+                                        size: 16,
                                         color: isDark ? Palette.darkText : Palette.lightText,
                                       ),
+                                      label: Text(
+                                        'Add a Route',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12.0,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? Palette.darkText : Palette.lightText,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+                                        backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
+                                        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                                      ),
+                                      onPressed: () {
+                                        _showAddRouteDialog();
+                                      },
                                     ),
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(color: isDark ? Palette.darkBorder : Palette.lightBorder),
-                                      backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
-                                      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                                    ),
-                                    onPressed: () {
-                                      _showAddRouteDialog();
-                                    },
-                                  ),
                                 ],
                                 const Spacer(),
                                 // Right-aligned grid/list view controls
