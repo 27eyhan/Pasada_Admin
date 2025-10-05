@@ -376,6 +376,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           if (!notification.isRead) {
             _markAsRead(notification);
           }
+          _showNotificationDetails(notification);
         },
       ),
     );
@@ -424,5 +425,202 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
       case NotificationType.systemAlert:
         return Colors.grey;
     }
+  }
+
+  void _showNotificationDetails(NotificationHistoryItem notification) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDark = themeProvider.isDarkMode;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? Palette.darkCard : Palette.lightCard,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: _getTypeColor(notification.type).withValues(alpha: 0.1),
+                child: Icon(
+                  _getTypeIcon(notification.type),
+                  color: _getTypeColor(notification.type),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  notification.title,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Palette.darkText : Palette.lightText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Body
+                Text(
+                  notification.body,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    color: isDark ? Palette.darkText : Palette.lightText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Meta info
+                _DetailRow(
+                  label: 'Type',
+                  value: _getTypeDisplayName(notification.type),
+                  isDark: isDark,
+                ),
+                _DetailRow(
+                  label: 'Status',
+                  value: notification.status.name,
+                  isDark: isDark,
+                ),
+                _DetailRow(
+                  label: 'Timestamp',
+                  value: DateFormat('yyyy-MM-dd HH:mm:ss').format(notification.timestamp),
+                  isDark: isDark,
+                ),
+                if (notification.driverId != null && notification.driverId!.isNotEmpty)
+                  _DetailRow(
+                    label: 'Driver ID',
+                    value: notification.driverId!,
+                    isDark: isDark,
+                  ),
+                if (notification.routeId != null && notification.routeId!.isNotEmpty)
+                  _DetailRow(
+                    label: 'Route ID',
+                    value: notification.routeId!,
+                    isDark: isDark,
+                  ),
+                if (notification.data != null && notification.data!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Additional Data',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Palette.darkText : Palette.lightText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? Palette.darkSurface : Palette.lightSurface,
+                      border: Border.all(color: isDark ? Palette.darkBorder : Palette.lightBorder),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: notification.data!.entries.map((e) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 100,
+                                child: Text(
+                                  e.key,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: SelectableText(
+                                  _stringify(e.value),
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    color: isDark ? Palette.darkText : Palette.lightText,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _stringify(dynamic value) {
+    try {
+      if (value == null) return 'null';
+      if (value is String) return value;
+      return value.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isDark;
+
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: isDark ? Palette.darkText : Palette.lightText,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
