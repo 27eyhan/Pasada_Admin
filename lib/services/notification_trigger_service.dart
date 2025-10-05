@@ -187,44 +187,44 @@ class NotificationTriggerService {
       // Get quota data for all drivers
       final response = await _supabase
           .from('driverQuotasTable')
-          .select('driver_id, daily_target, daily_current, weekly_target, weekly_current, monthly_target, monthly_current, driverTable!left(full_name)');
+          .select('driver_id, quota_daily, current_quota_daily, quota_weekly, current_quota_weekly, quota_monthly, current_quota_monthly, driverTable!left(full_name)');
       
       for (final quota in response) {
         final driverId = quota['driver_id'];
         
         // Check daily quota
-        final dailyTarget = quota['daily_target'] as int? ?? 0;
-        final dailyCurrent = quota['daily_current'] as int? ?? 0;
+        final dailyTarget = quota['quota_daily'] as num? ?? 0;
+        final dailyCurrent = quota['current_quota_daily'] as num? ?? 0;
         
         if (dailyTarget > 0 && dailyCurrent >= dailyTarget) {
           await NotificationService.checkQuotaNotification(
             driverId: driverId.toString(),
-            currentRides: dailyCurrent,
-            quotaTarget: dailyTarget,
+            currentRides: dailyCurrent.toInt(),
+            quotaTarget: dailyTarget.toInt(),
           );
         }
         
         // Check weekly quota
-        final weeklyTarget = quota['weekly_target'] as int? ?? 0;
-        final weeklyCurrent = quota['weekly_current'] as int? ?? 0;
+        final weeklyTarget = quota['quota_weekly'] as num? ?? 0;
+        final weeklyCurrent = quota['current_quota_weekly'] as num? ?? 0;
         
         if (weeklyTarget > 0 && weeklyCurrent >= weeklyTarget) {
           await NotificationService.checkQuotaNotification(
             driverId: driverId.toString(),
-            currentRides: weeklyCurrent,
-            quotaTarget: weeklyTarget,
+            currentRides: weeklyCurrent.toInt(),
+            quotaTarget: weeklyTarget.toInt(),
           );
         }
         
         // Check monthly quota
-        final monthlyTarget = quota['monthly_target'] as int? ?? 0;
-        final monthlyCurrent = quota['monthly_current'] as int? ?? 0;
+        final monthlyTarget = quota['quota_monthly'] as num? ?? 0;
+        final monthlyCurrent = quota['current_quota_monthly'] as num? ?? 0;
         
         if (monthlyTarget > 0 && monthlyCurrent >= monthlyTarget) {
           await NotificationService.checkQuotaNotification(
             driverId: driverId.toString(),
-            currentRides: monthlyCurrent,
-            quotaTarget: monthlyTarget,
+            currentRides: monthlyCurrent.toInt(),
+            quotaTarget: monthlyTarget.toInt(),
           );
         }
       }

@@ -76,7 +76,18 @@ class NotificationHistoryService {
       // Save to Supabase
       await Supabase.instance.client
           .from('notificationHistoryTable')
-          .insert(notification.toJson());
+          .insert({
+            // omit 'id' to let DB generate integer primary key
+            'title': notification.title,
+            'body': notification.body,
+            'type': notification.type.name,
+            'timestamp': notification.timestamp.millisecondsSinceEpoch ~/ 1000,
+            'status': notification.status.name,
+            'data': notification.data,
+            'driver_id': notification.driverId,
+            'route_id': notification.routeId,
+            'is_read': notification.isRead,
+          });
 
       debugPrint('Notification added to history: ${notification.title}');
     } catch (e) {
