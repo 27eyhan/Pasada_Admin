@@ -45,8 +45,8 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
       isLoading = true;
     });
     try {
-      // Fetch all columns from the 'adminArchives' table.
-      final data = await supabase.from('adminArchives').select('*');
+      // Fetch archived admins from adminTable where is_archived = true
+      final data = await supabase.from('adminTable').select('*').eq('is_archived', true);
       // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) {
@@ -71,27 +71,12 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
     try {
       setState(() { isLoading = true; });
       
-      // Get the archived admin data
-      final archiveId = selectedArchiveData['id'];
+      // Unarchive: set is_archived = false for this admin
       final adminId = selectedArchiveData['admin_id'];
-      final fullName = selectedArchiveData['full_name'];
-      final email = selectedArchiveData['email'];
-      final role = selectedArchiveData['role'];
-      
-      // Create admin data for restoration
-      final adminData = {
-        'admin_id': adminId,
-        'full_name': fullName,
-        'email': email,
-        'role': role,
-        'created_at': DateTime.now().toIso8601String(),
-      };
-      
-      // Insert the admin back into the main admin table
-      await supabase.from('adminTable').insert(adminData);
-      
-      // Delete from archive table
-      await supabase.from('adminArchives').delete().eq('id', archiveId);
+      await supabase
+          .from('adminTable')
+          .update({'is_archived': false})
+          .match({'admin_id': adminId});
       
       setState(() { isLoading = false; });
       _showInfoSnackBar('Admin restored successfully!');
@@ -128,11 +113,11 @@ class _AdminArchTableScreenState extends State<AdminArchTableScreen> {
       try {
         setState(() { isLoading = true; });
         
-        final archiveId = selectedArchiveData['id'];
-        final fullName = selectedArchiveData['full_name'];
+        final adminId = selectedArchiveData['admin_id'];
+        final fullName = '${selectedArchiveData['first_name'] ?? ''} ${selectedArchiveData['last_name'] ?? ''}'.trim();
         
-        // Delete from archive table
-        await supabase.from('adminArchives').delete().eq('id', archiveId);
+        // Permanently delete the admin
+        await supabase.from('adminTable').delete().eq('admin_id', adminId);
         
         setState(() { isLoading = false; });
         _showInfoSnackBar('Admin $fullName permanently deleted!');

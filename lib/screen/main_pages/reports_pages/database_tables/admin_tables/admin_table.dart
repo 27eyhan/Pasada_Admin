@@ -42,7 +42,7 @@ class _AdminTableScreenState extends State<AdminTableScreen> {
       isLoading = true;
     });
     try {
-      final data = await supabase.from('adminTable').select('*');
+      final data = await supabase.from('adminTable').select('*').eq('is_archived', false);
       final List listData = data as List;
       if (mounted) {
         setState(() {

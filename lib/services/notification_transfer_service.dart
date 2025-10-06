@@ -9,8 +9,6 @@ class NotificationTransferService {
           .rpc('transfer_notifications_to_history');
       
       final transferredCount = response as int;
-      debugPrint('Transferred $transferredCount notifications to history');
-      
       return transferredCount;
     } catch (e) {
       debugPrint('Error transferring notifications: $e');
@@ -25,11 +23,8 @@ class NotificationTransferService {
           .rpc('cleanup_old_notifications');
       
       final cleanedCount = response as int;
-      debugPrint('Cleaned up $cleanedCount old notifications');
-      
       return cleanedCount;
     } catch (e) {
-      debugPrint('Error cleaning up notifications: $e');
       rethrow;
     }
   }
@@ -71,7 +66,7 @@ class NotificationTransferService {
         'history_by_status': historyByStatus,
       };
     } catch (e) {
-      debugPrint('Error getting queue statistics: $e');
+      
       return {
         'queue_total': 0,
         'history_total': 0,
@@ -92,7 +87,7 @@ class NotificationTransferService {
 
       return response.isNotEmpty;
     } catch (e) {
-      debugPrint('Error checking if transfer is needed: $e');
+      
       return false;
     }
   }
@@ -108,7 +103,7 @@ class NotificationTransferService {
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      debugPrint('Error getting notifications needing transfer: $e');
+      
       return [];
     }
   }
@@ -122,14 +117,33 @@ class NotificationTransferService {
       int errorCount = 0;
       final errors = <String>[];
 
-      debugPrint('Starting manual transfer of $totalCount notifications');
+      
 
       for (final notification in notifications) {
         try {
-          // Convert timestamp if needed
-          int timestamp = notification['timestamp'] as int;
-          if (timestamp > 2147483647) {
-            timestamp = timestamp ~/ 1000;
+          // Normalize timestamp to ISO8601 string for timestamptz column
+          final dynamic rawTs = notification['timestamp'];
+          DateTime ts;
+          if (rawTs == null) {
+            ts = DateTime.now();
+          } else if (rawTs is int) {
+            // Heuristic: values > 2_147_483_647 are likely milliseconds
+            ts = rawTs > 2147483647
+                ? DateTime.fromMillisecondsSinceEpoch(rawTs)
+                : DateTime.fromMillisecondsSinceEpoch(rawTs * 1000);
+          } else if (rawTs is String) {
+            final parsedInt = int.tryParse(rawTs);
+            if (parsedInt != null) {
+              ts = parsedInt > 2147483647
+                  ? DateTime.fromMillisecondsSinceEpoch(parsedInt)
+                  : DateTime.fromMillisecondsSinceEpoch(parsedInt * 1000);
+            } else {
+              ts = DateTime.tryParse(rawTs) ?? DateTime.now();
+            }
+          } else if (rawTs is DateTime) {
+            ts = rawTs;
+          } else {
+            ts = DateTime.now();
           }
 
           // Insert into history
@@ -139,7 +153,7 @@ class NotificationTransferService {
                 'title': notification['title'],
                 'body': notification['body'],
                 'type': notification['type'],
-                'timestamp': timestamp,
+                'timestamp': ts.toIso8601String(),
                 'status': notification['status'],
                 'data': notification['data'],
                 'driver_id': notification['driver_id'],
@@ -158,7 +172,6 @@ class NotificationTransferService {
         } catch (e) {
           errorCount++;
           errors.add('Notification ${notification['id']}: $e');
-          debugPrint('Error transferring notification ${notification['id']}: $e');
         }
       }
 
@@ -170,7 +183,7 @@ class NotificationTransferService {
         'success': errorCount == 0,
       };
     } catch (e) {
-      debugPrint('Error in manual transfer: $e');
+      
       return {
         'total': 0,
         'transferred': 0,

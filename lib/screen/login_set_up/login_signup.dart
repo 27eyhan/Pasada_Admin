@@ -83,6 +83,7 @@ class _LoginSignupState extends State<LoginSignup> {
       final response = await supabase
           .from('adminTable')
           .select('admin_id, admin_username, admin_password')
+          .eq('is_archived', false)
           .ilike('admin_username',
               enteredUsername) // Find potential match ignoring case
           .limit(1)

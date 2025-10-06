@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/widgets/table_preview_helper.dart';
 import 'package:pasada_admin_application/services/archive_service.dart';
+import 'package:pasada_admin_application/services/pdf_export_service.dart';
+import 'package:printing/printing.dart';
+import 'package:pasada_admin_application/services/file_download_service.dart';
 
 class TableNavigationHelper {
   static final SupabaseClient _supabase = Supabase.instance.client;
@@ -44,7 +47,7 @@ class TableNavigationHelper {
     Map<String, dynamic>? selected;
     return TablePreviewHelper.createAdminTable(
       dataFetcher: () async {
-        final data = await _supabase.from('adminTable').select('*');
+        final data = await _supabase.from('adminTable').select('*').eq('is_archived', false);
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
@@ -53,24 +56,19 @@ class TableNavigationHelper {
       onSelectionChanged: (row) {
         selected = row;
       },
-      onArchive: () {
+      onArchive: () async {
         final id = selected?['admin_id'];
         if (id is int) {
-          ArchiveService.archiveAdmin(adminId: id).then((ok) {
-            if (ok) debugPrint('Admin archived successfully (id: $id)');
-          }).catchError((e) {
-            debugPrint('Archive admin error: $e');
-          });
+          final ok = await ArchiveService.archiveAdmin(adminId: id);
+          return ok;
         } else if (id is String) {
           final parsed = int.tryParse(id);
           if (parsed != null) {
-            ArchiveService.archiveAdmin(adminId: parsed).then((ok) {
-              if (ok) debugPrint('Admin archived successfully (id: $parsed)');
-            }).catchError((e) {
-              debugPrint('Archive admin error: $e');
-            });
+            final ok = await ArchiveService.archiveAdmin(adminId: parsed);
+            return ok;
           }
         }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -85,7 +83,7 @@ class TableNavigationHelper {
     Map<String, dynamic>? selected;
     return TablePreviewHelper.createDriverTable(
       dataFetcher: () async {
-        final data = await _supabase.from('driverTable').select('*');
+        final data = await _supabase.from('driverTable').select('*').eq('is_archived', false);
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
@@ -97,24 +95,19 @@ class TableNavigationHelper {
       onSelectionChanged: (row) {
         selected = row;
       },
-      onArchive: () {
+      onArchive: () async {
         final id = selected?['driver_id'];
         if (id is int) {
-          ArchiveService.archiveDriver(driverId: id).then((ok) {
-            if (ok) debugPrint('Driver archived successfully (id: $id)');
-          }).catchError((e) {
-            debugPrint('Archive driver error: $e');
-          });
+          final ok = await ArchiveService.archiveDriver(driverId: id);
+          return ok;
         } else if (id is String) {
           final parsed = int.tryParse(id);
           if (parsed != null) {
-            ArchiveService.archiveDriver(driverId: parsed).then((ok) {
-              if (ok) debugPrint('Driver archived successfully (id: $parsed)');
-            }).catchError((e) {
-              debugPrint('Archive driver error: $e');
-            });
+            final ok = await ArchiveService.archiveDriver(driverId: parsed);
+            return ok;
           }
         }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -192,24 +185,19 @@ class TableNavigationHelper {
       onSelectionChanged: (row) {
         selected = row;
       },
-      onArchive: () {
+      onArchive: () async {
         final id = selected?['booking_id'];
         if (id is int) {
-          ArchiveService.archiveBooking(bookingId: id).then((ok) {
-            if (ok) debugPrint('Booking archived successfully (id: $id)');
-          }).catchError((e) {
-            debugPrint('Archive booking error: $e');
-          });
+          final ok = await ArchiveService.archiveBooking(bookingId: id);
+          return ok;
         } else if (id is String) {
           final parsed = int.tryParse(id);
           if (parsed != null) {
-            ArchiveService.archiveBooking(bookingId: parsed).then((ok) {
-              if (ok) debugPrint('Booking archived successfully (id: $parsed)');
-            }).catchError((e) {
-              debugPrint('Archive booking error: $e');
-            });
+            final ok = await ArchiveService.archiveBooking(bookingId: parsed);
+            return ok;
           }
         }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -311,10 +299,65 @@ class TableNavigationHelper {
   }
 
   static Widget _createDriverArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    Map<String, dynamic>? selected;
     return TablePreviewHelper.createDriverArchivesTable(
       dataFetcher: () async {
-        final data = await _supabase.from('driverArchives').select('*');
+        final data = await _supabase.from('driverTable').select('*').eq('is_archived', true);
         return (data as List).cast<Map<String, dynamic>>();
+      },
+      onSelectionChanged: (row) { selected = row; },
+      onRecover: () async {
+        final id = selected?['driver_id'];
+        if (id is int) {
+          final res = await _supabase
+              .from('driverTable')
+              .update({'is_archived': false})
+              .match({'driver_id': id})
+              .select()
+              .maybeSingle();
+          return res != null;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase
+                .from('driverTable')
+                .update({'is_archived': false})
+                .match({'driver_id': parsed})
+                .select()
+                .maybeSingle();
+            return res != null;
+          }
+        }
+        return false;
+      },
+      onDelete: (alsoDownloadPdf) async {
+        final id = selected?['driver_id'];
+        Map<String, dynamic>? record = selected;
+        if (record == null && id != null) {
+          final fetched = await _supabase.from('driverTable').select('*').eq('driver_id', id).maybeSingle();
+          if (fetched is Map<String, dynamic>) record = fetched;
+        }
+        if (alsoDownloadPdf && record != null) {
+          final bytes = await PdfExportService.generateRecordPdf(
+            title: 'Driver Record',
+            record: record,
+            postScript: """This document is an official extract of the driver record deleted from the PASADA administrative system. It is provided solely for statutory retention, audit, and incident review purposes. Access to this file is restricted to authorized personnel only.\n\nHandling and retention:\n- Store in a secure, access-controlled repository.\n- Retain in accordance with PASADA data retention and local regulatory requirements.\n- Do not transmit externally without written authorization from Compliance and Data Protection.\n\nRestoration and follow-up:\n- This file cannot be used to reinstate the account. To restore access, a new driver record must be created, subject to current onboarding policies and approvals.\n- If this deletion was performed in error, contact IT Support and Compliance immediately to initiate corrective procedures.\n\nConfidentiality notice:\n- This document may contain personal and/or sensitive information. Unauthorized disclosure, copying, or distribution is strictly prohibited and may be unlawful.\n\nFor any questions regarding this record, contact PASADA Compliance or the Systems Administration team.""",
+          );
+          // Try printing (native) and direct browser download (web)
+          try { await Printing.layoutPdf(onLayout: (_) async => bytes); } catch (_) {}
+          await FileDownloadService.saveBytesAsFile(bytes: bytes, filename: 'driver_${record['driver_id']}.pdf');
+        }
+        if (id is int) {
+          final res = await _supabase.from('driverTable').delete().eq('driver_id', id);
+          return (res is List) || (res == null) ? true : true;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase.from('driverTable').delete().eq('driver_id', parsed);
+            return (res is List) || (res == null) ? true : true;
+          }
+        }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -326,10 +369,64 @@ class TableNavigationHelper {
   }
 
   static Widget _createAdminArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    Map<String, dynamic>? selected;
     return TablePreviewHelper.createAdminArchivesTable(
       dataFetcher: () async {
-        final data = await _supabase.from('adminArchives').select('*');
+        final data = await _supabase.from('adminTable').select('*').eq('is_archived', true);
         return (data as List).cast<Map<String, dynamic>>();
+      },
+      onSelectionChanged: (row) { selected = row; },
+      onRecover: () async {
+        final id = selected?['admin_id'];
+        if (id is int) {
+          final res = await _supabase
+              .from('adminTable')
+              .update({'is_archived': false})
+              .match({'admin_id': id})
+              .select()
+              .maybeSingle();
+          return res != null;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase
+                .from('adminTable')
+                .update({'is_archived': false})
+                .match({'admin_id': parsed})
+                .select()
+                .maybeSingle();
+            return res != null;
+          }
+        }
+        return false;
+      },
+      onDelete: (alsoDownloadPdf) async {
+        final id = selected?['admin_id'];
+        Map<String, dynamic>? record = selected;
+        if (record == null && id != null) {
+          final fetched = await _supabase.from('adminTable').select('*').eq('admin_id', id).maybeSingle();
+          if (fetched is Map<String, dynamic>) record = fetched;
+        }
+        if (alsoDownloadPdf && record != null) {
+          final bytes = await PdfExportService.generateRecordPdf(
+            title: 'Admin Record',
+            record: record,
+            postScript: """This document is an official extract of the administrator account record deleted from the PASADA administrative system. It is issued for internal recordkeeping, audit support, and regulatory inquiries. Distribution is strictly limited to authorized PASADA personnel.\n\nHandling and retention:\n- File must be stored in a secure, access-controlled location.\n- Retain per PASADA information governance and applicable regulations.\n- Do not share externally without written authorization from Compliance and Data Protection.\n\nRestoration and follow-up:\n- This file does not restore system privileges. To re-introduce an administrator, a new admin profile must be created and approved under current access control policies.\n- If this deletion was unintentional, notify IT Security and Compliance immediately for review and remediation.\n\nConfidentiality notice:\n- Content may include personal data and sensitive operational details. Unauthorized disclosure or misuse is prohibited and may violate policy and law.\n\nFor questions regarding this record, contact PASADA Compliance or Systems Administration.""",
+          );
+          try { await Printing.layoutPdf(onLayout: (_) async => bytes); } catch (_) {}
+          await FileDownloadService.saveBytesAsFile(bytes: bytes, filename: 'admin_${record['admin_id']}.pdf');
+        }
+        if (id is int) {
+          final res = await _supabase.from('adminTable').delete().eq('admin_id', id);
+          return (res is List) || (res == null) ? true : true;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase.from('adminTable').delete().eq('admin_id', parsed);
+            return (res is List) || (res == null) ? true : true;
+          }
+        }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {

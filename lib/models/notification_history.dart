@@ -96,7 +96,7 @@ class NotificationHistoryItem {
       'title': title,
       'body': body,
       'type': type.name,
-      'timestamp': timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to Unix timestamp in seconds
+      'timestamp': timestamp.toIso8601String(),
       'status': status.name,
       'data': data,
       'driver_id': driverId,

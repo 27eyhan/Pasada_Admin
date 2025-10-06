@@ -9,6 +9,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_windows
   firebase_core
   geolocator_windows
+  printing
   url_launcher_windows
 )
 

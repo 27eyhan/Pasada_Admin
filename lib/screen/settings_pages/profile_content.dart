@@ -63,6 +63,7 @@ class _ProfileContentState extends State<ProfileContent> {
           .from('adminTable')
           .select('admin_id, first_name, last_name, admin_username, admin_mobile_number, created_at')
           .eq('admin_id', currentAdminID)
+          .eq('is_archived', false)
           .maybeSingle();
           
       if (mounted) {
