@@ -341,6 +341,7 @@ class TableNavigationHelper {
           final bytes = await PdfExportService.generateRecordPdf(
             title: 'Driver Record',
             record: record,
+            postScript: """This document is an official extract of the driver record deleted from the PASADA administrative system. It is provided solely for statutory retention, audit, and incident review purposes. Access to this file is restricted to authorized personnel only.\n\nHandling and retention:\n- Store in a secure, access-controlled repository.\n- Retain in accordance with PASADA data retention and local regulatory requirements.\n- Do not transmit externally without written authorization from Compliance and Data Protection.\n\nRestoration and follow-up:\n- This file cannot be used to reinstate the account. To restore access, a new driver record must be created, subject to current onboarding policies and approvals.\n- If this deletion was performed in error, contact IT Support and Compliance immediately to initiate corrective procedures.\n\nConfidentiality notice:\n- This document may contain personal and/or sensitive information. Unauthorized disclosure, copying, or distribution is strictly prohibited and may be unlawful.\n\nFor any questions regarding this record, contact PASADA Compliance or the Systems Administration team.""",
           );
           // Try printing (native) and direct browser download (web)
           try { await Printing.layoutPdf(onLayout: (_) async => bytes); } catch (_) {}
@@ -410,6 +411,7 @@ class TableNavigationHelper {
           final bytes = await PdfExportService.generateRecordPdf(
             title: 'Admin Record',
             record: record,
+            postScript: """This document is an official extract of the administrator account record deleted from the PASADA administrative system. It is issued for internal recordkeeping, audit support, and regulatory inquiries. Distribution is strictly limited to authorized PASADA personnel.\n\nHandling and retention:\n- File must be stored in a secure, access-controlled location.\n- Retain per PASADA information governance and applicable regulations.\n- Do not share externally without written authorization from Compliance and Data Protection.\n\nRestoration and follow-up:\n- This file does not restore system privileges. To re-introduce an administrator, a new admin profile must be created and approved under current access control policies.\n- If this deletion was unintentional, notify IT Security and Compliance immediately for review and remediation.\n\nConfidentiality notice:\n- Content may include personal data and sensitive operational details. Unauthorized disclosure or misuse is prohibited and may violate policy and law.\n\nFor questions regarding this record, contact PASADA Compliance or Systems Administration.""",
           );
           try { await Printing.layoutPdf(onLayout: (_) async => bytes); } catch (_) {}
           await FileDownloadService.saveBytesAsFile(bytes: bytes, filename: 'admin_${record['admin_id']}.pdf');

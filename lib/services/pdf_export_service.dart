@@ -9,6 +9,7 @@ class PdfExportService {
     required String title,
     required Map<String, dynamic> record,
     String logoAssetPath = 'assets/pasadaLogoUpdated_Black.png',
+    String? postScript,
   }) async {
     final pdf = pw.Document();
 
@@ -55,11 +56,25 @@ class PdfExportService {
     pdf.addPage(
       pw.MultiPage(
         pageTheme: pw.PageTheme(
-          margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 40),
+          margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 60),
           theme: pw.ThemeData.withFont(
             base: pw.Font.helvetica(),
             bold: pw.Font.helveticaBold(),
           ),
+        ),
+        footer: (context) => pw.Column(
+          children: [
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 6),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('PASADA', style: pw.TextStyle(color: PdfColors.grey, fontSize: 9)),
+                pw.Text('Confidential - For Internal Use Only', style: pw.TextStyle(color: PdfColors.grey, fontSize: 9)),
+                pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: pw.TextStyle(color: PdfColors.grey, fontSize: 9)),
+              ],
+            ),
+          ],
         ),
         build: (context) => [
           // Header with logo and title
@@ -85,11 +100,14 @@ class PdfExportService {
           // Content table/rows
           pw.Column(children: rows),
           pw.SizedBox(height: 16),
-          pw.Divider(thickness: 0.5),
-          pw.Align(
-            alignment: pw.Alignment.centerRight,
-            child: pw.Text('PASADA', style: pw.TextStyle(color: PdfColors.grey, fontSize: 10)),
-          ),
+          if (postScript != null && postScript.trim().isNotEmpty) ...[
+            pw.Divider(thickness: 0.5),
+            pw.SizedBox(height: 8),
+            pw.Text('Corporate Notice', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 6),
+            pw.Text(postScript, style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 12),
+          ],
         ],
       ),
     );
