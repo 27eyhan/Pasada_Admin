@@ -263,7 +263,7 @@ class NotificationService {
             });
       }
     } catch (e) {
-      debugPrint('Error saving FCM token: $e');
+      throw Exception('Error saving FCM token: $e');
     }
   }
 
@@ -502,9 +502,9 @@ class NotificationService {
         routeId: notificationData.routeId,
       );
       
-      debugPrint('Notification queued: ${notificationData.title}');
+      
     } catch (e) {
-      debugPrint('Error sending notification: $e');
+      throw Exception('Error sending notification: $e');
     }
   }
 

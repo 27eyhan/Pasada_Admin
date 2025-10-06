@@ -150,8 +150,8 @@ class _DriversState extends State<Drivers> {
 
   Future<void> fetchDriverData() async {
     try {
-      // Get all columns from 'driverTable'
-      final data = await supabase.from('driverTable').select('*');
+      // Get all non-archived drivers from 'driverTable'
+      final data = await supabase.from('driverTable').select('*').eq('is_archived', false);
 
       final List listData = data as List;
       setState(() {

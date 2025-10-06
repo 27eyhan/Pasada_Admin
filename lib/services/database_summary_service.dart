@@ -68,7 +68,8 @@ class DatabaseSummaryService {
       // Get drivers data from driverTable
       final driversData = await supabase
           .from('driverTable')
-          .select('driver_id, full_name, driving_status');
+          .select('driver_id, full_name, driving_status')
+          .eq('is_archived', false);
       
       // Calculate metrics manually
       int totalCount = driversData.length;

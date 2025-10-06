@@ -15,7 +15,7 @@ class DriverLocationService {
             current_location, 
             driving_status,
             vehicleTable(plate_number, route_id, passenger_capacity, sitting_passenger, standing_passenger)
-          ''');
+          ''').eq('is_archived', false);
 
       final List<Map<String, dynamic>> driverLocations = [];
       for (var record in response) {

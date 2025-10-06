@@ -44,7 +44,7 @@ class TableNavigationHelper {
     Map<String, dynamic>? selected;
     return TablePreviewHelper.createAdminTable(
       dataFetcher: () async {
-        final data = await _supabase.from('adminTable').select('*');
+        final data = await _supabase.from('adminTable').select('*').eq('is_archived', false);
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
@@ -85,7 +85,7 @@ class TableNavigationHelper {
     Map<String, dynamic>? selected;
     return TablePreviewHelper.createDriverTable(
       dataFetcher: () async {
-        final data = await _supabase.from('driverTable').select('*');
+        final data = await _supabase.from('driverTable').select('*').eq('is_archived', false);
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {
@@ -313,7 +313,7 @@ class TableNavigationHelper {
   static Widget _createDriverArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createDriverArchivesTable(
       dataFetcher: () async {
-        final data = await _supabase.from('driverArchives').select('*');
+        final data = await _supabase.from('driverTable').select('*').eq('is_archived', true);
         return (data as List).cast<Map<String, dynamic>>();
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
@@ -328,7 +328,7 @@ class TableNavigationHelper {
   static Widget _createAdminArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createAdminArchivesTable(
       dataFetcher: () async {
-        final data = await _supabase.from('adminArchives').select('*');
+        final data = await _supabase.from('adminTable').select('*').eq('is_archived', true);
         return (data as List).cast<Map<String, dynamic>>();
       },
       includeNavigation: false, // Don't include navigation when used within main navigation

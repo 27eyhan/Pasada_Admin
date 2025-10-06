@@ -15,7 +15,7 @@ class NotificationHistoryService {
       // Load existing notifications from Supabase
       await _loadNotificationsFromSupabase();
       _isInitialized = true;
-      debugPrint('Notification history service initialized');
+      
     } catch (e) {
       debugPrint('Error initializing notification history service: $e');
     }
@@ -35,16 +35,15 @@ class NotificationHistoryService {
         try {
           _notifications.add(NotificationHistoryItem.fromJson(item));
         } catch (e) {
-          debugPrint('Error parsing notification item: $e');
-          debugPrint('Item data: $item');
+          
           // Skip this item and continue with others
           continue;
         }
       }
       
-      debugPrint('Loaded ${_notifications.length} notifications from history');
+      
     } catch (e) {
-      debugPrint('Error loading notifications from Supabase: $e');
+      
     }
   }
 
@@ -81,7 +80,7 @@ class NotificationHistoryService {
             'title': notification.title,
             'body': notification.body,
             'type': notification.type.name,
-            'timestamp': notification.timestamp.millisecondsSinceEpoch ~/ 1000,
+            'timestamp': notification.timestamp.toIso8601String(),
             'status': notification.status.name,
             'data': notification.data,
             'driver_id': notification.driverId,
@@ -89,9 +88,9 @@ class NotificationHistoryService {
             'is_read': notification.isRead,
           });
 
-      debugPrint('Notification added to history: ${notification.title}');
+      
     } catch (e) {
-      debugPrint('Error adding notification to history: $e');
+      
     }
   }
 
@@ -129,7 +128,7 @@ class NotificationHistoryService {
             .eq('id', notificationId);
       }
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
+      
     }
   }
 
@@ -148,7 +147,7 @@ class NotificationHistoryService {
           .update({'is_read': true})
           .eq('is_read', false);
     } catch (e) {
-      debugPrint('Error marking all notifications as read: $e');
+      
     }
   }
 
@@ -163,7 +162,7 @@ class NotificationHistoryService {
           .delete()
           .eq('id', notificationId);
     } catch (e) {
-      debugPrint('Error deleting notification: $e');
+      
     }
   }
 
@@ -178,7 +177,7 @@ class NotificationHistoryService {
           .delete()
           .neq('id', '');
     } catch (e) {
-      debugPrint('Error clearing all notifications: $e');
+      
     }
   }
 

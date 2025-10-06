@@ -46,8 +46,8 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
       isLoading = true;
     });
     try {
-      // Select all columns from the 'driverArchives' table.
-      final data = await supabase.from('driverArchives').select('*');
+      // Fetch archived drivers from driverTable where is_archived = true
+      final data = await supabase.from('driverTable').select('*').eq('is_archived', true);
       // Debug: verify data retrieval
       final List listData = data as List;
       if (mounted) { // Check if the widget is still mounted
@@ -65,33 +65,11 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
     }
   }
 
-  // Clean up archives older than 30 days
-  Future<void> cleanupOldArchives() async {
-    try {
-      // Calculate the date 30 days ago
-      final DateTime thirtyDaysAgo = DateTime.now().subtract(Duration(days: 30));
-      final String thirtyDaysAgoStr = thirtyDaysAgo.toIso8601String();
-      
-      // Delete records where archived_at is older than 30 days
-      await supabase
-          .from('driverArchives')
-          .delete()
-          .lt('archived_at', thirtyDaysAgoStr);
-      
-      // Refresh data after cleanup
-      if (mounted) {
-        fetchArchiveData();
-      }
-    } catch (e) {
-      if (mounted) {
-        _showInfoSnackBar('Error cleaning up old archives: ${e.toString()}');
-      }
-    }
-  }
+  // Clean up archives older than 30 days (not applicable in soft-delete model)
+  Future<void> cleanupOldArchives() async { return; }
 
   // --- Action Handlers ---
   void _handleRestoreDriver(Map<String, dynamic> selectedArchiveData) async {
-    final archiveId = selectedArchiveData['archive_id'];
     final driverId = selectedArchiveData['driver_id'];
     
     try {
@@ -137,21 +115,11 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
       
       _showInfoSnackBar('Restoring driver...');
       
-      // Extract driver data from archive to create record in driver table
-      final Map<String, dynamic> driverData = {
-        'driver_id': driverId,
-        'full_name': selectedArchiveData['full_name'],
-        'driver_number': selectedArchiveData['driver_number'],
-        'vehicle_id': selectedArchiveData['last_vehicle_used'],
-        'driving_status': 'Offline',
-        'last_online': DateTime.now().toIso8601String(),
-      };
-      
-      // First insert into driver table
-      await supabase.from('driverTable').insert(driverData);
-      
-      // Then delete from archives
-      await supabase.from('driverArchives').delete().eq('archive_id', archiveId);
+      // Unarchive: set is_archived = false for this driver
+      await supabase
+          .from('driverTable')
+          .update({'is_archived': false})
+          .match({'driver_id': driverId});
       
       _showInfoSnackBar('Driver restored successfully!');
       fetchArchiveData();
@@ -161,8 +129,6 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
   }
 
   void _handleDeleteDriverPermanent(Map<String, dynamic> selectedArchiveData) async {
-    final archiveId = selectedArchiveData['archive_id'];
-    // ignore: unused_local_variable
     final driverId = selectedArchiveData['driver_id'];
     
     try {
@@ -209,8 +175,8 @@ class _DriverArchTableScreenState extends State<DriverArchTableScreen> {
       
       _showInfoSnackBar('Permanently deleting driver...');
       
-      // Delete from archives table
-      await supabase.from('driverArchives').delete().eq('archive_id', archiveId);
+      // Permanently delete the driver
+      await supabase.from('driverTable').delete().eq('driver_id', driverId);
       
       _showInfoSnackBar('Driver permanently deleted.');
       fetchArchiveData();
