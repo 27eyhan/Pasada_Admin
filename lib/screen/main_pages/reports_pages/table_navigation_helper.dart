@@ -296,10 +296,36 @@ class TableNavigationHelper {
   }
 
   static Widget _createDriverArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    Map<String, dynamic>? selected;
     return TablePreviewHelper.createDriverArchivesTable(
       dataFetcher: () async {
         final data = await _supabase.from('driverTable').select('*').eq('is_archived', true);
         return (data as List).cast<Map<String, dynamic>>();
+      },
+      onSelectionChanged: (row) { selected = row; },
+      onRecover: () async {
+        final id = selected?['driver_id'];
+        if (id is int) {
+          final res = await _supabase
+              .from('driverTable')
+              .update({'is_archived': false})
+              .match({'driver_id': id})
+              .select()
+              .maybeSingle();
+          return res != null;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase
+                .from('driverTable')
+                .update({'is_archived': false})
+                .match({'driver_id': parsed})
+                .select()
+                .maybeSingle();
+            return res != null;
+          }
+        }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -311,10 +337,36 @@ class TableNavigationHelper {
   }
 
   static Widget _createAdminArchivesTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
+    Map<String, dynamic>? selected;
     return TablePreviewHelper.createAdminArchivesTable(
       dataFetcher: () async {
         final data = await _supabase.from('adminTable').select('*').eq('is_archived', true);
         return (data as List).cast<Map<String, dynamic>>();
+      },
+      onSelectionChanged: (row) { selected = row; },
+      onRecover: () async {
+        final id = selected?['admin_id'];
+        if (id is int) {
+          final res = await _supabase
+              .from('adminTable')
+              .update({'is_archived': false})
+              .match({'admin_id': id})
+              .select()
+              .maybeSingle();
+          return res != null;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase
+                .from('adminTable')
+                .update({'is_archived': false})
+                .match({'admin_id': parsed})
+                .select()
+                .maybeSingle();
+            return res != null;
+          }
+        }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {

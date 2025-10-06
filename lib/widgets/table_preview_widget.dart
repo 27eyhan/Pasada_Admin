@@ -20,7 +20,7 @@ class TablePreviewWidget extends StatefulWidget {
   final VoidCallback? onFilterPressed;
   final Widget? customActions;
   // Archive actions
-  final VoidCallback? onRecover; // When provided, shows a Recover action
+  final Future<bool> Function()? onRecover; // When provided, shows a Recover action (async with result)
   final void Function(bool alsoDownloadPdf)? onDelete; // Shows Delete with confirmation; bool indicates whether to also download PDF
   final VoidCallback? onDownloadPdf; // Optional separate Download PDF action
   final Future<bool> Function()? onArchive; // Optional Archive action (async with result)
@@ -184,6 +184,37 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
         ),
       );
       // Always refresh to reflect changes
+      await _fetchData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Palette.lightError,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      await _fetchData();
+    }
+  }
+
+  Future<void> _handleRecover() async {
+    if (widget.onRecover == null) return;
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final bool ok = await (widget.onRecover!.call());
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(ok ? 'Restored successfully.' : 'Failed to restore.'),
+          backgroundColor: ok ? Palette.lightSuccess : Palette.lightError,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       await _fetchData();
     } catch (e) {
       if (!mounted) return;
@@ -600,7 +631,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
               Padding(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: ElevatedButton.icon(
-                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : widget.onRecover,
+                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : _handleRecover,
                   icon: const Icon(Icons.restore),
                   label: const Text('Recover'),
                   style: ElevatedButton.styleFrom(
