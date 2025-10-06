@@ -4,6 +4,7 @@ import 'package:pasada_admin_application/widgets/table_preview_helper.dart';
 import 'package:pasada_admin_application/services/archive_service.dart';
 import 'package:pasada_admin_application/services/pdf_export_service.dart';
 import 'package:printing/printing.dart';
+import 'package:pasada_admin_application/services/file_download_service.dart';
 
 class TableNavigationHelper {
   static final SupabaseClient _supabase = Supabase.instance.client;
@@ -341,7 +342,9 @@ class TableNavigationHelper {
             title: 'Driver Record',
             record: record,
           );
-          await Printing.layoutPdf(onLayout: (_) async => bytes);
+          // Try printing (native) and direct browser download (web)
+          try { await Printing.layoutPdf(onLayout: (_) async => bytes); } catch (_) {}
+          await FileDownloadService.saveBytesAsFile(bytes: bytes, filename: 'driver_${record['driver_id']}.pdf');
         }
         if (id is int) {
           final res = await _supabase.from('driverTable').delete().eq('driver_id', id);
@@ -408,7 +411,8 @@ class TableNavigationHelper {
             title: 'Admin Record',
             record: record,
           );
-          await Printing.layoutPdf(onLayout: (_) async => bytes);
+          try { await Printing.layoutPdf(onLayout: (_) async => bytes); } catch (_) {}
+          await FileDownloadService.saveBytesAsFile(bytes: bytes, filename: 'admin_${record['admin_id']}.pdf');
         }
         if (id is int) {
           final res = await _supabase.from('adminTable').delete().eq('admin_id', id);
