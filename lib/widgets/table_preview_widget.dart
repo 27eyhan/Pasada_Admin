@@ -21,7 +21,7 @@ class TablePreviewWidget extends StatefulWidget {
   final Widget? customActions;
   // Archive actions
   final Future<bool> Function()? onRecover; // When provided, shows a Recover action (async with result)
-  final void Function(bool alsoDownloadPdf)? onDelete; // Shows Delete with confirmation; bool indicates whether to also download PDF
+  final Future<bool> Function(bool alsoDownloadPdf)? onDelete; // Shows Delete with confirmation; bool indicates whether to also download PDF
   final VoidCallback? onDownloadPdf; // Optional separate Download PDF action
   final Future<bool> Function()? onArchive; // Optional Archive action (async with result)
   // Selection
@@ -744,8 +744,18 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
           );
         },
       );
-      if (confirmed == true) {
-        widget.onDelete?.call(_deleteAlsoDownloadPdf);
+      if (confirmed == true && widget.onDelete != null) {
+        setState(() { isLoading = true; });
+        final ok = await widget.onDelete!.call(_deleteAlsoDownloadPdf);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ok ? 'Deleted successfully.' : 'Failed to delete.'),
+            backgroundColor: ok ? Palette.lightSuccess : Palette.lightError,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        await _fetchData();
       }
     } else {
       // Mobile: bottom sheet
@@ -827,9 +837,21 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               Navigator.of(context).pop();
-                              widget.onDelete?.call(_deleteAlsoDownloadPdf);
+                              if (widget.onDelete != null) {
+                                setState(() { isLoading = true; });
+                                final ok = await widget.onDelete!.call(_deleteAlsoDownloadPdf);
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(ok ? 'Deleted successfully.' : 'Failed to delete.'),
+                                    backgroundColor: ok ? Palette.lightSuccess : Palette.lightError,
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                                await _fetchData();
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Palette.lightError,

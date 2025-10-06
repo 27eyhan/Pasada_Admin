@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_admin_application/widgets/table_preview_helper.dart';
 import 'package:pasada_admin_application/services/archive_service.dart';
+import 'package:pasada_admin_application/services/pdf_export_service.dart';
+import 'package:printing/printing.dart';
 
 class TableNavigationHelper {
   static final SupabaseClient _supabase = Supabase.instance.client;
@@ -327,6 +329,32 @@ class TableNavigationHelper {
         }
         return false;
       },
+      onDelete: (alsoDownloadPdf) async {
+        final id = selected?['driver_id'];
+        Map<String, dynamic>? record = selected;
+        if (record == null && id != null) {
+          final fetched = await _supabase.from('driverTable').select('*').eq('driver_id', id).maybeSingle();
+          if (fetched is Map<String, dynamic>) record = fetched;
+        }
+        if (alsoDownloadPdf && record != null) {
+          final bytes = await PdfExportService.generateRecordPdf(
+            title: 'Driver Record',
+            record: record,
+          );
+          await Printing.layoutPdf(onLayout: (_) async => bytes);
+        }
+        if (id is int) {
+          final res = await _supabase.from('driverTable').delete().eq('driver_id', id);
+          return (res is List) || (res == null) ? true : true;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase.from('driverTable').delete().eq('driver_id', parsed);
+            return (res is List) || (res == null) ? true : true;
+          }
+        }
+        return false;
+      },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
         if (onNavigateToPage != null) {
@@ -364,6 +392,32 @@ class TableNavigationHelper {
                 .select()
                 .maybeSingle();
             return res != null;
+          }
+        }
+        return false;
+      },
+      onDelete: (alsoDownloadPdf) async {
+        final id = selected?['admin_id'];
+        Map<String, dynamic>? record = selected;
+        if (record == null && id != null) {
+          final fetched = await _supabase.from('adminTable').select('*').eq('admin_id', id).maybeSingle();
+          if (fetched is Map<String, dynamic>) record = fetched;
+        }
+        if (alsoDownloadPdf && record != null) {
+          final bytes = await PdfExportService.generateRecordPdf(
+            title: 'Admin Record',
+            record: record,
+          );
+          await Printing.layoutPdf(onLayout: (_) async => bytes);
+        }
+        if (id is int) {
+          final res = await _supabase.from('adminTable').delete().eq('admin_id', id);
+          return (res is List) || (res == null) ? true : true;
+        } else if (id is String) {
+          final parsed = int.tryParse(id);
+          if (parsed != null) {
+            final res = await _supabase.from('adminTable').delete().eq('admin_id', parsed);
+            return (res is List) || (res == null) ? true : true;
           }
         }
         return false;

@@ -499,6 +499,7 @@ class TablePreviewHelper {
     VoidCallback? onBackPressed,
     Future<bool> Function()? onRecover,
     ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
+    Future<bool> Function(bool alsoDownloadPdf)? onDelete,
   }) {
     return TablePreviewWidget(
       tableName: 'Driver Archives',
@@ -542,6 +543,7 @@ class TablePreviewHelper {
       onFilterPressed: onFilterPressed,
       customActions: customActions,
       onRecover: onRecover,
+      onDelete: onDelete,
       enableRowSelection: true,
       includeNavigation: includeNavigation,
       onBackPressed: onBackPressed,
@@ -558,6 +560,7 @@ class TablePreviewHelper {
     VoidCallback? onBackPressed,
     Future<bool> Function()? onRecover,
     ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
+    Future<bool> Function(bool alsoDownloadPdf)? onDelete,
   }) {
     return TablePreviewWidget(
       tableName: 'Admin Archives',
@@ -591,6 +594,7 @@ class TablePreviewHelper {
       onFilterPressed: onFilterPressed,
       customActions: customActions,
       onRecover: onRecover,
+      onDelete: onDelete,
       enableRowSelection: true,
       includeNavigation: includeNavigation,
       onBackPressed: onBackPressed,
