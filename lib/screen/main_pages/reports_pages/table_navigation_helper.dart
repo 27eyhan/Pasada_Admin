@@ -53,24 +53,19 @@ class TableNavigationHelper {
       onSelectionChanged: (row) {
         selected = row;
       },
-      onArchive: () {
+      onArchive: () async {
         final id = selected?['admin_id'];
         if (id is int) {
-          ArchiveService.archiveAdmin(adminId: id).then((ok) {
-            if (ok) debugPrint('Admin archived successfully (id: $id)');
-          }).catchError((e) {
-            debugPrint('Archive admin error: $e');
-          });
+          final ok = await ArchiveService.archiveAdmin(adminId: id);
+          return ok;
         } else if (id is String) {
           final parsed = int.tryParse(id);
           if (parsed != null) {
-            ArchiveService.archiveAdmin(adminId: parsed).then((ok) {
-              if (ok) debugPrint('Admin archived successfully (id: $parsed)');
-            }).catchError((e) {
-              debugPrint('Archive admin error: $e');
-            });
+            final ok = await ArchiveService.archiveAdmin(adminId: parsed);
+            return ok;
           }
         }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -97,24 +92,19 @@ class TableNavigationHelper {
       onSelectionChanged: (row) {
         selected = row;
       },
-      onArchive: () {
+      onArchive: () async {
         final id = selected?['driver_id'];
         if (id is int) {
-          ArchiveService.archiveDriver(driverId: id).then((ok) {
-            if (ok) debugPrint('Driver archived successfully (id: $id)');
-          }).catchError((e) {
-            debugPrint('Archive driver error: $e');
-          });
+          final ok = await ArchiveService.archiveDriver(driverId: id);
+          return ok;
         } else if (id is String) {
           final parsed = int.tryParse(id);
           if (parsed != null) {
-            ArchiveService.archiveDriver(driverId: parsed).then((ok) {
-              if (ok) debugPrint('Driver archived successfully (id: $parsed)');
-            }).catchError((e) {
-              debugPrint('Archive driver error: $e');
-            });
+            final ok = await ArchiveService.archiveDriver(driverId: parsed);
+            return ok;
           }
         }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {
@@ -192,24 +182,19 @@ class TableNavigationHelper {
       onSelectionChanged: (row) {
         selected = row;
       },
-      onArchive: () {
+      onArchive: () async {
         final id = selected?['booking_id'];
         if (id is int) {
-          ArchiveService.archiveBooking(bookingId: id).then((ok) {
-            if (ok) debugPrint('Booking archived successfully (id: $id)');
-          }).catchError((e) {
-            debugPrint('Archive booking error: $e');
-          });
+          final ok = await ArchiveService.archiveBooking(bookingId: id);
+          return ok;
         } else if (id is String) {
           final parsed = int.tryParse(id);
           if (parsed != null) {
-            ArchiveService.archiveBooking(bookingId: parsed).then((ok) {
-              if (ok) debugPrint('Booking archived successfully (id: $parsed)');
-            }).catchError((e) {
-              debugPrint('Archive booking error: $e');
-            });
+            final ok = await ArchiveService.archiveBooking(bookingId: parsed);
+            return ok;
           }
         }
+        return false;
       },
       includeNavigation: false, // Don't include navigation when used within main navigation
       onBackPressed: () {

@@ -23,7 +23,7 @@ class TablePreviewWidget extends StatefulWidget {
   final VoidCallback? onRecover; // When provided, shows a Recover action
   final void Function(bool alsoDownloadPdf)? onDelete; // Shows Delete with confirmation; bool indicates whether to also download PDF
   final VoidCallback? onDownloadPdf; // Optional separate Download PDF action
-  final VoidCallback? onArchive; // Optional Archive action
+  final Future<bool> Function()? onArchive; // Optional Archive action (async with result)
   // Selection
   final bool enableRowSelection; // When true, allows selecting a single row
   final ValueChanged<Map<String, dynamic>?>? onSelectionChanged; // Emits selected row (or null)
@@ -164,6 +164,38 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
   void _handleRefresh() {
     _fetchData();
     widget.onRefresh?.call();
+  }
+
+  Future<void> _handleArchive() async {
+    if (widget.onArchive == null) return;
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final bool ok = await (widget.onArchive!.call());
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(ok ? 'Archived successfully.' : 'Failed to archive.'),
+          backgroundColor: ok ? Palette.lightSuccess : Palette.lightError,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      // Always refresh to reflect changes
+      await _fetchData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Palette.lightError,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      await _fetchData();
+    }
   }
 
   @override
@@ -554,7 +586,7 @@ class _TablePreviewWidgetState extends State<TablePreviewWidget>
               Padding(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: OutlinedButton.icon(
-                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : widget.onArchive,
+                  onPressed: isLoading || (widget.enableRowSelection && !hasSelection) ? null : _handleArchive,
                   icon: const Icon(Icons.archive_outlined),
                   label: const Text('Archive'),
                   style: OutlinedButton.styleFrom(

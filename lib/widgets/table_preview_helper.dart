@@ -10,7 +10,7 @@ class TablePreviewHelper {
     Widget? customActions,
     bool includeNavigation = true,
     VoidCallback? onBackPressed,
-    VoidCallback? onArchive,
+    Future<bool> Function()? onArchive,
     ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
   }) {
     return TablePreviewWidget(
@@ -42,7 +42,13 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
-      onArchive: onArchive,
+      onArchive: () async {
+        if (onArchive != null) {
+          onArchive();
+          return true;
+        }
+        return false;
+      },
       enableRowSelection: true,
       onSelectionChanged: onSelectionChanged,
       includeNavigation: includeNavigation,
@@ -57,7 +63,7 @@ class TablePreviewHelper {
     Widget? customActions,
     bool includeNavigation = true,
     VoidCallback? onBackPressed,
-    VoidCallback? onArchive,
+    Future<bool> Function()? onArchive,
     ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
   }) {
     return TablePreviewWidget(
@@ -100,7 +106,13 @@ class TablePreviewHelper {
       showFilterButton: true,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
-      onArchive: onArchive,
+      onArchive: () async {
+        if (onArchive != null) {
+          onArchive();
+          return true;
+        }
+        return false;
+      },
       enableRowSelection: true,
       onSelectionChanged: onSelectionChanged,
       includeNavigation: includeNavigation,
@@ -261,7 +273,7 @@ class TablePreviewHelper {
     Widget? customActions,
     bool includeNavigation = true,
     VoidCallback? onBackPressed,
-    VoidCallback? onArchive,
+    Future<bool> Function()? onArchive,
     ValueChanged<Map<String, dynamic>?>? onSelectionChanged,
   }) {
     return TablePreviewWidget(
@@ -317,7 +329,12 @@ class TablePreviewHelper {
       onRefresh: onRefresh,
       onFilterPressed: onFilterPressed,
       customActions: customActions,
-      onArchive: onArchive,
+      onArchive: () async {
+        if (onArchive != null) {
+          return await onArchive();
+        }
+        return false;
+      },
       enableRowSelection: true,
       onSelectionChanged: onSelectionChanged,
       includeNavigation: includeNavigation,
