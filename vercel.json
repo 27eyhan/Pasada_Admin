@@ -1,13 +1,26 @@
 {
-  "version": 2,
-  "installCommand": "bash vercel_install.sh",
-  "buildCommand": "flutter/bin/flutter build web --release",
+  "buildCommand": "bash vercel_install.sh && flutter/bin/flutter build web --release",
   "outputDirectory": "build/web",
   "framework": null,
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/index.html" }
+  "installCommand": "echo 'Dependencies installed via vercel_install.sh'",
+  "devCommand": null,
+  "github": {
+    "silent": false
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "credentialless"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        }
+      ]
+    }
   ]
 }
-
 

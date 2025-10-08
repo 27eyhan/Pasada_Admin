@@ -1,0 +1,18 @@
+{
+  "deno.enablePaths": [
+    "supabase/functions",
+    "lib/supabase/functions"
+  ],
+  "deno.enable": false,
+  "deno.lint": true,
+  "deno.unstable": [],
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.dart_tool": true,
+    "**/build": true
+  }
+}
+
