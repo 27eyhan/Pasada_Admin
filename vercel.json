@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bash vercel_install.sh && flutter/bin/flutter build web --release --web-renderer canvaskit",
+  "buildCommand": "bash vercel_install.sh && flutter/bin/flutter build web --release",
   "outputDirectory": "build/web",
   "framework": null,
   "installCommand": "echo 'Dependencies installed via vercel_install.sh'",
