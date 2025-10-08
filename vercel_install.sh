@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== Starting Vercel Install Script ==="
+echo "Working directory: $(pwd)"
+
 # Ensure Flutter (stable) is available
 if [ -d flutter ]; then
   (
@@ -22,13 +25,18 @@ flutter/bin/flutter --version
 flutter/bin/flutter pub get
 
 # Ensure an env file exists for Flutter assets resolution
+echo "=== Setting up .env file ==="
 if [ ! -f assets/.env ]; then
   if [ -f assets/.env.example ]; then
+    echo "Copying assets/.env.example to assets/.env"
     cp assets/.env.example assets/.env
   else
+    echo "Creating empty assets/.env file"
     mkdir -p assets
     : > assets/.env
   fi
+else
+  echo "assets/.env already exists"
 fi
 
 # Inject Vercel environment variables into assets/.env when available
@@ -36,8 +44,9 @@ set_kv() {
   local key="$1"; shift
   local value="${1:-}"
   if [ -n "$value" ]; then
-    if grep -q "^${key}=" assets/.env; then
-      sed -i "s#^${key}=.*#${key}=${value//#/\\#}#" assets/.env
+    if grep -q "^${key}=" assets/.env 2>/dev/null; then
+      # Use a temporary file for sed to work across all platforms
+      sed "s#^${key}=.*#${key}=${value//#/\\#}#" assets/.env > assets/.env.tmp && mv assets/.env.tmp assets/.env
     else
       printf "%s=%s\n" "$key" "$value" >> assets/.env
     fi
@@ -71,19 +80,28 @@ set_kv MESSAGING_SENDER_ID "${MESSAGING_SENDER_ID:-}"
 set_kv WEB_APP_ID "${WEB_APP_ID:-}"
 set_kv FCM_API_KEY "${FCM_API_KEY:-}"
 
-# Source the .env file to access the variables
-source assets/.env
+# Export variables from .env file for the build process
+echo "=== Exporting environment variables ==="
+if [ -f assets/.env ]; then
+  set -a  # automatically export all variables
+  source assets/.env || true
+  set +a  # stop auto-exporting
+fi
 
 # Check if required Firebase environment variables are set
 required_vars=("PASADA_WEB_APP_KEY" "AUTH_DOMAIN" "WEB_PROJECT_ID" "STORAGE_BUCKET" "MESSAGING_SENDER_ID" "WEB_APP_ID")
 
+echo "Checking required Firebase variables..."
 for var in "${required_vars[@]}"; do
     if [ -z "${!var:-}" ]; then
         echo "Warning: $var is not set in .env file"
+    else
+        echo "✓ $var is set"
     fi
 done
 
 # Create firebase-config.js with actual values
+echo "=== Generating Firebase configuration ==="
 cat > web/firebase-config.js << EOF
 // Firebase configuration for web
 // Generated automatically - do not edit manually
@@ -106,3 +124,4 @@ EOF
 
 echo "Firebase configuration injected successfully"
 echo "Generated web/firebase-config.js with environment variables"
+echo "=== Vercel Install Script Completed Successfully ==="
