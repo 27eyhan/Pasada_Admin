@@ -44,3 +44,8 @@ app.*.map.json
 /.env
 .env
 .vercel
+
+# Supabase
+supabase/.temp
+supabase/.branches
+**/deno.lock
