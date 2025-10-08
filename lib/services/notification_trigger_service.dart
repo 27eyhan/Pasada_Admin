@@ -10,6 +10,10 @@ class NotificationTriggerService {
   // Timer for periodic monitoring
   static Timer? _monitoringTimer;
   
+  // Cache last-known driver statuses to detect transitions
+  static final Map<int, String> _driverStatusCache = <int, String>{};
+  static bool _driverStatusBaselineInitialized = false;
+  
   // Configuration for monitoring intervals
   static const Duration _defaultMonitoringInterval = Duration(minutes: 2);
   static Duration _monitoringInterval = _defaultMonitoringInterval;
@@ -118,10 +122,22 @@ class NotificationTriggerService {
           .from('driverTable')
           .select('driver_id, full_name, driving_status, vehicle_id, vehicleTable!left(plate_number)');
       
+      // On first run, initialize baseline without sending notifications
+      if (!_driverStatusBaselineInitialized) {
+        for (final driver in response) {
+          final driverId = driver['driver_id'] as int;
+          final status = (driver['driving_status'] ?? 'offline').toString();
+          _driverStatusCache[driverId] = status;
+        }
+        _driverStatusBaselineInitialized = true;
+        return;
+      }
+
       for (final driver in response) {
-        final driverId = driver['driver_id'];
+        final driverId = driver['driver_id'] as int;
         final driverName = driver['full_name'] ?? 'Unknown Driver';
-        final status = driver['driving_status'] ?? 'offline';
+        final status = (driver['driving_status'] ?? 'offline').toString();
+        final previousStatus = _driverStatusCache[driverId];
         final vehicleData = driver['vehicleTable'];
         String? plateNumber;
         
@@ -135,8 +151,12 @@ class NotificationTriggerService {
           driverId: driverId,
           driverName: driverName,
           status: status,
+          previousStatus: previousStatus,
           plateNumber: plateNumber,
         );
+
+        // Update cache after processing
+        _driverStatusCache[driverId] = status;
       }
     } catch (e) {
       // Handle error silently
@@ -148,6 +168,7 @@ class NotificationTriggerService {
     required int driverId,
     required String driverName,
     required String status,
+    String? previousStatus,
     String? plateNumber,
   }) async {
     String title;
@@ -167,6 +188,10 @@ class NotificationTriggerService {
         message = '$driverName is currently idling${plateNumber != null ? ' (Vehicle: $plateNumber)' : ''}';
         break;
       case 'offline':
+        // Only notify when transitioning into offline from a non-offline state
+        if ((previousStatus ?? '').toLowerCase() == 'offline') {
+          return;
+        }
         title = 'Driver Offline! 🔴';
         message = '$driverName has gone offline${plateNumber != null ? ' (Vehicle: $plateNumber)' : ''}';
         break;
