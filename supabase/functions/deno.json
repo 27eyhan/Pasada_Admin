@@ -3,10 +3,12 @@
     "lib": ["deno.window"],
     "strict": true
   },
-  "imports": {
-    "@std/http": "https://deno.land/std@0.224.0/http/server.ts",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.49.0",
-    "pdf-lib": "https://esm.sh/pdf-lib@1.17.1"
+  "lint": {
+    "rules": {
+      "tags": [],
+      "include": [],
+      "exclude": ["no-import-prefix"]
+    }
   }
 }
 

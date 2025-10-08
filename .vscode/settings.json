@@ -5,7 +5,7 @@
   ],
   "deno.enable": false,
   "deno.lint": true,
-  "deno.unstable": false,
+  "deno.unstable": [],
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },

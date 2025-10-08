@@ -1,6 +1,7 @@
-import { serve } from "@std/http";
-import { createClient } from "@supabase/supabase-js";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+// deno-lint-ignore-file no-import-prefix
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 type ArchiveRow = {
   booking_archives_id: number;
