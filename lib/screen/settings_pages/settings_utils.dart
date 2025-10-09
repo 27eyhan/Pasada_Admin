@@ -50,7 +50,7 @@ class SwitchTile extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Palette.greenColor,
+            activeThumbColor: Palette.greenColor,
           ),
         ],
       ),

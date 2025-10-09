@@ -625,7 +625,7 @@ class _MyDrawerState extends State<MyDrawer> with TickerProviderStateMixin {
                                 onChanged: (value) {
                                   themeProvider.toggleTheme();
                                 },
-                                activeColor: Colors.white,
+                                activeThumbColor: Colors.white,
                                 activeTrackColor: Palette.lightPrimary,
                                 inactiveThumbColor: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                                 inactiveTrackColor: isDark ? Palette.darkBorder : Palette.lightBorder,

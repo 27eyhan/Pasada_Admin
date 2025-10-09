@@ -348,7 +348,7 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
             ),
           ),
           child: DropdownButtonFormField<String>(
-            value: _selectedStatus,
+            initialValue: _selectedStatus,
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
