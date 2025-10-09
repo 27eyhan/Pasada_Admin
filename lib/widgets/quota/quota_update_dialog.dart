@@ -86,7 +86,7 @@ Future<void> showQuotaUpdateDialog({
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<int?> (
-                    value: selectedDriverId,
+                    initialValue: selectedDriverId,
                     items: [
                       const DropdownMenuItem<int?>(value: null, child: Text('All drivers (Global)')),
                       ...drivers.map((d) => DropdownMenuItem<int?> (

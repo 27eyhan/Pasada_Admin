@@ -344,7 +344,7 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
                           contentPadding: EdgeInsets.symmetric(
                               vertical: 12.0, horizontal: 16.0),
                         ),
-                        value: _status,
+                        initialValue: _status,
                         items: ['Active', 'Processing', 'Inactive']
                             .map((String status) {
                           return DropdownMenuItem<String>(
