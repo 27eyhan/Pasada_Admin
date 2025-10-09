@@ -13,6 +13,7 @@
     "**/.git": true,
     "**/.dart_tool": true,
     "**/build": true
-  }
+  },
+  "dart.showTodos": false
 }
 

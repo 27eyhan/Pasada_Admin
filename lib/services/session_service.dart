@@ -9,10 +9,18 @@ class SessionService {
   static final SessionService _instance = SessionService._internal();
   factory SessionService() => _instance;
 
-  static String get tableName =>
-      dotenv.env['ADMIN_SESSIONS_TABLE'] ??
-      dotenv.env['adminSessionsTable'] ??
-      'adminSessionsTable';
+  static String get tableName {
+    final envPrimary = dotenv.env['ADMIN_SESSIONS_TABLE']?.trim();
+    final envAlt = dotenv.env['adminSessionsTable']?.trim();
+    final envName = (envPrimary != null && envPrimary.isNotEmpty)
+        ? envPrimary
+        : (envAlt != null && envAlt.isNotEmpty)
+            ? envAlt
+            : null;
+    // Fallback to a sensible default table name when unset/empty
+    // Ensure not empty to avoid requests hitting /rest/v1/ with no table path
+    return (envName == null || envName.isEmpty) ? 'admin_sessions' : envName;
+  }
   static const String _deviceIdKey = 'deviceId';
 
   RealtimeChannel? _sessionChannel;
