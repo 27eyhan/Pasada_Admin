@@ -44,6 +44,11 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   // Weekly processing state
   bool _isProcessingWeekly = false;
   String _weeklyProcessingStatus = '';
+  
+  // Weekly analytics state
+  bool _weeklySummaryLoading = false;
+  Map<String, dynamic>? _weeklySummary;
+  String? _weeklySummaryError;
 
   @override
   void initState() {
@@ -51,6 +56,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     _fetchTraffic();
     _loadRoutes();
     _fetchCollectionStatus();
+    _fetchWeeklySummary();
     
     // NEW: Also check traffic analytics status on startup
     _checkTrafficAnalyticsStatus();
@@ -68,12 +74,12 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 
   Future<void> _fetchTraffic() async {
-    debugPrint('[FleetAnalyticsGraph] 🚗 Starting _fetchTraffic...');
+    debugPrint('[FleetAnalyticsGraph] Starting _fetchTraffic...');
     debugPrint('[FleetAnalyticsGraph] API Configured: ${_analyticsService.isConfigured}');
     debugPrint('[FleetAnalyticsGraph] Analytics API Configured: ${_analyticsService.isAnalyticsConfigured}');
     
     if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
-      debugPrint('[FleetAnalyticsGraph] ❌ Configuration check failed');
+      debugPrint('[FleetAnalyticsGraph] Configuration check failed');
       setState(() {
         _error = 'Analytics API not configured';
       });
@@ -121,7 +127,6 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       // Start all requests in parallel
       final futures = <String, Future<http.Response>>{
         'routeSummary': _analyticsService.getRouteSummary(routeId, days: 120),
-        'dailyAnalytics': _analyticsService.getRouteDailyAnalytics(routeId),
         'todayTraffic': _analyticsService.getTodayTrafficForRoute(routeId),
       };
       
@@ -617,6 +622,42 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     }
   }
 
+  Future<void> _fetchWeeklySummary() async {
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
+      return;
+    }
+
+    setState(() {
+      _weeklySummaryLoading = true;
+      _weeklySummaryError = null;
+    });
+
+    try {
+      debugPrint('[FleetAnalyticsGraph] 📊 Fetching weekly summary...');
+      final response = await _analyticsService.getWeeklySummary();
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        setState(() {
+          _weeklySummary = decoded;
+          _weeklySummaryLoading = false;
+        });
+        debugPrint('[FleetAnalyticsGraph] ✅ Weekly summary loaded successfully');
+      } else {
+        setState(() {
+          _weeklySummaryError = 'Failed to fetch weekly summary: ${response.statusCode}';
+          _weeklySummaryLoading = false;
+        });
+        debugPrint('[FleetAnalyticsGraph] ❌ Weekly summary failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _weeklySummaryError = 'Error fetching weekly summary: $e';
+        _weeklySummaryLoading = false;
+      });
+      debugPrint('[FleetAnalyticsGraph] ❌ Weekly summary error: $e');
+    }
+  }
+
   Future<void> _processWeeklyAnalytics({int? weekOffset}) async {
     if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
       _showErrorSnackBar('Analytics API not configured');
@@ -657,6 +698,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         await _fetchTraffic();
         await _fetchPredictions();
         await _fetchCollectionStatus();
+        await _fetchWeeklySummary();
       } else {
         setState(() {
           _weeklyProcessingStatus = 'Failed to process weekly analytics (${response.statusCode})';
@@ -1547,6 +1589,18 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
           ),
           const SizedBox(height: 8.0),
           _WeekAxis(isDark: isDark),
+          
+          // Weekly Summary Display
+          if (_weeklySummary != null) ...[
+            const SizedBox(height: 16.0),
+            _WeeklySummaryWidget(
+              weeklySummary: _weeklySummary!,
+              isDark: isDark,
+              loading: _weeklySummaryLoading,
+              error: _weeklySummaryError,
+            ),
+          ],
+          
           if (_showExplanation) ...[
             const SizedBox(height: 12.0),
             Container(
@@ -2167,6 +2221,280 @@ class _CollectionStatusIndicator extends StatelessWidget {
     buffer.write('\nRoutes with data: $routesWithData/$totalRoutes');
     
     return buffer.toString();
+  }
+}
+
+class _WeeklySummaryWidget extends StatelessWidget {
+  final Map<String, dynamic> weeklySummary;
+  final bool isDark;
+  final bool loading;
+  final String? error;
+
+  const _WeeklySummaryWidget({
+    required this.weeklySummary,
+    required this.isDark,
+    required this.loading,
+    this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: isDark ? Palette.darkSurface : Palette.lightSurface,
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: isDark ? Palette.darkBorder : Palette.lightBorder,
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12.0),
+            Text(
+              'Loading weekly summary...',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12.0,
+                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (error != null) {
+      return Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(color: Colors.red),
+        ),
+        child: Text(
+          'Weekly summary error: $error',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            color: Colors.red,
+          ),
+        ),
+      );
+    }
+
+    // Parse weekly summary data
+    final List<Map<String, dynamic>> weeklyData = [];
+    if (weeklySummary['data'] is List) {
+      final dataList = weeklySummary['data'] as List;
+      for (final item in dataList) {
+        if (item is Map) {
+          weeklyData.add(Map<String, dynamic>.from(item));
+        }
+      }
+    }
+
+    if (weeklyData.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: isDark ? Palette.darkSurface : Palette.lightSurface,
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: isDark ? Palette.darkBorder : Palette.lightBorder,
+          ),
+        ),
+        child: Text(
+          'No weekly data available',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: isDark ? Palette.darkSurface : Palette.lightSurface,
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(
+          color: isDark ? Palette.darkBorder : Palette.lightBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                size: 16,
+                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+              ),
+              const SizedBox(width: 8.0),
+              Text(
+                'Weekly Analytics Summary',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14.0,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Palette.darkText : Palette.lightText,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12.0),
+          ...weeklyData.take(3).map((weekData) {
+            final String weekStart = weekData['week_start']?.toString() ?? 'Unknown';
+            final int routeId = weekData['route_id'] ?? 0;
+            final double avgDensity = (weekData['avg_traffic_density'] as num?)?.toDouble() ?? 0.0;
+            final int sampleCount = weekData['sample_count'] ?? 0;
+            final double avgSpeed = (weekData['avg_speed_kmh'] as num?)?.toDouble() ?? 0.0;
+            final int peakHour = weekData['peak_hour'] ?? 0;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8.0),
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: isDark ? Palette.darkCard : Palette.lightCard,
+                borderRadius: BorderRadius.circular(6.0),
+                border: Border.all(
+                  color: isDark ? Palette.darkBorder.withOpacity(0.3) : Palette.lightBorder.withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Route $routeId - Week of $weekStart',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12.0,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Palette.darkText : Palette.lightText,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                        decoration: BoxDecoration(
+                          color: avgDensity > 0.7 ? Colors.red.withOpacity(0.2) : 
+                                 avgDensity > 0.4 ? Colors.orange.withOpacity(0.2) : 
+                                 Colors.green.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4.0),
+                        ),
+                        child: Text(
+                          '${(avgDensity * 100).toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.0,
+                            fontWeight: FontWeight.w500,
+                            color: avgDensity > 0.7 ? Colors.red : 
+                                   avgDensity > 0.4 ? Colors.orange : 
+                                   Colors.green,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8.0),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryItem(
+                          icon: Icons.speed,
+                          label: 'Avg Speed',
+                          value: '${avgSpeed.toStringAsFixed(1)} km/h',
+                          isDark: isDark,
+                        ),
+                      ),
+                      Expanded(
+                        child: _SummaryItem(
+                          icon: Icons.schedule,
+                          label: 'Peak Hour',
+                          value: '${peakHour}:00',
+                          isDark: isDark,
+                        ),
+                      ),
+                      Expanded(
+                        child: _SummaryItem(
+                          icon: Icons.data_usage,
+                          label: 'Samples',
+                          value: '$sampleCount',
+                          isDark: isDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isDark;
+
+  const _SummaryItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: 12,
+              color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+            ),
+            const SizedBox(width: 4.0),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 10.0,
+                color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2.0),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11.0,
+            fontWeight: FontWeight.w500,
+            color: isDark ? Palette.darkText : Palette.lightText,
+          ),
+        ),
+      ],
+    );
   }
 }
 

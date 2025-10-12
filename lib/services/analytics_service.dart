@@ -4,11 +4,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class AnalyticsService {
-  final String _apiUrl = dotenv.env['API_URL'] ?? '';
   final String _analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'] ?? '';
   final String _analyticsProxyPrefix = dotenv.env['ANALYTICS_PROXY_PREFIX'] ?? '';
 
-  bool get isConfigured => _apiUrl.isNotEmpty;
+  bool get isConfigured => _analyticsApiUrl.isNotEmpty;
   bool get isAnalyticsConfigured => _analyticsApiUrl.isNotEmpty;
   
   // Check if analytics service is actually available
@@ -34,7 +33,6 @@ class AnalyticsService {
     final results = <String, dynamic>{};
     
     debugPrint('[AnalyticsService] ========== ENDPOINT TESTING STARTED ==========');
-    debugPrint('[AnalyticsService] Main API URL: $_apiUrl');
     debugPrint('[AnalyticsService] Analytics API URL: $_analyticsApiUrl');
     debugPrint('[AnalyticsService] Is Configured: $isConfigured');
     debugPrint('[AnalyticsService] Is Analytics Configured: $isAnalyticsConfigured');
@@ -48,7 +46,6 @@ class AnalyticsService {
     results['weekly_trends'] = await _testEndpoint('GET', '/api/admin/analytics/weekly/trends', 'Weekly Trends');
     results['today_traffic'] = await _testEndpoint('GET', '/api/analytics/traffic/today', 'Today Traffic (All Routes)');
     results['today_traffic_route'] = await _testEndpoint('GET', '/api/analytics/traffic/today/1', 'Today Traffic (Route 1)');
-    results['route_daily'] = await _testEndpoint('GET', '/api/admin/analytics/route/1/daily', 'Route Daily Analytics');
     results['peak_patterns'] = await _testEndpoint('GET', '/api/admin/analytics/weekly/peak-patterns', 'Peak Patterns');
     
     // Test admin management endpoints
@@ -113,7 +110,7 @@ class AnalyticsService {
     return result;
   }
 
-  Uri _u(String path) => Uri.parse('$_apiUrl$path');
+  Uri _u(String path) => Uri.parse('$_analyticsApiUrl$path');
   Uri _au(String path) {
     // If a proxy prefix is configured, prefer it to avoid CORS on web
     if (_analyticsProxyPrefix.isNotEmpty) {
@@ -371,19 +368,6 @@ class AnalyticsService {
     }
   }
   
-  // Daily analytics for specific route
-  Future<http.Response> getRouteDailyAnalytics(String routeId) async {
-    final uri = _au('/api/admin/analytics/route/$routeId/daily');
-    debugPrint('[AnalyticsService] 📅 Calling getRouteDailyAnalytics for route $routeId: $uri');
-    try {
-      final response = await http.get(uri).timeout(Duration(seconds: 10));
-      debugPrint('[AnalyticsService] ✅ getRouteDailyAnalytics response: ${response.statusCode}');
-      return response;
-    } catch (e) {
-      debugPrint('[AnalyticsService] ❌ getRouteDailyAnalytics failed: $e');
-      rethrow;
-    }
-  }
   
   // Peak traffic pattern analysis
   Future<http.Response> getWeeklyPeakPatterns() {

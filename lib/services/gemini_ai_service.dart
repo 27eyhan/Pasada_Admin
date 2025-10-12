@@ -22,7 +22,7 @@ class GeminiAIService {
         return 'Too many requests. Please wait a moment and try again.';
       }
       if (!_analyticsService.isConfigured) {
-        return "API not configured. Set API_URL in .env.";
+        return "API not configured. Set ANALYTICS_API_URL in .env.";
       }
       final resp = await _analyticsService.askManong(
         question: question,
@@ -50,7 +50,7 @@ class GeminiAIService {
         return 'Too many requests. Please wait a moment and try again.';
       }
       if (!_analyticsService.isConfigured) {
-        return "API not configured. Set API_URL in .env.";
+        return "API not configured. Set ANALYTICS_API_URL in .env.";
       }
       // Keep only last 6 turns
       final recent = messages.length > 6 ? messages.sublist(messages.length - 6) : messages;
@@ -108,7 +108,7 @@ class GeminiAIService {
   Future<String> getDatabaseRouteInsights({required int routeId, int days = 7}) async {
     try {
       if (!_analyticsService.isConfigured) {
-        return "API not configured. Set API_URL in .env.";
+        return "API not configured. Set ANALYTICS_API_URL in .env.";
       }
       final resp = await _analyticsService.getDatabaseRouteAnalysis(routeId: routeId, days: days);
       if (resp.statusCode != 200) {
@@ -124,7 +124,7 @@ class GeminiAIService {
   Future<String> getDatabaseOverviewInsights({int days = 7}) async {
     try {
       if (!_analyticsService.isConfigured) {
-        return "API not configured. Set API_URL in .env.";
+        return "API not configured. Set ANALYTICS_API_URL in .env.";
       }
       final resp = await _analyticsService.getDatabaseOverviewAnalysis(days: days);
       if (resp.statusCode != 200) {
