@@ -753,7 +753,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
           }
         } catch (e) {
           // Non-fatal - analytics processing succeeded
-          print('Traffic collection failed but analytics succeeded: $e');
+          debugPrint('Traffic collection failed but analytics succeeded: $e');
         }
         
         // Refresh data after processing
@@ -1056,7 +1056,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: success ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                    color: success ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                     border: Border.all(
                       color: success ? Colors.green : Colors.red,
                       width: 1,
