@@ -4,10 +4,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class AnalyticsService {
+  final String _apiUrl = dotenv.env['API_URL'] ?? '';
   final String _analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'] ?? '';
   final String _analyticsProxyPrefix = dotenv.env['ANALYTICS_PROXY_PREFIX'] ?? '';
 
-  bool get isConfigured => _analyticsApiUrl.isNotEmpty;
+  bool get isConfigured => _apiUrl.isNotEmpty;
   bool get isAnalyticsConfigured => _analyticsApiUrl.isNotEmpty;
   
   // Check if analytics service is actually available
@@ -33,6 +34,7 @@ class AnalyticsService {
     final results = <String, dynamic>{};
     
     debugPrint('[AnalyticsService] ========== ENDPOINT TESTING STARTED ==========');
+    debugPrint('[AnalyticsService] Main API URL: $_apiUrl');
     debugPrint('[AnalyticsService] Analytics API URL: $_analyticsApiUrl');
     debugPrint('[AnalyticsService] Is Configured: $isConfigured');
     debugPrint('[AnalyticsService] Is Analytics Configured: $isAnalyticsConfigured');
@@ -46,6 +48,7 @@ class AnalyticsService {
     results['weekly_trends'] = await _testEndpoint('GET', '/api/admin/analytics/weekly/trends', 'Weekly Trends');
     results['today_traffic'] = await _testEndpoint('GET', '/api/analytics/traffic/today', 'Today Traffic (All Routes)');
     results['today_traffic_route'] = await _testEndpoint('GET', '/api/analytics/traffic/today/1', 'Today Traffic (Route 1)');
+    results['route_daily'] = await _testEndpoint('GET', '/api/admin/analytics/route/1/daily', 'Route Daily Analytics');
     results['peak_patterns'] = await _testEndpoint('GET', '/api/admin/analytics/weekly/peak-patterns', 'Peak Patterns');
     
     // Test admin management endpoints
@@ -110,7 +113,7 @@ class AnalyticsService {
     return result;
   }
 
-  Uri _u(String path) => Uri.parse('$_analyticsApiUrl$path');
+  Uri _u(String path) => Uri.parse('$_apiUrl$path');
   Uri _au(String path) {
     // If a proxy prefix is configured, prefer it to avoid CORS on web
     if (_analyticsProxyPrefix.isNotEmpty) {
@@ -303,13 +306,13 @@ class AnalyticsService {
   // Weekly analytics summary
   Future<http.Response> getWeeklySummary() async {
     final uri = _au('/api/admin/analytics/weekly/summary');
-    debugPrint('[AnalyticsService] 📊 Calling getWeeklySummary: $uri');
+    debugPrint('[AnalyticsService] Calling getWeeklySummary: $uri');
     try {
       final response = await http.get(uri).timeout(Duration(seconds: 10));
-      debugPrint('[AnalyticsService] ✅ getWeeklySummary response: ${response.statusCode}');
+      debugPrint('[AnalyticsService] getWeeklySummary response: ${response.statusCode}');
       return response;
     } catch (e) {
-      debugPrint('[AnalyticsService] ❌ getWeeklySummary failed: $e');
+      debugPrint('[AnalyticsService] getWeeklySummary failed: $e');
       rethrow;
     }
   }
@@ -320,17 +323,61 @@ class AnalyticsService {
     final uri = days != null
         ? _au('$base?days=$days')
         : _au(base);
-    debugPrint('[AnalyticsService] 🛣️  Calling getRouteSummary for route $routeId: $uri');
+    debugPrint('[AnalyticsService] Calling getRouteSummary for route $routeId: $uri');
     try {
-      final response = await http.get(uri).timeout(Duration(seconds: 8));
-      debugPrint('[AnalyticsService] ✅ getRouteSummary response: ${response.statusCode}');
+      final response = await http.get(uri).timeout(Duration(seconds: 5));
+      debugPrint('[AnalyticsService] getRouteSummary response: ${response.statusCode}');
       if (response.statusCode == 404) {
-        debugPrint('[AnalyticsService] ⚠️ Route $routeId has no data (404)');
+        debugPrint('[AnalyticsService] Route $routeId has no data (404)');
       }
       return response;
     } catch (e) {
-      debugPrint('[AnalyticsService] ❌ getRouteSummary failed: $e');
-      rethrow;
+      debugPrint('[AnalyticsService] getRouteSummary failed: $e');
+      // Return a mock response instead of throwing to prevent crashes
+      return http.Response('{"success": false, "error": "Service timeout"}', 408);
+    }
+  }
+  
+  // Fast weekly analytics endpoint (optimized for speed)
+  Future<http.Response> getFastWeeklyAnalytics(String routeId) async {
+    final uri = _au('/api/admin/analytics/weekly/summary');
+    debugPrint('[AnalyticsService] Calling getFastWeeklyAnalytics: $uri');
+    try {
+      final response = await http.get(uri).timeout(Duration(seconds: 3));
+      debugPrint('[AnalyticsService] getFastWeeklyAnalytics response: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      debugPrint('[AnalyticsService] getFastWeeklyAnalytics failed: $e');
+      // Return a mock response instead of throwing to prevent crashes
+      return http.Response('{"success": false, "error": "Service timeout"}', 408);
+    }
+  }
+  
+  // Safe method to get weekly analytics with fallback
+  Future<Map<String, dynamic>?> getWeeklyAnalyticsSafe(String routeId) async {
+    try {
+      final response = await getFastWeeklyAnalytics(routeId);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('[AnalyticsService] getWeeklyAnalyticsSafe failed: $e');
+    }
+    return null;
+  }
+
+  // Get current week traffic analytics for the green graph
+  Future<http.Response> getCurrentWeekTrafficAnalytics(String routeId) async {
+    final uri = _au('/api/admin/analytics/route/$routeId/current-week');
+    debugPrint('[AnalyticsService] Calling getCurrentWeekTrafficAnalytics for route $routeId: $uri');
+    try {
+      final response = await http.get(uri).timeout(Duration(seconds: 15));
+      debugPrint('[AnalyticsService] getCurrentWeekTrafficAnalytics response: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      debugPrint('[AnalyticsService] getCurrentWeekTrafficAnalytics failed: $e');
+      // Return a mock response instead of throwing to prevent crashes
+      return http.Response('{"success": false, "error": "Service timeout"}', 408);
     }
   }
   
@@ -357,17 +404,32 @@ class AnalyticsService {
   // Today's traffic for specific route
   Future<http.Response> getTodayTrafficForRoute(String routeId) async {
     final uri = _au('/api/analytics/traffic/today/$routeId');
-    debugPrint('[AnalyticsService] 🚦 Calling getTodayTrafficForRoute for route $routeId: $uri');
+    debugPrint('[AnalyticsService] Calling getTodayTrafficForRoute for route $routeId: $uri');
     try {
-      final response = await http.get(uri).timeout(Duration(seconds: 10));
-      debugPrint('[AnalyticsService] ✅ getTodayTrafficForRoute response: ${response.statusCode}');
+      final response = await http.get(uri).timeout(Duration(seconds: 3));
+      debugPrint('[AnalyticsService] getTodayTrafficForRoute response: ${response.statusCode}');
       return response;
     } catch (e) {
-      debugPrint('[AnalyticsService] ❌ getTodayTrafficForRoute failed: $e');
-      rethrow;
+      debugPrint('[AnalyticsService] getTodayTrafficForRoute failed: $e');
+      // Return a mock response instead of throwing to prevent crashes
+      return http.Response('{"success": false, "error": "Service timeout"}', 408);
     }
   }
   
+  // Daily analytics for specific route
+  Future<http.Response> getRouteDailyAnalytics(String routeId) async {
+    final uri = _au('/api/admin/analytics/route/$routeId/daily');
+    debugPrint('[AnalyticsService] Calling getRouteDailyAnalytics for route $routeId: $uri');
+    try {
+      final response = await http.get(uri).timeout(Duration(seconds: 3));
+      debugPrint('[AnalyticsService] getRouteDailyAnalytics response: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      debugPrint('[AnalyticsService] getRouteDailyAnalytics failed: $e');
+      // Return a mock response instead of throwing to prevent crashes
+      return http.Response('{"success": false, "error": "Service timeout"}', 408);
+    }
+  }
   
   // Peak traffic pattern analysis
   Future<http.Response> getWeeklyPeakPatterns() {

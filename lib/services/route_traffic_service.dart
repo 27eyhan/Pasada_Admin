@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class RouteTrafficService {
-  final String _apiUrl = dotenv.env['ANALYTICS_API_URL'] ?? '';
+  final String _apiUrl = dotenv.env['API_URL'] ?? '';
 
   Future<Map<String, dynamic>?> getRouteTrafficData(int routeId) async {
     if (_apiUrl.isEmpty) {
@@ -70,7 +70,7 @@ class RouteTrafficService {
   Future<String> getRouteTrafficForAI(int routeId) async {
     // Check if API URL is configured
     if (_apiUrl.isEmpty) {
-      return 'Error: ANALYTICS_API_URL is not configured in .env file. Please add ANALYTICS_API_URL=your_api_url_here to your .env file.';
+      return 'Error: API_URL is not configured in .env file. Please add API_URL=your_api_url_here to your .env file.';
     }
 
     final data = await getRouteTrafficData(routeId);
