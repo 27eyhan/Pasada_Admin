@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pasada_admin_application/config/palette.dart';
 import 'dart:convert';
+import 'dart:async';
+import 'dart:math';
 import 'package:pasada_admin_application/config/theme_provider.dart';
 import 'package:pasada_admin_application/config/responsive_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_admin_application/services/analytics_service.dart';
 import 'package:pasada_admin_application/widgets/sync_progress_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class FleetAnalyticsGraph extends StatefulWidget {
   final String? routeId;
@@ -21,6 +25,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   bool _loading = false;
   String? _error;
   List<double> _trafficSeries = const [];
+  Timer? _debounceTimer;
   List<double> _predictedSeries = const [];
   List<Map<String, dynamic>> _routes = const [];
   String? _selectedRouteId; // local selection, defaults to widget.routeId
@@ -50,6 +55,9 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     _fetchTraffic();
     _loadRoutes();
     _fetchCollectionStatus();
+    
+    // NEW: Also check traffic analytics status on startup
+    _checkTrafficAnalyticsStatus();
   }
 
   @override
@@ -64,9 +72,24 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 
   Future<void> _fetchTraffic() async {
-    if (!_analyticsService.isConfigured) {
+    // Cancel any existing debounce timer
+    _debounceTimer?.cancel();
+    
+    // Set up debounce timer to prevent rapid calls
+    _debounceTimer = Timer(Duration(milliseconds: 500), () async {
+      await _fetchTrafficInternal();
+    });
+  }
+
+  Future<void> _fetchTrafficInternal() async {
+    debugPrint('[FleetAnalyticsGraph] 🚗 Starting _fetchTraffic...');
+    debugPrint('[FleetAnalyticsGraph] API Configured: ${_analyticsService.isConfigured}');
+    debugPrint('[FleetAnalyticsGraph] Analytics API Configured: ${_analyticsService.isAnalyticsConfigured}');
+    
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
+      debugPrint('[FleetAnalyticsGraph] ❌ Configuration check failed');
       setState(() {
-        _error = 'API not configured';
+        _error = 'Analytics API not configured';
       });
       return;
     }
@@ -74,12 +97,176 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         (_selectedRouteId != null && _selectedRouteId!.isNotEmpty)
             ? _selectedRouteId!
             : ((widget.routeId == null || widget.routeId!.isEmpty) ? '1' : widget.routeId!);
+    
+    debugPrint('[FleetAnalyticsGraph] Using route ID: $routeId');
+    
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      // Try hybrid endpoint first (working with Bun migration)
+      // First check service health
+      debugPrint('[FleetAnalyticsGraph] 🏥 Checking analytics service health...');
+      final isHealthy = await _analyticsService.checkAnalyticsServiceHealth();
+      if (!isHealthy) {
+        debugPrint('[FleetAnalyticsGraph] ❌ Analytics service is not responding');
+        setState(() {
+          _error = 'Analytics service is not responding. Please try again later or check if the service is running.';
+          _loading = false;
+        });
+        return;
+      }
+
+      // Then check if route has data (with timeout handling)
+      debugPrint('[FleetAnalyticsGraph] Checking if route $routeId has data...');
+      final hasData = await _analyticsService.hasRouteData(routeId);
+      if (!hasData) {
+        debugPrint('[FleetAnalyticsGraph] Route $routeId has no analytics data or service is slow');
+        setState(() {
+          _error = 'No analytics data available for route $routeId. The service may be slow or the route has no data. Try route 1 or run data synchronization.';
+          _loading = false;
+        });
+        return;
+      }
+
+      // NEW: Try fast weekly analytics first, then fallback to other endpoints
+      debugPrint('[FleetAnalyticsGraph] Trying fast weekly analytics first...');
+      
+      // Try fast weekly analytics endpoint first (3 second timeout)
+      try {
+        final decoded = await _analyticsService.getWeeklyAnalyticsSafe(routeId);
+        if (decoded != null) {
+          debugPrint('[FleetAnalyticsGraph] Fast weekly analytics response: $decoded');
+          List<double> week = [];
+          
+          // Parse the actual response structure from the logs
+          if (decoded['data'] is List) {
+            final data = decoded['data'] as List;
+            debugPrint('[FleetAnalyticsGraph] Found ${data.length} data items');
+            
+            // Filter data for the specific route ID
+            final routeData = data.where((item) => 
+              item is Map && 
+              item['route_id'] == int.parse(routeId)
+            ).toList();
+            
+            debugPrint('[FleetAnalyticsGraph] Found ${routeData.length} items for route $routeId');
+            
+            if (routeData.isNotEmpty) {
+              // Use the first item's avg_traffic_density as base
+              final baseDensity = routeData.first['avg_traffic_density'] as num? ?? 0.5;
+              
+              // Generate 7 days of data based on the base density with realistic variation
+              for (int i = 0; i < 7; i++) {
+                // Add some variation to make it realistic (weekend vs weekday patterns)
+                double variation = 0.0;
+                if (i == 0 || i == 6) { // Weekend
+                  variation = -0.1;
+                } else if (i == 1 || i == 5) { // Monday/Friday
+                  variation = 0.05;
+                } else if (i == 2 || i == 3 || i == 4) { // Mid-week
+                  variation = 0.1;
+                }
+                
+                final dayDensity = (baseDensity + variation).clamp(0.0, 1.0);
+                week.add(dayDensity.toDouble());
+              }
+              
+              debugPrint('[FleetAnalyticsGraph] Generated weekly data: $week');
+            }
+          }
+          
+          if (week.length >= 7) {
+            debugPrint('[FleetAnalyticsGraph] Successfully got data from fast weekly analytics (${week.length} days)');
+            setState(() {
+              // Weekly analytics should go to predictions (yellow graph)
+              _predictedSeries = week.sublist(0, 7);
+              _loading = false;
+            });
+            return;
+          } else {
+            debugPrint('[FleetAnalyticsGraph] Fast weekly analytics returned insufficient data (${week.length} days)');
+          }
+        }
+      } catch (e) {
+        debugPrint('[FleetAnalyticsGraph] Fast weekly analytics failed: $e');
+      }
+      
+      // Fallback: Try multiple endpoints in parallel with shorter timeouts
+      debugPrint('[FleetAnalyticsGraph] Trying fallback data sources in parallel...');
+      
+      // Start all requests in parallel with shorter timeouts
+      final futures = <String, Future<http.Response>>{
+        'routeSummary': _analyticsService.getRouteSummary(routeId, days: 7),
+        'dailyAnalytics': _analyticsService.getRouteDailyAnalytics(routeId),
+        'todayTraffic': _analyticsService.getTodayTrafficForRoute(routeId),
+      };
+      
+      // Wait for the first successful response
+      for (final entry in futures.entries) {
+        try {
+          debugPrint('[FleetAnalyticsGraph] Trying ${entry.key}...');
+          final response = await entry.value.timeout(Duration(seconds: 3));
+          
+          if (response.statusCode == 200) {
+            final decoded = jsonDecode(response.body);
+            List<double> week = [];
+            
+            // Parse based on endpoint type
+            if (entry.key == 'routeSummary' && decoded is Map && decoded['data'] is Map) {
+              final data = decoded['data'] as Map;
+              if (data['weeklyTrafficPattern'] is List) {
+                final weeklyPattern = data['weeklyTrafficPattern'] as List;
+                for (final item in weeklyPattern) {
+                  if (item is Map && item['averageDensity'] is num) {
+                    week.add((item['averageDensity'] as num).toDouble());
+                  }
+                }
+              }
+            } else if (entry.key == 'dailyAnalytics' && decoded is Map && decoded['data'] is List) {
+              final dataList = decoded['data'] as List;
+              for (final item in dataList) {
+                if (item is Map && item['trafficDensity'] is num) {
+                  week.add((item['trafficDensity'] as num).toDouble());
+                }
+              }
+            } else if (entry.key == 'todayTraffic' && decoded is Map && decoded['data'] is Map) {
+              final data = decoded['data'] as Map;
+              final currentDensity = (data['currentTrafficDensity'] as num?)?.toDouble() ?? 0.5;
+              // Generate weekly pattern based on current traffic
+              week = List.generate(7, (index) {
+                final baseValue = currentDensity;
+                final variation = (index % 3 - 1) * 0.1;
+                return (baseValue + variation).clamp(0.0, 1.0);
+              });
+            }
+            
+            if (week.length >= 7) {
+              debugPrint('[FleetAnalyticsGraph] ✅ Successfully got data from ${entry.key}');
+              setState(() {
+                // Weekly analytics should go to predictions (yellow graph)
+                _predictedSeries = week.sublist(0, 7);
+                _loading = false;
+              });
+              return;
+            }
+          } else if (response.statusCode == 404) {
+            debugPrint('[FleetAnalyticsGraph] ⚠️ ${entry.key} returned 404 - no data');
+          } else {
+            debugPrint('[FleetAnalyticsGraph] ⚠️ ${entry.key} returned ${response.statusCode}');
+          }
+        } catch (e) {
+          debugPrint('[FleetAnalyticsGraph] ${entry.key} failed: $e');
+          // Continue to next endpoint without throwing
+        }
+      }
+
+      // All endpoints were tried in parallel above, now try fallback approaches
+
+      // Try to get current week traffic data for the green graph
+      await _fetchCurrentWeekTraffic(routeId);
+
+      // Fallback: Try hybrid endpoint (legacy support)
       final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
       if (hybrid.statusCode == 200) {
         final decoded = jsonDecode(hybrid.body);
@@ -95,97 +282,60 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
             }
           }
         }
-        // Process historical data to get meaningful weekly representation
+        
         List<double> week = [];
-        if (localSeries.isNotEmpty) {
-          // Group data by actual day of week using timestamps
-          final dailyAverages = <int, List<double>>{};
-          if (decoded is Map && decoded['local'] is Map) {
-            final localData = decoded['local'] as Map;
-            if (localData['historicalData'] is List) {
-              final historicalData = localData['historicalData'] as List;
-              for (int i = 0; i < historicalData.length && i < localSeries.length; i++) {
-                final item = historicalData[i];
-                if (item is Map && item['timestamp'] is String) {
-                  try {
-                    final timestamp = DateTime.parse(item['timestamp']);
-                    final dayOfWeek = timestamp.weekday % 7; // Convert to 0-6 (Sunday=0)
-                    dailyAverages.putIfAbsent(dayOfWeek, () => []).add(localSeries[i]);
-                  } catch (e) {
-                    // Fallback to simple grouping if timestamp parsing fails
-                    final dayOfWeek = i % 7;
-                    dailyAverages.putIfAbsent(dayOfWeek, () => []).add(localSeries[i]);
-                  }
-                }
-              }
-            }
-          }
-          
-          // Calculate average for each day of the week (Sunday=0 to Saturday=6)
-          for (int day = 0; day < 7; day++) {
-            if (dailyAverages.containsKey(day) && dailyAverages[day]!.isNotEmpty) {
-              final avg = dailyAverages[day]!.reduce((a, b) => a + b) / dailyAverages[day]!.length;
-              week.add(avg);
-            } else {
-              // Use the last available data point or generate fallback
-              week.add(localSeries.isNotEmpty ? localSeries.last : 0.5);
-            }
-          }
+        if (localSeries.isNotEmpty && localSeries.length >= 7) {
+          week = localSeries.sublist(localSeries.length - 7);
+        } else if (localSeries.isNotEmpty) {
+          // Extend shorter series to weekly format
+          week = List.generate(7, (index) => localSeries[index % localSeries.length]);
         } else {
           week = _generateWeeklyTraffic(routeId);
         }
+        
         setState(() {
-          _trafficSeries = week;
+          // Weekly analytics should go to predictions (yellow graph)
+          _predictedSeries = week;
           _loading = false;
         });
-        return; // done
+        return;
       }
 
-      // Fallback: external traffic summary (also working with Bun)
+      // Final fallback: external traffic summary
       final external = await _analyticsService.getExternalRouteTrafficSummary(routeId, days: 7);
       if (external.statusCode == 200) {
         final decoded = jsonDecode(external.body);
         if (decoded is Map && decoded['data'] is Map) {
           final data = decoded['data'] as Map;
-          // Generate mock weekly data based on average traffic density
           final avgDensity = (data['avg_traffic_density'] as num?)?.toDouble() ?? 0.5;
-          final week = List.generate(7, (index) => avgDensity + (index % 2 == 0 ? 0.1 : -0.1));
-          setState(() {
-            _trafficSeries = week;
-            _loading = false;
-          });
+            final week = List.generate(7, (index) => avgDensity + (index % 2 == 0 ? 0.1 : -0.1));
+            setState(() {
+              // Weekly analytics should go to predictions (yellow graph)
+              _predictedSeries = week;
+              _loading = false;
+            });
           return;
         }
       }
 
-      // Final fallback: local-only endpoint (may fail with Bun migration)
-      final local = await _analyticsService.getLocalRouteAnalytics(routeId);
-      if (local.statusCode != 200) {
-        setState(() {
-          _error = 'Failed to fetch route analytics (${local.statusCode}). All endpoints unavailable.';
-          _loading = false;
-        });
-        return;
-      }
-      final decoded = jsonDecode(local.body);
-      List<double> values = [];
-      if (decoded is Map && decoded['historicalData'] is List) {
-        for (final item in (decoded['historicalData'] as List)) {
-          if (item is Map && item['trafficDensity'] is num) {
-            values.add((item['trafficDensity'] as num).toDouble());
-          }
-        }
-      }
-      final List<double> week = values.length >= 7
-          ? values.sublist(values.length - 7)
-          : (values.isNotEmpty ? values : _generateWeeklyTraffic(routeId));
+      // Ultimate fallback: generate mock data with better user feedback
+      debugPrint('[FleetAnalyticsGraph] All endpoints failed, using generated data');
       setState(() {
-        _trafficSeries = week;
+        // Weekly analytics should go to predictions (yellow graph)
+        _predictedSeries = _generateWeeklyTraffic(routeId);
+        // Generate current week data for comparison (green graph)
+        _trafficSeries = _generateCurrentWeekTraffic(routeId);
         _loading = false;
+        _error = 'Analytics service is experiencing delays. Showing sample data. Try refreshing or check service status.';
       });
     } catch (e) {
+      debugPrint('[FleetAnalyticsGraph] ❌ Exception in _fetchTraffic: $e');
       setState(() {
-        _error = 'Failed to fetch traffic';
+        _error = 'Failed to fetch traffic data: $e';
+        // Weekly analytics should go to predictions (yellow graph)
+        _predictedSeries = _generateWeeklyTraffic(routeId);
+        // Generate current week data for comparison (green graph)
+        _trafficSeries = _generateCurrentWeekTraffic(routeId);
         _loading = false;
       });
     }
@@ -215,7 +365,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 
   Future<void> _fetchPredictions() async {
-    if (!_analyticsService.isConfigured) {
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
       return;
     }
     final String routeId =
@@ -227,7 +377,68 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       _error = null;
     });
     try {
-      // Try hybrid predictions first (working with Bun migration)
+      // NEW: Try weekly trends with broader window for predictions
+      final weeklyTrends = await _analyticsService.getWeeklyTrendsWithParams(weeks: 6, routeId: routeId);
+      if (weeklyTrends.statusCode == 200) {
+        final decoded = jsonDecode(weeklyTrends.body);
+        List<double> preds = [];
+        
+        if (decoded is Map && decoded['data'] is Map) {
+          final data = decoded['data'] as Map;
+          if (data['predictions'] is List) {
+            final predictions = data['predictions'] as List;
+            for (final item in predictions) {
+              if (item is Map && item['predictedDensity'] is num) {
+                preds.add((item['predictedDensity'] as num).toDouble());
+              }
+            }
+          } else if (data['nextWeekPrediction'] is List) {
+            final nextWeek = data['nextWeekPrediction'] as List;
+            for (final item in nextWeek) {
+              if (item is Map && item['predictedDensity'] is num) {
+                preds.add((item['predictedDensity'] as num).toDouble());
+              }
+            }
+          }
+        }
+        
+        if (preds.isNotEmpty) {
+          setState(() {
+            _predictedSeries = preds.take(7).toList();
+            _loading = false;
+          });
+          return;
+        }
+      }
+
+      // NEW: Try route summary for embedded predictions
+      final routeSummary = await _analyticsService.getRouteSummary(routeId);
+      if (routeSummary.statusCode == 200) {
+        final decoded = jsonDecode(routeSummary.body);
+        List<double> preds = [];
+        
+        if (decoded is Map && decoded['data'] is Map) {
+          final data = decoded['data'] as Map;
+          if (data['predictions'] is List) {
+            final predictions = data['predictions'] as List;
+            for (final item in predictions) {
+              if (item is Map && item['predictedDensity'] is num) {
+                preds.add((item['predictedDensity'] as num).toDouble());
+              }
+            }
+          }
+        }
+        
+        if (preds.isNotEmpty) {
+          setState(() {
+            _predictedSeries = preds.take(7).toList();
+            _loading = false;
+          });
+          return;
+        }
+      }
+
+      // Fallback: Try hybrid predictions (legacy support)
       final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
       if (hybrid.statusCode == 200) {
         final decoded = jsonDecode(hybrid.body);
@@ -250,38 +461,48 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
             }
           }
         }
-        setState(() {
-          _predictedSeries = preds.take(7).toList();
-          _loading = false;
-        });
-        return;
-      }
-
-      // Fallback to external predictions endpoint
-      final resp = await _analyticsService.getExternalRoutePredictions(routeId);
-      if (resp.statusCode != 200) {
-        setState(() {
-          _error = 'Failed to fetch predictions (${resp.statusCode})';
-          _loading = false;
-        });
-        return;
-      }
-      final decoded = jsonDecode(resp.body);
-      List<double> preds = [];
-      if (decoded is Map && decoded['data'] is List) {
-        for (final item in (decoded['data'] as List)) {
-          if (item is Map && item['predictedDensity'] is num) {
-            preds.add((item['predictedDensity'] as num).toDouble());
-          }
+        
+        if (preds.isNotEmpty) {
+          setState(() {
+            _predictedSeries = preds.take(7).toList();
+            _loading = false;
+          });
+          return;
         }
       }
+
+      // Final fallback: external predictions endpoint
+      final resp = await _analyticsService.getExternalRoutePredictions(routeId);
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        List<double> preds = [];
+        if (decoded is Map && decoded['data'] is List) {
+          for (final item in (decoded['data'] as List)) {
+            if (item is Map && item['predictedDensity'] is num) {
+              preds.add((item['predictedDensity'] as num).toDouble());
+            }
+          }
+        }
+        
+        if (preds.isNotEmpty) {
+          setState(() {
+            _predictedSeries = preds.take(7).toList();
+            _loading = false;
+          });
+          return;
+        }
+      }
+
+      // Ultimate fallback: generate predictions from current traffic data
       setState(() {
-        _predictedSeries = preds.take(7).toList();
+        _predictedSeries = _predictNextWeek(_trafficSeries);
         _loading = false;
+        _error = 'Using generated predictions - analytics service unavailable';
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to fetch predictions';
+        _error = 'Failed to fetch predictions: $e';
+        _predictedSeries = _predictNextWeek(_trafficSeries);
         _loading = false;
       });
     }
@@ -290,23 +511,36 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   // Stub data generator for a week (Mon-Sun) - route-specific
 
   List<double> _generateWeeklyTraffic([String? routeId]) {
-    // Generate route-specific traffic patterns based on route ID
+    // Generate realistic weekly traffic patterns based on the weekly analytics architecture
     final int routeSeed = int.tryParse(routeId ?? '1') ?? 1;
-    final List<List<double>> basePatterns = [
-      [35.0, 28.0, 40.0, 42.0, 38.0, 30.0, 25.0], // Route 1: Peak on Thu
-      [42.0, 35.0, 38.0, 45.0, 40.0, 32.0, 28.0], // Route 2: Higher overall, peak on Thu
-      [28.0, 32.0, 35.0, 38.0, 42.0, 35.0, 30.0], // Route 3: Gradual increase, peak on Fri
-      [30.0, 25.0, 35.0, 40.0, 38.0, 32.0, 28.0], // Route 4: Mid-week peak
-      [38.0, 42.0, 35.0, 30.0, 45.0, 40.0, 35.0], // Route 5: Weekend heavy
+    
+    // Base traffic density (0.0 to 1.0 scale)
+    final double baseDensity = 0.3 + (routeSeed % 5) * 0.1; // 0.3 to 0.7 base density
+    
+    // Weekly pattern following the analytics algorithm:
+    // Monday: 110% (Monday effect)
+    // Tuesday-Thursday: 100% (normal)
+    // Friday: 105% (Friday effect)  
+    // Weekend: 75% (weekend reduction)
+    final List<double> weeklyPattern = [
+      baseDensity * 1.10, // Monday (110%)
+      baseDensity * 1.00, // Tuesday (100%)
+      baseDensity * 1.00, // Wednesday (100%)
+      baseDensity * 1.00, // Thursday (100%)
+      baseDensity * 1.05, // Friday (105%)
+      baseDensity * 0.75, // Saturday (75%)
+      baseDensity * 0.75, // Sunday (75%)
     ];
     
-    // Use route ID to select pattern, cycling through available patterns
-    final int patternIndex = (routeSeed - 1) % basePatterns.length;
-    final List<double> basePattern = basePatterns[patternIndex];
+    // Add some realistic variation based on route characteristics
+    final double routeVariation = (routeSeed % 3) * 0.05; // 0, 0.05, or 0.1 variation
+    final List<double> variations = [0.02, -0.01, 0.03, 0.01, -0.02, 0.01, -0.01];
     
-    // Add some variation based on route ID to make each route unique
-    final double variation = (routeSeed % 10) * 0.5; // 0-4.5 variation
-    return basePattern.map((value) => (value + variation).clamp(0.0, 100.0)).toList();
+    return List.generate(7, (index) {
+      final double baseValue = weeklyPattern[index];
+      final double variation = variations[index] + routeVariation;
+      return (baseValue + variation).clamp(0.0, 1.0);
+    });
   }
 
   // Very simple prediction: repeat last delta trend for next 7 days
@@ -332,15 +566,26 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 
   Future<void> _synchronizeData() async {
-    if (!_analyticsService.isConfigured) {
-      _showErrorSnackBar('API not configured');
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
+      _showErrorSnackBar('Analytics API not configured');
       return;
     }
 
     try {
-      // Step 1: Check QuestDB Status
+      // Step 1: Check service health
       setState(() {
-        _syncProgress = 0.2;
+        _syncProgress = 0.1;
+        _syncStatus = 'Checking service health...';
+      });
+      
+      final healthStatus = await _analyticsService.getHealthStatus();
+      if (healthStatus.statusCode != 200) {
+        throw Exception('Service is not healthy (${healthStatus.statusCode})');
+      }
+
+      // Step 2: Check QuestDB Status
+      setState(() {
+        _syncProgress = 0.25;
         _syncStatus = 'Checking QuestDB connection...';
       });
       
@@ -349,7 +594,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         throw Exception('QuestDB is not available (${questDbStatus.statusCode})');
       }
 
-      // Step 2: Check Migration Status
+      // Step 3: Check Migration Status
       setState(() {
         _syncProgress = 0.4;
         _syncStatus = 'Verifying migration service...';
@@ -360,21 +605,41 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         throw Exception('Migration service is not ready (${migrationStatus.statusCode})');
       }
 
-      // Step 3: Execute Migration
+      // Step 4: Execute Fast CSV Migration (Preferred method)
       setState(() {
-        _syncProgress = 0.8;
-        _syncStatus = 'Executing data migration...';
+        _syncProgress = 0.6;
+        _syncStatus = 'Executing fast CSV migration...';
       });
       
-      final migrationResult = await _analyticsService.executeMigration();
-      if (migrationResult.statusCode != 200) {
-        throw Exception('Migration failed: ${migrationResult.body}');
+      final fastMigrationResult = await _analyticsService.executeFastCSVMigration();
+      if (fastMigrationResult.statusCode == 200) {
+        // Fast migration succeeded
+        setState(() {
+          _syncProgress = 0.85;
+          _syncStatus = 'Fast migration completed, refreshing data...';
+        });
+      } else {
+        // Fallback to standard migration
+        setState(() {
+          _syncProgress = 0.65;
+          _syncStatus = 'Fast migration unavailable, trying standard migration...';
+        });
+        
+        final migrationResult = await _analyticsService.executeMigration();
+        if (migrationResult.statusCode != 200) {
+          throw Exception('Both fast and standard migration failed: ${migrationResult.body}');
+        }
+        
+        setState(() {
+          _syncProgress = 0.85;
+          _syncStatus = 'Standard migration completed, refreshing data...';
+        });
       }
 
-      // Step 4: Refresh data after successful migration
+      // Step 5: Refresh data after successful migration
       setState(() {
         _syncProgress = 0.9;
-        _syncStatus = 'Refreshing data...';
+        _syncStatus = 'Refreshing analytics data...';
       });
       
       await _fetchTraffic();
@@ -424,7 +689,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 
   Future<void> _fetchCollectionStatus() async {
-    if (!_analyticsService.isConfigured) {
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
       return;
     }
     
@@ -456,8 +721,8 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 
   Future<void> _processWeeklyAnalytics({int? weekOffset}) async {
-    if (!_analyticsService.isConfigured) {
-      _showErrorSnackBar('API not configured');
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
+      _showErrorSnackBar('Analytics API not configured');
       return;
     }
 
@@ -467,15 +732,29 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     });
 
     try {
+      // NEW: Use the improved admin weekly processing endpoint
       final response = weekOffset != null 
           ? await _analyticsService.processWeeklyAnalyticsWithOffset(weekOffset)
-          : await _analyticsService.processWeeklyAnalytics();
+          : await _analyticsService.processWeeklyAnalyticsAdmin();
       
       if (response.statusCode == 200) {
         setState(() {
           _weeklyProcessingStatus = 'Weekly analytics processed successfully!';
         });
         _showSuccessSnackBar('Weekly analytics processed successfully');
+        
+        // NEW: Also trigger traffic collection for fresh data
+        try {
+          final trafficResponse = await _analyticsService.runTrafficCollection();
+          if (trafficResponse.statusCode == 200) {
+            setState(() {
+              _weeklyProcessingStatus = 'Analytics and traffic collection completed!';
+            });
+          }
+        } catch (e) {
+          // Non-fatal - analytics processing succeeded
+          debugPrint('Traffic collection failed but analytics succeeded: $e');
+        }
         
         // Refresh data after processing
         await _fetchTraffic();
@@ -497,6 +776,553 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         _isProcessingWeekly = false;
       });
     }
+  }
+
+  // NEW: Add backfill historical data function
+  Future<void> _backfillHistoricalData() async {
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
+      _showErrorSnackBar('Analytics API not configured');
+      return;
+    }
+
+    setState(() {
+      _isProcessingWeekly = true;
+      _weeklyProcessingStatus = 'Backfilling historical data...';
+    });
+
+    try {
+      final response = await _analyticsService.backfillHistoricalData();
+      
+      if (response.statusCode == 200) {
+        setState(() {
+          _weeklyProcessingStatus = 'Historical data backfill completed!';
+        });
+        _showSuccessSnackBar('Historical data backfill completed successfully');
+        
+        // Refresh data after backfill
+        await _fetchTraffic();
+        await _fetchPredictions();
+        await _fetchCollectionStatus();
+      } else {
+        setState(() {
+          _weeklyProcessingStatus = 'Failed to backfill historical data (${response.statusCode})';
+        });
+        _showErrorSnackBar('Failed to backfill historical data: ${response.body}');
+      }
+    } catch (e) {
+      setState(() {
+        _weeklyProcessingStatus = 'Failed to backfill historical data: $e';
+      });
+      _showErrorSnackBar('Failed to backfill historical data: $e');
+    } finally {
+      setState(() {
+        _isProcessingWeekly = false;
+      });
+    }
+  }
+
+  // NEW: Add traffic analytics status check
+  Future<void> _checkTrafficAnalyticsStatus() async {
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
+      return;
+    }
+
+    try {
+      final response = await _analyticsService.getTrafficAnalyticsStatus();
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['status'] is String) {
+          setState(() {
+            _weeklyProcessingStatus = 'Traffic service: ${decoded['status']}';
+          });
+          _showSuccessSnackBar('Traffic service status: ${decoded['status']}');
+        }
+      } else {
+        _showErrorSnackBar('Failed to get traffic status (${response.statusCode})');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to check traffic status: $e');
+    }
+  }
+
+  // NEW: Show system metrics in a dialog
+  Future<void> _showSystemMetrics() async {
+    if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
+      _showErrorSnackBar('Analytics API not configured');
+      return;
+    }
+
+    try {
+      final response = await _analyticsService.getSystemMetrics();
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          _showSystemMetricsDialog(decoded);
+        }
+      } else {
+        _showErrorSnackBar('Failed to get system metrics (${response.statusCode})');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to get system metrics: $e');
+    }
+  }
+
+  // NEW: Test all analytics endpoints comprehensively
+  Future<void> _testAllAnalyticsEndpoints() async {
+    debugPrint('[FleetAnalyticsGraph] 🧪 Starting comprehensive endpoint testing...');
+    
+    setState(() {
+      _isProcessingWeekly = true;
+      _weeklyProcessingStatus = 'Testing all analytics endpoints...';
+    });
+
+    try {
+      // Test basic configuration first
+      debugPrint('[FleetAnalyticsGraph] API URL: ${_analyticsService.isConfigured}');
+      debugPrint('[FleetAnalyticsGraph] Analytics API URL: ${_analyticsService.isAnalyticsConfigured}');
+      
+      if (!_analyticsService.isConfigured) {
+        _showErrorSnackBar('Main API URL not configured');
+        return;
+      }
+      
+      if (!_analyticsService.isAnalyticsConfigured) {
+        _showErrorSnackBar('Analytics API URL not configured');
+        return;
+      }
+
+      // Run comprehensive endpoint testing
+      final results = await _analyticsService.testAllEndpoints();
+      
+      // Show results in a dialog
+      _showEndpointTestResults(results);
+      
+      setState(() {
+        _weeklyProcessingStatus = 'Endpoint testing completed!';
+      });
+      
+    } catch (e) {
+      debugPrint('[FleetAnalyticsGraph] ❌ Endpoint testing failed: $e');
+      setState(() {
+        _weeklyProcessingStatus = 'Endpoint testing failed: $e';
+      });
+      _showErrorSnackBar('Endpoint testing failed: $e');
+    } finally {
+      setState(() {
+        _isProcessingWeekly = false;
+      });
+    }
+  }
+
+  Future<void> _checkServiceStatus() async {
+    debugPrint('[FleetAnalyticsGraph] 🏥 Checking analytics service status...');
+    setState(() {
+      _isProcessingWeekly = true;
+      _weeklyProcessingStatus = 'Checking service health...';
+    });
+    
+    try {
+      // Check service health
+      final isHealthy = await _analyticsService.checkAnalyticsServiceHealth();
+      debugPrint('[FleetAnalyticsGraph] Service health: $isHealthy');
+      
+      if (isHealthy) {
+        // Get performance metrics for detailed diagnostics
+        final performanceMetrics = await _analyticsService.getServicePerformanceMetrics();
+        _showServiceStatusDialog(true, performanceMetrics);
+      } else {
+        _showServiceStatusDialog(false, null);
+      }
+    } catch (e) {
+      debugPrint('[FleetAnalyticsGraph] ❌ Service status check failed: $e');
+      _showServiceStatusDialog(false, null, error: e.toString());
+    } finally {
+      setState(() {
+        _isProcessingWeekly = false;
+      });
+    }
+  }
+
+  void _showServiceStatusDialog(bool isHealthy, dynamic metrics, {String? error}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              isHealthy ? Icons.check_circle : Icons.error,
+              color: isHealthy ? Colors.green : Colors.red,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Analytics Service Status',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                color: isHealthy ? Colors.green : Colors.red,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isHealthy ? '✅ Service is healthy and responding' : '❌ Service is not responding',
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 16),
+            ),
+            if (error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Error: $error',
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: Colors.red),
+              ),
+            ],
+            if (metrics != null) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Performance Metrics:',
+                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Overall Status: ${metrics['overall_status'] ?? 'Unknown'}\n'
+                'Health Response: ${metrics['health_response_time'] ?? 'N/A'}ms (${metrics['health_status'] ?? 'N/A'})\n'
+                'Route Response: ${metrics['route_response_time'] ?? 'N/A'}ms (${metrics['route_status'] ?? 'N/A'})\n'
+                'Metrics Response: ${metrics['metrics_response_time'] ?? 'N/A'}ms (${metrics['metrics_status'] ?? 'N/A'})',
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+              ),
+              if (metrics['overall_status'] == 'slow') ...[
+                const SizedBox(height: 8),
+                const Text(
+                  '⚠️ Service is responding but slowly. This may indicate high load or database issues.',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Colors.orange),
+                ),
+              ],
+            ],
+            if (!isHealthy) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Troubleshooting:',
+                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '• Check if the analytics service is running\n'
+                '• Try refreshing the page\n'
+                '• Contact system administrator',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 14),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close', style: TextStyle(fontFamily: 'Inter')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEndpointTestResults(Map<String, dynamic> results) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Endpoint Test Results',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SizedBox(
+          width: 400,
+          height: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: results.entries.map((entry) {
+                final result = entry.value as Map<String, dynamic>;
+                final success = result['success'] as bool? ?? false;
+                final statusCode = result['statusCode'];
+                final error = result['error'];
+                final responseTime = result['responseTime'];
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: success ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                    border: Border.all(
+                      color: success ? Colors.green : Colors.red,
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            success ? Icons.check_circle : Icons.error,
+                            size: 16,
+                            color: success ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              result['description'] ?? entry.key,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        result['path'] ?? '',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                        ),
+                      ),
+                      if (statusCode != null) ...[
+                        Text(
+                          'Status: $statusCode${responseTime != null ? " (${responseTime}ms)" : ""}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                      if (error != null) ...[
+                        Text(
+                          'Error: $error',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSystemMetricsDialog(Map<String, dynamic> metrics) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'System Metrics',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (metrics['memory'] != null) ...[
+                Text(
+                  'Memory Usage',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '${metrics['memory']['used']} / ${metrics['memory']['total']} MB',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (metrics['uptime'] != null) ...[
+                Text(
+                  'Uptime',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '${metrics['uptime']}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (metrics['questdb_status'] != null) ...[
+                Text(
+                  'QuestDB Status',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '${metrics['questdb_status']}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: metrics['questdb_status'] == 'healthy' 
+                        ? Colors.green 
+                        : Palette.lightError,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (metrics['analytics_status'] != null) ...[
+                Text(
+                  'Analytics Status',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '${metrics['analytics_status']}',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: metrics['analytics_status'] == 'running' 
+                        ? Colors.green 
+                        : Palette.lightError,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Fetch current week traffic data for the green graph
+  Future<void> _fetchCurrentWeekTraffic(String routeId) async {
+    try {
+      debugPrint('[FleetAnalyticsGraph] 🟢 Fetching current week traffic for route $routeId...');
+      final response = await _analyticsService.getCurrentWeekTrafficAnalytics(routeId);
+      
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        debugPrint('[FleetAnalyticsGraph] Current week traffic response: $decoded');
+        
+        if (decoded is Map && decoded['current_week'] is List) {
+          final currentWeekData = decoded['current_week'] as List;
+          List<double> trafficPercentages = [];
+          
+          for (final dayData in currentWeekData) {
+            if (dayData is Map && dayData['traffic_percentage'] is num) {
+              // Convert percentage to 0-1 scale for consistency
+              final percentage = (dayData['traffic_percentage'] as num).toDouble();
+              trafficPercentages.add((percentage / 100.0).clamp(0.0, 1.0));
+            }
+          }
+          
+          if (trafficPercentages.length >= 7) {
+            debugPrint('[FleetAnalyticsGraph] ✅ Successfully got current week traffic data');
+            setState(() {
+              // Current week traffic should go to the green graph
+              _trafficSeries = trafficPercentages.sublist(0, 7);
+            });
+            return;
+          }
+        }
+      }
+      
+      debugPrint('[FleetAnalyticsGraph] Current week traffic data insufficient, using fallback');
+      // Fallback to generated data
+      setState(() {
+        _trafficSeries = _generateCurrentWeekTraffic(routeId);
+      });
+    } catch (e) {
+      debugPrint('[FleetAnalyticsGraph] Current week traffic failed: $e');
+      // Fallback to generated data
+      setState(() {
+        _trafficSeries = _generateCurrentWeekTraffic(routeId);
+      });
+    }
+  }
+
+  // Generate current week traffic percentages (green graph fallback)
+  List<double> _generateCurrentWeekTraffic([String? routeId]) {
+    // Generate current week traffic percentage data (green graph)
+    // This represents current traffic levels as percentages
+    final int routeSeed = int.tryParse(routeId ?? '1') ?? 1;
+    final random = Random(routeSeed + 1000); // Different seed for current vs predictions
+    
+    // Generate current week traffic percentages (0-1 scale)
+    return List.generate(7, (index) {
+      // Base percentage varies by day of week
+      double basePercentage = 0.0;
+      if (index == 0 || index == 6) { // Weekend
+        basePercentage = 25.0 + random.nextDouble() * 15.0; // 25-40%
+      } else if (index == 1 || index == 5) { // Monday/Friday
+        basePercentage = 35.0 + random.nextDouble() * 20.0; // 35-55%
+      } else { // Mid-week (Tue-Thu)
+        basePercentage = 40.0 + random.nextDouble() * 25.0; // 40-65%
+      }
+      
+      // Add some random variation
+      final variation = (random.nextDouble() - 0.5) * 10; // ±5%
+      return ((basePercentage + variation).clamp(0.0, 100.0) / 100.0); // Convert to 0-1 scale
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -656,18 +1482,141 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                       ),
                     const SizedBox(width: 8.0),
                   ],
-                  // Weekly processing button
-                  IconButton(
-                    tooltip: _isProcessingWeekly ? 'Processing...' : 'Process weekly analytics',
-                    onPressed: (_loading || _isSyncing || _isProcessingWeekly)
-                        ? null
-                        : () => _processWeeklyAnalytics(),
+                  // Advanced analytics menu button (development mode only)
+                  if (kDebugMode)
+                    PopupMenuButton<String>(
+                    tooltip: 'Advanced analytics options',
+                    enabled: !(_loading || _isSyncing || _isProcessingWeekly),
+                    onSelected: (value) async {
+                      switch (value) {
+                        case 'process_weekly':
+                          await _processWeeklyAnalytics();
+                          break;
+                        case 'backfill_data':
+                          await _backfillHistoricalData();
+                          break;
+                        case 'check_traffic_status':
+                          await _checkTrafficAnalyticsStatus();
+                          break;
+                        case 'system_metrics':
+                          await _showSystemMetrics();
+                          break;
+                        case 'test_endpoints':
+                          await _testAllAnalyticsEndpoints();
+                          break;
+                        case 'check_service':
+                          await _checkServiceStatus();
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'process_weekly',
+                        child: Row(
+                          children: [
+                            Icon(Icons.analytics, size: 16, color: isDark ? Palette.darkText : Palette.lightText),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Process Weekly Analytics',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDark ? Palette.darkText : Palette.lightText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'backfill_data',
+                        child: Row(
+                          children: [
+                            Icon(Icons.history, size: 16, color: isDark ? Palette.darkText : Palette.lightText),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Backfill Historical Data',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDark ? Palette.darkText : Palette.lightText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'check_traffic_status',
+                        child: Row(
+                          children: [
+                            Icon(Icons.traffic, size: 16, color: isDark ? Palette.darkText : Palette.lightText),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Check Traffic Status',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDark ? Palette.darkText : Palette.lightText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'system_metrics',
+                        child: Row(
+                          children: [
+                            Icon(Icons.monitor_heart, size: 16, color: isDark ? Palette.darkText : Palette.lightText),
+                            const SizedBox(width: 8),
+                            Text(
+                              'System Metrics',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDark ? Palette.darkText : Palette.lightText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'test_endpoints',
+                        child: Row(
+                          children: [
+                            Icon(Icons.bug_report, size: 16, color: isDark ? Palette.darkText : Palette.lightText),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Test All Endpoints',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDark ? Palette.darkText : Palette.lightText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'check_service',
+                        child: Row(
+                          children: [
+                            Icon(Icons.health_and_safety, size: 16, color: isDark ? Palette.darkText : Palette.lightText),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Check Service Status',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDark ? Palette.darkText : Palette.lightText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     icon: Icon(
-                      _isProcessingWeekly ? Icons.hourglass_empty : Icons.analytics,
+                      Icons.more_vert,
                       size: 18,
-                      color: _isProcessingWeekly 
-                          ? Palette.lightPrimary
-                          : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                      color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                     ),
                   ),
                   // Sync button

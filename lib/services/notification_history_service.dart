@@ -18,6 +18,7 @@ class NotificationHistoryService {
       
     } catch (e) {
       debugPrint('Error initializing notification history service: $e');
+      throw Exception('Error initializing notification history service: $e');
     }
   }
 
@@ -35,15 +36,13 @@ class NotificationHistoryService {
         try {
           _notifications.add(NotificationHistoryItem.fromJson(item));
         } catch (e) {
-          
-          // Skip this item and continue with others
-          continue;
+          throw Exception('Error loading notifications: $e');
         }
       }
       
       
     } catch (e) {
-      
+      throw Exception('Error loading notifications: $e');
     }
   }
 
@@ -90,7 +89,7 @@ class NotificationHistoryService {
 
       
     } catch (e) {
-      
+      throw Exception('Error adding notification: $e');
     }
   }
 
@@ -128,7 +127,7 @@ class NotificationHistoryService {
             .eq('id', notificationId);
       }
     } catch (e) {
-      
+      throw Exception('Error marking notification as read: $e');
     }
   }
 
@@ -147,7 +146,7 @@ class NotificationHistoryService {
           .update({'is_read': true})
           .eq('is_read', false);
     } catch (e) {
-      
+      throw Exception('Error marking all notifications as read: $e');
     }
   }
 
@@ -162,7 +161,7 @@ class NotificationHistoryService {
           .delete()
           .eq('id', notificationId);
     } catch (e) {
-      
+      throw Exception('Error deleting notification: $e');
     }
   }
 
@@ -177,7 +176,7 @@ class NotificationHistoryService {
           .delete()
           .neq('id', '');
     } catch (e) {
-      
+      throw Exception('Error clearing notifications: $e');
     }
   }
 

@@ -17,9 +17,6 @@ class SessionService {
         : (envAlt != null && envAlt.isNotEmpty)
             ? envAlt
             : null;
-    // Fallback to a sensible default table name when unset/empty
-    // Ensure not empty to avoid requests hitting /rest/v1/ with no table path
-    // Use camelCase to match existing schema conventions in this project
     return (envName == null || envName.isEmpty) ? 'adminSessionsTable' : envName;
   }
   static const String _deviceIdKey = 'deviceId';
