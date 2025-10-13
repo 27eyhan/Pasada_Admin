@@ -7,6 +7,12 @@
   "github": {
     "silent": false
   },
+  "rewrites": [
+    {
+      "source": "/analytics-proxy/(.*)",
+      "destination": "https://pasada-analytics-v2.fly.dev/$1"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 class AnalyticsService {
   final String _apiUrl = dotenv.env['API_URL'] ?? '';
   final String _analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'] ?? '';
-  final String _analyticsProxyPrefix = dotenv.env['ANALYTICS_PROXY_PREFIX'] ?? '';
+  final String _analyticsProxyPrefix = dotenv.env['ANALYTICS_PROXY_PREFIX'] ?? '/analytics-proxy';
 
   bool get isConfigured => _apiUrl.isNotEmpty;
   bool get isAnalyticsConfigured => _analyticsApiUrl.isNotEmpty;
