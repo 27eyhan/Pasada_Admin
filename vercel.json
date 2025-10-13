@@ -10,7 +10,7 @@
   "rewrites": [
     {
       "source": "/analytics-proxy/(.*)",
-      "destination": "https://pasada-analytics-v2.fly.dev/$1"
+      "destination": "/api/analytics-proxy/$1"
     }
   ],
   "headers": [
