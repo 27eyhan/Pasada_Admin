@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 class AnalyticsService {
   final String _apiUrl = dotenv.env['API_URL'] ?? '';
   final String _analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'] ?? '';
+  // Default to no proxy in dev; Vercel build injects ANALYTICS_PROXY_PREFIX=/analytics-proxy
   final String _analyticsProxyPrefix = dotenv.env['ANALYTICS_PROXY_PREFIX'] ?? '';
 
   bool get isConfigured => _apiUrl.isNotEmpty;
@@ -115,13 +116,21 @@ class AnalyticsService {
 
   Uri _u(String path) => Uri.parse('$_apiUrl$path');
   Uri _au(String path) {
-    // If a proxy prefix is configured, prefer it to avoid CORS on web
+    // Use proxy only for web deployments (not localhost dev)
     if (_analyticsProxyPrefix.isNotEmpty) {
-      final uri = Uri.parse('$_analyticsProxyPrefix$path');
-      debugPrint('[AnalyticsService] Using proxy for analytics: $uri');
-      return uri;
+      if (kIsWeb) {
+        final host = Uri.base.host.toLowerCase();
+        final isLocal = host == 'localhost' || host == '127.0.0.1';
+        if (!isLocal) {
+          final uri = Uri.parse('$_analyticsProxyPrefix$path');
+          debugPrint('[AnalyticsService] Using proxy for analytics: $uri');
+          return uri;
+        }
+      }
     }
-    return Uri.parse('$_analyticsApiUrl$path');
+    final direct = Uri.parse('$_analyticsApiUrl$path');
+    debugPrint('[AnalyticsService] Using direct analytics URL: $direct');
+    return direct;
   }
 
   // Internal traffic data

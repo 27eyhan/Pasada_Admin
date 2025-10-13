@@ -7,6 +7,12 @@
   "github": {
     "silent": false
   },
+  "rewrites": [
+    {
+      "source": "/analytics-proxy/(.*)",
+      "destination": "/api/analytics-proxy/$1"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
