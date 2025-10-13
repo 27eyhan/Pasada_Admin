@@ -49,6 +49,13 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   bool _isProcessingWeekly = false;
   String _weeklyProcessingStatus = '';
 
+  // In-memory caches (5-minute TTL)
+  final Map<String, _CacheEntry<List<double>>> _predictionsCache = {};
+  final Map<String, _CacheEntry<List<double>>> _currentWeekCache = {};
+
+  // Request token to avoid race conditions when switching routes
+  int _requestToken = 0;
+
   @override
   void initState() {
     super.initState();
@@ -77,17 +84,19 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     
     // Set up debounce timer to prevent rapid calls
     _debounceTimer = Timer(Duration(milliseconds: 500), () async {
-      await _fetchTrafficInternal();
+      _requestToken++;
+      final int token = _requestToken;
+      await _fetchTrafficInternal(requestToken: token);
     });
   }
 
-  Future<void> _fetchTrafficInternal() async {
-    debugPrint('[FleetAnalyticsGraph] 🚗 Starting _fetchTraffic...');
+  Future<void> _fetchTrafficInternal({required int requestToken}) async {
+    debugPrint('[FleetAnalyticsGraph] Starting _fetchTraffic...');
     debugPrint('[FleetAnalyticsGraph] API Configured: ${_analyticsService.isConfigured}');
     debugPrint('[FleetAnalyticsGraph] Analytics API Configured: ${_analyticsService.isAnalyticsConfigured}');
     
     if (!_analyticsService.isConfigured || !_analyticsService.isAnalyticsConfigured) {
-      debugPrint('[FleetAnalyticsGraph] ❌ Configuration check failed');
+      debugPrint('[FleetAnalyticsGraph] Configuration check failed');
       setState(() {
         _error = 'Analytics API not configured';
       });
@@ -106,10 +115,10 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     });
     try {
       // First check service health
-      debugPrint('[FleetAnalyticsGraph] 🏥 Checking analytics service health...');
+      debugPrint('[FleetAnalyticsGraph] Checking analytics service health...');
       final isHealthy = await _analyticsService.checkAnalyticsServiceHealth();
       if (!isHealthy) {
-        debugPrint('[FleetAnalyticsGraph] ❌ Analytics service is not responding');
+        debugPrint('[FleetAnalyticsGraph] Analytics service is not responding');
         setState(() {
           _error = 'Analytics service is not responding. Please try again later or check if the service is running.';
           _loading = false;
@@ -242,7 +251,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
             }
             
             if (week.length >= 7) {
-              debugPrint('[FleetAnalyticsGraph] ✅ Successfully got data from ${entry.key}');
+              debugPrint('[FleetAnalyticsGraph] Successfully got data from ${entry.key}');
               setState(() {
                 // Weekly analytics should go to predictions (yellow graph)
                 _predictedSeries = week.sublist(0, 7);
@@ -251,10 +260,10 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
               return;
             }
           } else if (response.statusCode == 404) {
-            debugPrint('[FleetAnalyticsGraph] ⚠️ ${entry.key} returned 404 - no data');
+            debugPrint('[FleetAnalyticsGraph] ${entry.key} returned 404 - no data');
           } else {
-            debugPrint('[FleetAnalyticsGraph] ⚠️ ${entry.key} returned ${response.statusCode}');
-          }
+            debugPrint('[FleetAnalyticsGraph] ${entry.key} returned ${response.statusCode}');
+          } 
         } catch (e) {
           debugPrint('[FleetAnalyticsGraph] ${entry.key} failed: $e');
           // Continue to next endpoint without throwing
@@ -264,7 +273,7 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       // All endpoints were tried in parallel above, now try fallback approaches
 
       // Try to get current week traffic data for the green graph
-      await _fetchCurrentWeekTraffic(routeId);
+      await _fetchCurrentWeekTraffic(routeId, requestToken: requestToken);
 
       // Fallback: Try hybrid endpoint (legacy support)
       final hybrid = await _analyticsService.getHybridRouteAnalytics(routeId);
@@ -372,6 +381,20 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         (_selectedRouteId != null && _selectedRouteId!.isNotEmpty)
             ? _selectedRouteId!
             : ((widget.routeId == null || widget.routeId!.isEmpty) ? '1' : widget.routeId!);
+    // Request token to avoid race conditions
+    _requestToken++;
+    final int token = _requestToken;
+
+    // Cache first
+    final cached = _predictionsCache[routeId];
+    if (cached != null && !cached.isExpired) {
+      if (!mounted || token != _requestToken) return;
+      setState(() {
+        _predictedSeries = cached.value;
+        _loading = false;
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -403,10 +426,12 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         }
         
         if (preds.isNotEmpty) {
+          if (!mounted || token != _requestToken) return;
           setState(() {
             _predictedSeries = preds.take(7).toList();
             _loading = false;
           });
+          _predictionsCache[routeId] = _CacheEntry(_predictedSeries);
           return;
         }
       }
@@ -430,10 +455,12 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         }
         
         if (preds.isNotEmpty) {
+          if (!mounted || token != _requestToken) return;
           setState(() {
             _predictedSeries = preds.take(7).toList();
             _loading = false;
           });
+          _predictionsCache[routeId] = _CacheEntry(_predictedSeries);
           return;
         }
       }
@@ -463,10 +490,12 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         }
         
         if (preds.isNotEmpty) {
+          if (!mounted || token != _requestToken) return;
           setState(() {
             _predictedSeries = preds.take(7).toList();
             _loading = false;
           });
+          _predictionsCache[routeId] = _CacheEntry(_predictedSeries);
           return;
         }
       }
@@ -485,21 +514,25 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
         }
         
         if (preds.isNotEmpty) {
+          if (!mounted || token != _requestToken) return;
           setState(() {
             _predictedSeries = preds.take(7).toList();
             _loading = false;
           });
+          _predictionsCache[routeId] = _CacheEntry(_predictedSeries);
           return;
         }
       }
 
       // Ultimate fallback: generate predictions from current traffic data
+      if (!mounted || token != _requestToken) return;
       setState(() {
         _predictedSeries = _predictNextWeek(_trafficSeries);
         _loading = false;
         _error = 'Using generated predictions - analytics service unavailable';
       });
     } catch (e) {
+      if (!mounted || token != _requestToken) return;
       setState(() {
         _error = 'Failed to fetch predictions: $e';
         _predictedSeries = _predictNextWeek(_trafficSeries);
@@ -830,6 +863,11 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     try {
       final response = await _analyticsService.getTrafficAnalyticsStatus();
       if (response.statusCode == 200) {
+        // Guard against HTML responses in dev
+        final contentType = response.headers['content-type'] ?? '';
+        if (!contentType.toLowerCase().contains('application/json')) {
+          throw FormatException('Non-JSON response received (content-type: $contentType)');
+        }
         final decoded = jsonDecode(response.body);
         if (decoded is Map && decoded['status'] is String) {
           setState(() {
@@ -1248,9 +1286,18 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   }
 
   // Fetch current week traffic data for the green graph
-  Future<void> _fetchCurrentWeekTraffic(String routeId) async {
+  Future<void> _fetchCurrentWeekTraffic(String routeId, {int? requestToken}) async {
     try {
       debugPrint('[FleetAnalyticsGraph] 🟢 Fetching current week traffic for route $routeId...');
+      // Cache check
+      final cached = _currentWeekCache[routeId];
+      if (cached != null && !cached.isExpired) {
+        if (requestToken != null && requestToken != _requestToken) return; // stale
+        setState(() {
+          _trafficSeries = cached.value;
+        });
+        return;
+      }
       final response = await _analyticsService.getCurrentWeekTrafficAnalytics(routeId);
       
       if (response.statusCode == 200) {
@@ -1270,11 +1317,13 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
           }
           
           if (trafficPercentages.length >= 7) {
-            debugPrint('[FleetAnalyticsGraph] ✅ Successfully got current week traffic data');
+            debugPrint('[FleetAnalyticsGraph] Successfully got current week traffic data');
+            if (requestToken != null && requestToken != _requestToken) return; // stale
             setState(() {
               // Current week traffic should go to the green graph
               _trafficSeries = trafficPercentages.sublist(0, 7);
             });
+            _currentWeekCache[routeId] = _CacheEntry(_trafficSeries);
             return;
           }
         }
@@ -1282,15 +1331,19 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       
       debugPrint('[FleetAnalyticsGraph] Current week traffic data insufficient, using fallback');
       // Fallback to generated data
+      if (requestToken != null && requestToken != _requestToken) return; // stale
       setState(() {
         _trafficSeries = _generateCurrentWeekTraffic(routeId);
       });
+      _currentWeekCache[routeId] = _CacheEntry(_trafficSeries);
     } catch (e) {
       debugPrint('[FleetAnalyticsGraph] Current week traffic failed: $e');
       // Fallback to generated data
+      if (requestToken != null && requestToken != _requestToken) return; // stale
       setState(() {
         _trafficSeries = _generateCurrentWeekTraffic(routeId);
       });
+      _currentWeekCache[routeId] = _CacheEntry(_trafficSeries);
     }
   }
 
@@ -1798,6 +1851,13 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
       ),
     );
   }
+}
+
+class _CacheEntry<T> {
+  final T value;
+  final DateTime expiry;
+  _CacheEntry(T v) : value = v, expiry = DateTime.now().add(const Duration(minutes: 5));
+  bool get isExpired => DateTime.now().isAfter(expiry);
 }
 
 // Metric dropdown removed

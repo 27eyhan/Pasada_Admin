@@ -116,13 +116,21 @@ class AnalyticsService {
 
   Uri _u(String path) => Uri.parse('$_apiUrl$path');
   Uri _au(String path) {
-    // If a proxy prefix is configured, prefer it to avoid CORS on web
+    // Use proxy only for web deployments (not localhost dev)
     if (_analyticsProxyPrefix.isNotEmpty) {
-      final uri = Uri.parse('$_analyticsProxyPrefix$path');
-      debugPrint('[AnalyticsService] Using proxy for analytics: $uri');
-      return uri;
+      if (kIsWeb) {
+        final host = Uri.base.host.toLowerCase();
+        final isLocal = host == 'localhost' || host == '127.0.0.1';
+        if (!isLocal) {
+          final uri = Uri.parse('$_analyticsProxyPrefix$path');
+          debugPrint('[AnalyticsService] Using proxy for analytics: $uri');
+          return uri;
+        }
+      }
     }
-    return Uri.parse('$_analyticsApiUrl$path');
+    final direct = Uri.parse('$_analyticsApiUrl$path');
+    debugPrint('[AnalyticsService] Using direct analytics URL: $direct');
+    return direct;
   }
 
   // Internal traffic data
