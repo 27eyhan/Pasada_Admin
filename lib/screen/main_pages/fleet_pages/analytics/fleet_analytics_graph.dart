@@ -1094,12 +1094,22 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
-          'Endpoint Test Results',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.bug_report,
+              color: Colors.orange,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Endpoint Test Results',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         content: SizedBox(
           width: 400,
@@ -1201,12 +1211,22 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
-          'System Metrics',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: const [
+            Icon(
+              Icons.monitor_heart,
+              color: Colors.blue,
+              size: 24,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'System Metrics',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         content: SizedBox(
           width: 300,
