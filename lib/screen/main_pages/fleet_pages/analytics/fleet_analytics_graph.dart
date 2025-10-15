@@ -48,6 +48,9 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   // Weekly processing state
   bool _isProcessingWeekly = false;
   String _weeklyProcessingStatus = '';
+  
+  // Verification state (refresh button)
+  bool _isVerifying = false;
 
   // In-memory caches (5-minute TTL)
   final Map<String, _CacheEntry<List<double>>> _predictionsCache = {};
@@ -981,6 +984,27 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     }
   }
 
+  // NEW: Combined refresh button action to verify health and endpoints
+  Future<void> _refreshAndVerify() async {
+    if (_loading || _isSyncing || _isProcessingWeekly || _isVerifying) return;
+    setState(() {
+      _isVerifying = true;
+    });
+    try {
+      await _checkServiceStatus();
+      await _testAllAnalyticsEndpoints();
+      _showSuccessSnackBar('Verification completed');
+    } catch (e) {
+      _showErrorSnackBar('Verification failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
+    }
+  }
+
   void _showServiceStatusDialog(bool isHealthy, dynamic metrics, {String? error}) {
     showDialog(
       context: context,
@@ -1066,16 +1090,107 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     );
   }
 
+  // NEW: Explain how analytics works and timing expectations
+  void _showAnalyticsInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(
+              Icons.info_outline,
+              color: Colors.blueGrey,
+              size: 24,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'About Traffic Analytics',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'How it works',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• This week (green): Current week traffic levels per day (0–100%).\n'
+                '• Next week (yellow): Predicted traffic computed from historical patterns and latest signals.\n'
+                '• Data sources: live route summaries, daily analytics, and fallback models when APIs are slow.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Timing reminder',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Weekly analytics and backfill can take time to compute, especially right after synchronization or during high load. If results are delayed, you may see sample or partial data temporarily. Use Refresh & Verify to check service health and endpoint availability.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showEndpointTestResults(Map<String, dynamic> results) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
-          'Endpoint Test Results',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.bug_report,
+              color: Colors.orange,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Endpoint Test Results',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         content: SizedBox(
           width: 400,
@@ -1177,12 +1292,22 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(
-          'System Metrics',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: const [
+            Icon(
+              Icons.monitor_heart,
+              color: Colors.blue,
+              size: 24,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'System Metrics',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         content: SizedBox(
           width: 300,
@@ -1670,6 +1795,34 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                       Icons.more_vert,
                       size: 18,
                       color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    ),
+                  ),
+                  // Info button
+                  IconButton(
+                    tooltip: 'About analytics',
+                    onPressed: () {
+                      _showAnalyticsInfoDialog();
+                    },
+                    icon: Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    ),
+                  ),
+                  // Refresh & verify button
+                  IconButton(
+                    tooltip: _isVerifying ? 'Verifying...' : 'Refresh & Verify',
+                    onPressed: (_loading || _isSyncing || _isProcessingWeekly || _isVerifying)
+                        ? null
+                        : () async {
+                            await _refreshAndVerify();
+                          },
+                    icon: Icon(
+                      Icons.refresh,
+                      size: 18,
+                      color: _isVerifying
+                          ? Palette.lightPrimary
+                          : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                     ),
                   ),
                   // Sync button
