@@ -48,6 +48,9 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
   // Weekly processing state
   bool _isProcessingWeekly = false;
   String _weeklyProcessingStatus = '';
+  
+  // Verification state (refresh button)
+  bool _isVerifying = false;
 
   // In-memory caches (5-minute TTL)
   final Map<String, _CacheEntry<List<double>>> _predictionsCache = {};
@@ -981,6 +984,27 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     }
   }
 
+  // NEW: Combined refresh button action to verify health and endpoints
+  Future<void> _refreshAndVerify() async {
+    if (_loading || _isSyncing || _isProcessingWeekly || _isVerifying) return;
+    setState(() {
+      _isVerifying = true;
+    });
+    try {
+      await _checkServiceStatus();
+      await _testAllAnalyticsEndpoints();
+      _showSuccessSnackBar('Verification completed');
+    } catch (e) {
+      _showErrorSnackBar('Verification failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
+    }
+  }
+
   void _showServiceStatusDialog(bool isHealthy, dynamic metrics, {String? error}) {
     showDialog(
       context: context,
@@ -1670,6 +1694,22 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                       Icons.more_vert,
                       size: 18,
                       color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    ),
+                  ),
+                  // Sync button
+                  IconButton(
+                    tooltip: _isVerifying ? 'Verifying...' : 'Refresh & Verify',
+                    onPressed: (_loading || _isSyncing || _isProcessingWeekly || _isVerifying)
+                        ? null
+                        : () async {
+                            await _refreshAndVerify();
+                          },
+                    icon: Icon(
+                      Icons.refresh,
+                      size: 18,
+                      color: _isVerifying
+                          ? Palette.lightPrimary
+                          : isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                     ),
                   ),
                   // Sync button
