@@ -1090,6 +1090,87 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
     );
   }
 
+  // NEW: Explain how analytics works and timing expectations
+  void _showAnalyticsInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(
+              Icons.info_outline,
+              color: Colors.blueGrey,
+              size: 24,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'About Traffic Analytics',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'How it works',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• This week (green): Current week traffic levels per day (0–100%).\n'
+                '• Next week (yellow): Predicted traffic computed from historical patterns and latest signals.\n'
+                '• Data sources: live route summaries, daily analytics, and fallback models when APIs are slow.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Timing reminder',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Weekly analytics and backfill can take time to compute, especially right after synchronization or during high load. If results are delayed, you may see sample or partial data temporarily. Use Refresh & Verify to check service health and endpoint availability.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showEndpointTestResults(Map<String, dynamic> results) {
     showDialog(
       context: context,
@@ -1716,7 +1797,19 @@ class _FleetAnalyticsGraphState extends State<FleetAnalyticsGraph> {
                       color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
                     ),
                   ),
-                  // Sync button
+                  // Info button
+                  IconButton(
+                    tooltip: 'About analytics',
+                    onPressed: () {
+                      _showAnalyticsInfoDialog();
+                    },
+                    icon: Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: isDark ? Palette.darkTextSecondary : Palette.lightTextSecondary,
+                    ),
+                  ),
+                  // Refresh & verify button
                   IconButton(
                     tooltip: _isVerifying ? 'Verifying...' : 'Refresh & Verify',
                     onPressed: (_loading || _isSyncing || _isProcessingWeekly || _isVerifying)
