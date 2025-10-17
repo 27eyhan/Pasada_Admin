@@ -637,7 +637,7 @@ class TablePreviewHelper {
             DataCell(Text(row['stop_lat']?.toString() ?? 'N/A')),
             DataCell(Text(row['stop_lng']?.toString() ?? 'N/A')),
             DataCell(Text(row['stop_order']?.toString() ?? '—')),
-            DataCell(Text((row['is_active'] == true) ? 'true' : 'false')),
+            DataCell(Text(_asBool(row['is_active']) ? 'true' : 'false')),
             DataCell(Text(row['created_at']?.toString() ?? '—')),
           ],
         );
@@ -648,6 +648,17 @@ class TablePreviewHelper {
       includeNavigation: includeNavigation,
       onBackPressed: onBackPressed,
     );
+  }
+
+  // Coerce dynamic values to boolean safely for robust display across drivers/serializers
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final v = value.toLowerCase().trim();
+      return v == 'true' || v == 't' || v == '1' || v == 'yes';
+    }
+    return false;
   }
 
   static Widget createAiChatHistoryTable({

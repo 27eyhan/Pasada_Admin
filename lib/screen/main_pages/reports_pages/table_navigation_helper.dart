@@ -247,7 +247,10 @@ class TableNavigationHelper {
   static Widget _createAllowedStopsTable(Function(String, {Map<String, dynamic>? args})? onNavigateToPage) {
     return TablePreviewHelper.createAllowedStopsTable(
       dataFetcher: () async {
-        final data = await _supabase.from('allowed_stops').select('*');
+        final data = await _supabase
+            .from('allowed_stops')
+            .select('*')
+            .order('stop_order', ascending: true);
         return (data as List).cast<Map<String, dynamic>>();
       },
       onRefresh: () {

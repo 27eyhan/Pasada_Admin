@@ -33,6 +33,9 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
   String _status = 'Active';
 
   bool _isLoading = false;
+  // Allowed stops state
+  List<Map<String, dynamic>> _stops = [];
+  bool _isLoadingStops = false;
 
   @override
   void initState() {
@@ -83,6 +86,96 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
             widget.routeData['intermediate_coordinates'].toString();
       }
     }
+    // Load allowed stops for this route
+    _fetchStops();
+  }
+
+  Widget _buildStopsSection() {
+    if (_isLoadingStops) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_stops.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: const Text('No stops added yet.'),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        children: [
+          for (final stop in _stops)
+            ListTile(
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
+              title: Text('${stop['stop_order'] ?? '-'} · ${stop['stop_name'] ?? ''}'),
+              subtitle: Text('${stop['stop_address'] ?? ''}\n(${stop['stop_lat']}, ${stop['stop_lng']})', maxLines: 2),
+              isThreeLine: true,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Edit',
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _showStopDialog(stop: stop),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Stop?'),
+                          content: const Text('This action cannot be undone.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        try {
+                          await widget.supabase
+                              .from('allowed_stops')
+                              .delete()
+                              .eq('allowedstop_id', stop['allowedstop_id']);
+                          await _fetchStops();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Stop deleted')),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error deleting stop: ${e.toString()}')),
+                            );
+                          }
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -166,6 +259,175 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
         );
       }
     }
+  }
+
+  Future<void> _fetchStops() async {
+    setState(() {
+      _isLoadingStops = true;
+    });
+    try {
+      final routeId = widget.routeData['officialroute_id'];
+      final data = await widget.supabase
+          .from('allowed_stops')
+          .select('*')
+          .eq('officialroute_id', routeId)
+          .order('stop_order', ascending: true);
+      setState(() {
+        _stops = (data as List).cast<Map<String, dynamic>>();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load stops: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isLoadingStops = false;
+      });
+    }
+  }
+
+  Future<void> _showStopDialog({Map<String, dynamic>? stop}) async {
+    final bool isEdit = stop != null;
+    final nameCtrl = TextEditingController(text: stop?['stop_name']?.toString() ?? '');
+    final addressCtrl = TextEditingController(text: stop?['stop_address']?.toString() ?? '');
+    final latCtrl = TextEditingController(text: stop?['stop_lat']?.toString() ?? '');
+    final lngCtrl = TextEditingController(text: stop?['stop_lng']?.toString() ?? '');
+    final orderCtrl = TextEditingController(text: stop?['stop_order']?.toString() ?? (_stops.length + 1).toString());
+    bool isActive = stop == null ? true : (stop['is_active'] == true || stop['is_active'] == 'true' || stop['is_active'] == 1);
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            side: BorderSide(color: Palette.orangeColor, width: 1.5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(isEdit ? Icons.edit_location_alt : Icons.add_location_alt, color: Palette.orangeColor),
+                        const SizedBox(width: 8),
+                        Text(isEdit ? 'Edit Stop' : 'Add Stop', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildStopField(controller: nameCtrl, label: 'Stop Name', icon: Icons.push_pin_outlined, validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null),
+                    _buildStopField(controller: addressCtrl, label: 'Stop Address', icon: Icons.place_outlined, validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null),
+                    Row(
+                      children: [
+                        Expanded(child: _buildStopField(controller: latCtrl, label: 'Latitude', icon: Icons.explore_outlined, keyboardType: TextInputType.numberWithOptions(decimal: true), validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildStopField(controller: lngCtrl, label: 'Longitude', icon: Icons.explore_outlined, keyboardType: TextInputType.numberWithOptions(decimal: true), validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null)),
+                      ],
+                    ),
+                    _buildStopField(controller: orderCtrl, label: 'Order', icon: Icons.format_list_numbered, keyboardType: TextInputType.number, validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Required';
+                      return int.tryParse(v) == null ? 'Must be a number' : null;
+                    }),
+                    Row(
+                      children: [
+                        Checkbox(value: isActive, onChanged: (v) { isActive = v ?? true; setState(() {}); }),
+                        const SizedBox(width: 4),
+                        const Text('Active stop')
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (!formKey.currentState!.validate()) return;
+                              final payload = {
+                                'officialroute_id': widget.routeData['officialroute_id'],
+                                'stop_name': nameCtrl.text.trim(),
+                                'stop_address': addressCtrl.text.trim(),
+                                'stop_lat': latCtrl.text.trim(),
+                                'stop_lng': lngCtrl.text.trim(),
+                                'stop_order': int.tryParse(orderCtrl.text.trim()),
+                                'is_active': isActive,
+                              };
+                              try {
+                                if (isEdit) {
+                                  await widget.supabase
+                                      .from('allowed_stops')
+                                      .update(payload)
+                                      .eq('allowedstop_id', stop['allowedstop_id']);
+                                } else {
+                                  await widget.supabase.from('allowed_stops').insert(payload);
+                                }
+                                if (mounted) {
+                                  Navigator.of(context).pop();
+                                  await _fetchStops();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(isEdit ? 'Stop updated' : 'Stop added')),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: ${e.toString()}')),
+                                  );
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(backgroundColor: Palette.orangeColor, foregroundColor: Colors.white),
+                            child: Text(isEdit ? 'Save' : 'Add'),
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStopField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Palette.orangeColor),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+          filled: true,
+          fillColor: Colors.grey[50],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+        ),
+      ),
+    );
   }
 
   @override
@@ -359,6 +621,29 @@ class _EditRouteDialogState extends State<EditRouteDialog> {
                             });
                           }
                         },
+                      ),
+                    ),
+                    // Allowed Stops Section
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Allowed Stops',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Palette.orangeColor),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStopsSection(),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoadingStops ? null : () => _showStopDialog(),
+                        icon: const Icon(Icons.add_location_alt),
+                        label: const Text('Add Stop'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Palette.orangeColor,
+                          foregroundColor: Colors.white,
+                        ),
                       ),
                     ),
                   ],
